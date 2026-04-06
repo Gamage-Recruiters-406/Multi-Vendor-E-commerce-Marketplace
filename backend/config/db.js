@@ -1,5 +1,8 @@
 import mongoose from "mongoose";
 import colors from "colors";
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 const connectDB = async () => {
   try {
@@ -13,4 +16,5 @@ const connectDB = async () => {
   }
 };
 
-export default connectDB;
+export default connectDB; 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
