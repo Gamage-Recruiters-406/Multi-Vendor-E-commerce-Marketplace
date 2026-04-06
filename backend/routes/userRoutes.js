@@ -6,9 +6,6 @@ import {
   viewProfile,
 } from "../controllers/userController.js";
 import { requiredSignIn } from "../middlewares/authMiddleware.js";
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
 
 const router = express.Router();
 
@@ -20,4 +17,4 @@ router.post("/login", login);
 router.get("/profile", requiredSignIn, viewProfile);
 router.put("/change-password", requiredSignIn, changePassword);
 
-export default router;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+export default router;
