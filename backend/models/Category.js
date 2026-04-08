@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { pluralize } from '../utils/pluralize.js';
+import { toPlural } from '../utils/pluralize.js';
 import { generateSlug } from '../utils/slugify.js';
 
 const categorySchema = new mongoose.Schema(
@@ -9,11 +9,10 @@ const categorySchema = new mongoose.Schema(
             required: true,
             unique: true,
             trim: true,
-            set: (value) => pluralize(value), // Automatically pluralize before saving
+            set: (value) => toPlural(value), // Automatically pluralize before saving
         },
         slug: {
             type: String,
-            required: true,
             unique: true,
         },
         parentCategory: {
@@ -31,7 +30,7 @@ const categorySchema = new mongoose.Schema(
 );
 
 // Generate slug BEFORE validation
-categorySchema.pre('validate', async function (next) {
+categorySchema.pre('validate', async function () {
     if (this.isModified('name') || !this.slug) {
         let baseSlug = generateSlug(this.name);
         let slug = baseSlug;
@@ -43,7 +42,6 @@ categorySchema.pre('validate', async function (next) {
     }
 });
 
-// Prevent deletion if category has products or subcategories
 categorySchema.methods.hasProductsOrChildren = async function () {
     const Product = mongoose.model('Product');
     const productCount = await Product.countDocuments({ category: this._id });

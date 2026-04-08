@@ -1,6 +1,6 @@
 import Category from "../models/Category.js";
 import { findSimilarCategories } from "../utils/categorySimilarity.js";
-import { pluralize } from "../utils/pluralize.js";
+import { toPlural } from "../utils/pluralize.js";
 
 // Create category
 export const createCategory = async (req, res, next) => {
@@ -11,16 +11,16 @@ export const createCategory = async (req, res, next) => {
         }
 
         // Check similarity
-        const similar = await findSimilarCategories(name);
+        const similar = await findSimilarCategories(name, Category);
         if (similar.length > 0) {
             return res.status(409).json({
                 success: false,
                 message: 'A similar category already exists',
-                existingCategories: similar,
+                existingCategories: similar.map(cat => ({ id: cat._id, name: cat.name })),
             });
         }
 
-        const pluralName = pluralize(name);
+        const pluralName = toPlural(name);
         const category = await Category.create({
             name: pluralName,
             parentCategory: parentCategory || null,
