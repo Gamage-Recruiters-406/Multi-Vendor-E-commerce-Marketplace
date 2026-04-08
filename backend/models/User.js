@@ -49,6 +49,11 @@ const userSchema = new mongoose.Schema(
       enum: ["Buyer", "Vendor", "admin"], 
       default: "Buyer" 
     },
+
+    profilePicture: {
+      type: String,  // Store Cloudinary URL
+      default: null
+    },
     
   },
   { timestamps: true }
