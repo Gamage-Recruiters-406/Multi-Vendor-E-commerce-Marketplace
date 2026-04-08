@@ -196,3 +196,105 @@ export const viewProfile = async (req, res) => {
     });
   }
 };
+
+//logout user
+export const logout = async (req, res) => {
+  try {
+    res.clearCookie("access_token");
+
+    res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error logging out",
+      error: error.message,
+    });
+  }
+};
+
+//update phone only
+export const updatePhone = async (req, res) => {
+  try {
+    const { phone } = req.body;
+
+    // Validate phone
+    if (!phone || !/^[0-9]{10}$/.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number must be 10 digits",
+      });
+    }
+
+    // Check if phone already exists
+    const existingPhone = await User.findOne({ phone });
+    if (existingPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number already in use",
+      });
+    }
+
+    // Update only phone
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { phone },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    res.status(200).json({
+      success: true,
+      message: "Phone number updated successfully",
+      user,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error updating phone number",
+      error: error.message,
+    });
+  }
+};
+
+//get all users (admin)
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select("-password");
+
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      users,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching users",
+      error: error.message,
+    });
+  }
+};
+
+//get users by role
+export const getUsersByRole = async (req, res) => {
+  try {
+    const { role } = req.params;
+
+    const users = await User.find({ role }).select("-password");
+
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      users,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching users",
+      error: error.message,
+    });
+  }
+};
