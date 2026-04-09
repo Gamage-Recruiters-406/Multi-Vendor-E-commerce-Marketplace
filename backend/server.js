@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 
 // Import your routes (create these files later)
 import userRoutes from './routes/userRoutes.js';
+import chatbotRoutes from './routes/chatbotRoutes.js';
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use(cors({ origin: true, credentials: true }));
 
 // Routes
 app.use('/api/v1/user', userRoutes);
+app.use('/api/v1/chatbot', chatbotRoutes);
 
 // Test route
 app.get('/', (req, res) => {
