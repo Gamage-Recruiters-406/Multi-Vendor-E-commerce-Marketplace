@@ -41,11 +41,7 @@ export const createStore = async (req, res) => {
 
         let logoUrl = '';
         if (req.file) {
-            // Upload to Cloudinary and get public_id
-            const publicId = await uploadImage(req.file.buffer, 'marketplace/stores');
-            // Construct the full URL
-            const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-            logoUrl = `https://res.cloudinary.com/${cloudName}/image/upload/${publicId}`;
+            logoUrl = await uploadImage(req.file.buffer, 'marketplace/stores');
         }
 
         const store = await Store.create({
@@ -70,3 +66,35 @@ export const createStore = async (req, res) => {
         });
     }
 };
+
+
+
+// Get Single Store
+export const getSingleStore = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const store = await Store.findById(id)
+            .populate('vendor', 'name email');
+
+        if (!store) {
+            return res.status(404).json({
+                success: false,
+                message: "Store not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: store
+        });
+
+    } catch (error) {
+        console.error(error);
+        
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+}
