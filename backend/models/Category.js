@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import { toPlural } from '../utils/pluralize.js';
-import { generateSlug } from '../utils/slugify.js';
 
 const categorySchema = new mongoose.Schema(
     {
@@ -10,10 +9,6 @@ const categorySchema = new mongoose.Schema(
             unique: true,
             trim: true,
             set: (value) => toPlural(value), // Automatically pluralize before saving
-        },
-        slug: {
-            type: String,
-            unique: true,
         },
         parentCategory: {
             type: mongoose.Schema.Types.ObjectId,
@@ -28,19 +23,6 @@ const categorySchema = new mongoose.Schema(
     },
     { timestamps: true }
 );
-
-// Generate slug BEFORE validation
-categorySchema.pre('validate', async function () {
-    if (this.isModified('name') || !this.slug) {
-        let baseSlug = generateSlug(this.name);
-        let slug = baseSlug;
-        let counter = 1;
-        while (await mongoose.model('Category').exists({ slug, _id: { $ne: this._id } })) {
-            slug = `${baseSlug}-${counter++}`;
-        }
-        this.slug = slug;
-    }
-});
 
 categorySchema.methods.hasProductsOrChildren = async function () {
     const Product = mongoose.model('Product');
