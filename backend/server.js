@@ -8,9 +8,13 @@ import { v2 as cloudinary } from 'cloudinary';
 
 // Import your routes (create these files later)
 import userRoutes from './routes/userRoutes.js';
+import chatbotRoutes from './routes/chatbotRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import storeRoutes from './routes/storeRoutes.js';
 import productRoutes from './routes/productRoutes.js';
+
+import orderRoutes from './routes/orderRoutes.js';
+import announcementRoutes from './routes/announcementRoutes.js';
 
 const app = express();
 
@@ -39,6 +43,8 @@ app.use(cors({ origin: true, credentials: true }));
 
 // Routes
 app.use('/api/v1/user', userRoutes);
+app.use('/api/v1/chatbot', chatbotRoutes);
+
 app.use('/api/v1/category', categoryRoutes);
 app.use('/api/v1/store', storeRoutes);
 app.use('/api/v1/product', productRoutes);
