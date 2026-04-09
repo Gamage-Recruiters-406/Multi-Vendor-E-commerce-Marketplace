@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import { generateSlug } from '../utils/slugify.js';
 
 const storeSchema = new mongoose.Schema(
     {
@@ -8,10 +7,6 @@ const storeSchema = new mongoose.Schema(
             required: true,
             unique: true,
             trim: true,
-        },
-        slug: {
-            type: String,
-            unique: true,
         },
         description: {
             type: String,
@@ -33,19 +28,6 @@ const storeSchema = new mongoose.Schema(
     },
     { timestamps: true }
 );
-
-// Generate slug from name before validation
-storeSchema.pre('validate', async function () {
-    if (this.isModified('name') || !this.slug) {
-        let baseSlug = generateSlug(this.name);
-        let slug = baseSlug;
-        let counter = 1;
-        while (await mongoose.model('Store').exists({ slug, _id: { $ne: this._id } })) {
-            slug = `${baseSlug}-${counter++}`;
-        }
-        this.slug = slug;
-    }
-});
 
 // Virtual for product count (will be populated later)
 storeSchema.virtual('productCount', {
