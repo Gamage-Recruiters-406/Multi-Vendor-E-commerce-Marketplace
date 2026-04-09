@@ -9,6 +9,7 @@ import { v2 as cloudinary } from 'cloudinary';
 // Import your routes (create these files later)
 import userRoutes from './routes/userRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
+import storeRoutes from './routes/storeRoutes.js';
 
 const app = express();
 
@@ -38,6 +39,8 @@ app.use(cors({ origin: true, credentials: true }));
 // Routes
 app.use('/api/v1/user', userRoutes);
 app.use('/api/v1/category', categoryRoutes);
+app.use('/api/v1/store', storeRoutes);
+
 // Test route
 app.get('/', (req, res) => {
   res.send({ message: 'Welcome to Recruitment Management System API' });
