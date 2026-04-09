@@ -2,7 +2,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import Groq from 'groq-sdk';
-import { FAQTemplate, ProductFAQ, ChatSession, TempProduct } from '../models/chatbot.js';
+import { FAQTemplate, ProductFAQ, ChatSession } from '../models/chatbot.js';
+import Product from '../models/Product.js';
 
 // Initialize Groq with your free API key
 const groq = new Groq({
@@ -11,15 +12,36 @@ const groq = new Groq({
 
 // ==================== HELPER FUNCTIONS ====================
 
+// Get product by ID with populated fields
+async function getProduct(productId) {
+    return await Product.findById(productId)
+        .populate('category', 'name')
+        .populate('store', 'name');
+}
+
 // Get AI answer using Groq (for custom typed questions)
 async function getGroqAnswer(userQuestion, product) {
+    // Get category name
+    const categoryName = product.category?.name || 'General';
+    const storeName = product.store?.name || 'Vendor';
+    
+    // Build specifications string if variants exist
+    let specsText = '';
+    if (product.variants && product.variants.length > 0) {
+        const sizes = [...new Set(product.variants.map(v => v.attributes?.size).filter(s => s))];
+        const colors = [...new Set(product.variants.map(v => v.attributes?.color).filter(c => c))];
+        if (sizes.length) specsText += `\n- Available Sizes: ${sizes.join(', ')}`;
+        if (colors.length) specsText += `\n- Available Colors: ${colors.join(', ')}`;
+    }
+    
     const prompt = `You are a helpful customer support assistant for an e-commerce marketplace.
 
 PRODUCT INFORMATION:
 - Name: ${product.name}
 - Price: $${product.price}
-- Category: ${product.category}
-- Description: ${product.description?.substring(0, 500) || 'No description available'}
+- Category: ${categoryName}
+- Store: ${storeName}
+- Description: ${product.description?.substring(0, 500) || 'No description available'}${specsText}
 
 PLATFORM POLICIES:
 - Returns accepted within 14 days of delivery
@@ -29,7 +51,7 @@ PLATFORM POLICIES:
 INSTRUCTIONS:
 1. Answer ONLY based on the product information provided above
 2. Be concise, friendly, and helpful (maximum 150 words)
-3. If you don't know the answer, say: "I don't have that information. Would you like to contact the vendor directly?"
+3. If you don't know the answer, say: "I don't have that information. Would you like to contact the store directly?"
 4. Never make up information
 5. Use emojis occasionally 🛍️
 
@@ -49,7 +71,7 @@ Answer:`;
                     content: prompt
                 }
             ],
-            model: "llama-3.3-70b-versatile",  // Free, high quality
+            model: "llama-3.3-70b-versatile",
             temperature: 0.7,
             max_tokens: 300,
         });
@@ -58,16 +80,18 @@ Answer:`;
         
     } catch (error) {
         console.error('Groq API error:', error);
-        return "I'm having trouble responding right now. Please try again or contact the vendor directly. 📞";
+        return "I'm having trouble responding right now. Please try again or contact the store directly. 📞";
     }
 }
 
 // Generate product-specific questions using Groq
 async function generateProductQuestions(product) {
+    const categoryName = product.category?.name || 'General';
+    
     const prompt = `You are an e-commerce expert. Based on the following product, generate the 5 most frequently asked questions that customers would ask.
 
 PRODUCT NAME: ${product.name}
-CATEGORY: ${product.category}
+CATEGORY: ${categoryName}
 PRICE: $${product.price}
 DESCRIPTION: ${product.description || 'No description available'}
 
@@ -77,13 +101,13 @@ Each question should be something a real customer would ask before buying.
 Return ONLY valid JSON format like this:
 [
   {"question": "What is the battery life?", "answer": "Based on specifications, the battery life is [answer from product info]"},
-  {"question": "Does it come with a warranty?", "answer": "Answer based on product info or say 'Check with vendor'"}
+  {"question": "Does it come with a warranty?", "answer": "Answer based on product info or say 'Check with store'"}
 ]
 
 IMPORTANT: 
 - Questions must be SPECIFIC to this product, not generic
 - Answers should be based on product information provided
-- If information is not available, answer: "Please check product details or contact vendor"
+- If information is not available, answer: "Please check product details or contact store"
 - Keep answers concise (under 100 words each)`;
 
     try {
@@ -98,14 +122,13 @@ IMPORTANT:
                     content: prompt
                 }
             ],
-            model: "llama-3.3-70b-versatile",  // Free model
+            model: "llama-3.3-70b-versatile",
             temperature: 0.5,
             max_tokens: 2000,
         });
 
         const text = completion.choices[0]?.message?.content || '';
         
-        // Clean the response (remove markdown code blocks if present)
         let cleanText = text;
         if (text.includes('```json')) {
             cleanText = text.split('```json')[1].split('```')[0];
@@ -133,18 +156,16 @@ function getFallbackAnswer(question, product) {
         return `Shipping typically takes 3-7 business days depending on your location. 📦`;
     }
     if (lowerQuestion.includes('original') || lowerQuestion.includes('genuine')) {
-        return `Yes, ${product.name} is 100% genuine and sold by a verified vendor. ✅`;
+        return `Yes, ${product.name} is 100% genuine and sold by a verified store. ✅`;
     }
     if (lowerQuestion.includes('payment') || lowerQuestion.includes('pay')) {
         return `We accept all major credit cards and digital wallets. Secure payments via Stripe. 💳`;
     }
+    if (lowerQuestion.includes('stock') || lowerQuestion.includes('available')) {
+        return `Current stock: ${product.stock} units available. 📦`;
+    }
     
-    return `I don't have that information. Would you like to contact the vendor directly? 📞`;
-}
-
-// Adapter function - EASY TO SWITCH when Product model is ready
-async function getProduct(productId) {
-    return await TempProduct.findOne({ productId });
+    return `I don't have that information. Would you like to contact the store directly? 📞`;
 }
 
 // Seed default FAQ templates
@@ -155,7 +176,7 @@ async function seedDefaultFAQs() {
             questions: [
                 { question: "What is your return policy?", answer: "Returns accepted within 14 days of delivery. Product must be unused and in original packaging.", displayOrder: 1 },
                 { question: "How long does shipping take?", answer: "Shipping typically takes 3-7 business days depending on your location.", displayOrder: 2 },
-                { question: "Is this product original?", answer: "Yes, all products are 100% genuine and sold by verified vendors.", displayOrder: 3 },
+                { question: "Is this product original?", answer: "Yes, all products are 100% genuine and sold by verified stores.", displayOrder: 3 },
                 { question: "Do you offer cash on delivery?", answer: "No, we only accept secure online payments.", displayOrder: 4 },
                 { question: "Can I track my order?", answer: "Yes, tracking information is available in your order dashboard once shipped.", displayOrder: 5 }
             ]
@@ -224,45 +245,57 @@ async function seedDefaultFAQs() {
 
 // ==================== CONTROLLER FUNCTIONS ====================
 
-// 1. Create/Update a product (TEMPORARY)
+// 1. Create a product (Admin only)
 export const createProduct = async (req, res) => {
     try {
-        const { productId, name, price, category, description, vendorId } = req.body;
-        
-        const product = await TempProduct.findOneAndUpdate(
-            { productId },
-            { name, price, category, description, vendorId },
-            { upsert: true, new: true }
-        );
-        
+        const product = new Product(req.body);
+        await product.save();
         res.json({ success: true, product });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };
 
-// 2. Get all products (TEMPORARY)
+// 2. Get all products
 export const getProducts = async (req, res) => {
     try {
-        const products = await TempProduct.find();
+        const products = await Product.find()
+            .populate('category', 'name')
+            .populate('store', 'name');
         res.json(products);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };
 
-// 3. Get 5 FAQ questions when chatbot opens
+// 3. Get product by ID
+export const getProductById = async (req, res) => {
+    try {
+        const product = await getProduct(req.params.id);
+        if (!product) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+        res.json(product);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// 4. Get 5 FAQ questions when chatbot opens
 export const getFAQQuestions = async (req, res) => {
     try {
         const { productId } = req.params;
         
         const product = await getProduct(productId);
         if (!product) {
-            return res.status(404).json({ error: 'Product not found. Please create product first.' });
+            return res.status(404).json({ error: 'Product not found' });
         }
         
+        // Get category name for template matching
+        const categoryName = product.category?.name?.toLowerCase() || 'default';
+        
         // Check for custom AI-generated FAQs
-        const customFAQ = await ProductFAQ.findOne({ productId });
+        const customFAQ = await ProductFAQ.findOne({ productId: product._id });
         if (customFAQ && customFAQ.customQuestions.length > 0) {
             const questions = customFAQ.customQuestions
                 .sort((a, b) => a.displayOrder - b.displayOrder)
@@ -281,7 +314,7 @@ export const getFAQQuestions = async (req, res) => {
         
         // Use category template
         let template = await FAQTemplate.findOne({ 
-            category: product.category || 'default' 
+            category: categoryName 
         });
         
         if (!template) {
@@ -302,7 +335,7 @@ export const getFAQQuestions = async (req, res) => {
     }
 };
 
-// 4. User CLICKS a FAQ button (DEFAULT answer from DB - NO AI)
+// 5. User CLICKS a FAQ button (DEFAULT answer from DB - NO AI)
 export const getFAQAnswer = async (req, res) => {
     try {
         const { questionId, productId } = req.body;
@@ -313,7 +346,7 @@ export const getFAQAnswer = async (req, res) => {
         }
         
         // Check custom FAQs first
-        const customFAQ = await ProductFAQ.findOne({ productId });
+        const customFAQ = await ProductFAQ.findOne({ productId: product._id });
         if (customFAQ) {
             const question = customFAQ.customQuestions.id(questionId);
             if (question) {
@@ -324,8 +357,9 @@ export const getFAQAnswer = async (req, res) => {
         }
         
         // Use category template
+        const categoryName = product.category?.name?.toLowerCase() || 'default';
         const template = await FAQTemplate.findOne({ 
-            category: product.category || 'default' 
+            category: categoryName 
         });
         
         if (template) {
@@ -345,7 +379,7 @@ export const getFAQAnswer = async (req, res) => {
     }
 };
 
-// 5. User TYPES a custom question (AI generates answer using Groq)
+// 6. User TYPES a custom question (AI generates answer using Groq)
 export const askAIQuestion = async (req, res) => {
     try {
         const { message, productId, sessionId } = req.body;
@@ -366,7 +400,7 @@ export const askAIQuestion = async (req, res) => {
             session = new ChatSession({
                 sessionId: newSessionId,
                 userId: userId,
-                productId: productId,
+                productId: product._id,
                 messages: []
             });
         }
@@ -387,7 +421,7 @@ export const askAIQuestion = async (req, res) => {
         
     } catch (error) {
         console.error(error);
-        const product = await getProduct(productId);
+        const product = await getProduct(req.body.productId);
         const fallbackAnswer = getFallbackAnswer(req.body.message, product);
         res.json({
             success: true,
@@ -397,7 +431,7 @@ export const askAIQuestion = async (req, res) => {
     }
 };
 
-// 6. Get chat history
+// 7. Get chat history
 export const getChatHistory = async (req, res) => {
     try {
         const { sessionId } = req.params;
@@ -422,7 +456,7 @@ export const getChatHistory = async (req, res) => {
     }
 };
 
-// 7. Contact vendor
+// 8. Contact store/vendor
 export const contactVendor = async (req, res) => {
     try {
         const { sessionId, productId } = req.body;
@@ -433,14 +467,16 @@ export const contactVendor = async (req, res) => {
             return res.status(404).json({ error: 'Product not found' });
         }
         
+        const storeId = product.store?._id || product.store;
+        
         let session = await ChatSession.findOne({ sessionId });
         if (!session) {
-            const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const newSessionId = sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             session = new ChatSession({
                 sessionId: newSessionId,
                 userId: userId,
-                productId: productId,
-                vendorId: product.vendorId || 'vendor_not_set',
+                productId: product._id,
+                vendorId: storeId,
                 messages: [],
                 status: 'transferred_to_vendor'
             });
@@ -448,11 +484,11 @@ export const contactVendor = async (req, res) => {
             if (session.userId.toString() !== userId.toString()) {
                 return res.status(403).json({ error: 'Access denied to this session' });
             }
-            session.vendorId = product.vendorId || 'vendor_not_set';
+            session.vendorId = storeId;
             session.status = 'transferred_to_vendor';
             session.messages.push({
                 sender: 'ai',
-                message: "You're now connected with the vendor. They'll respond shortly.",
+                message: "You're now connected with the store. They'll respond shortly.",
                 timestamp: new Date()
             });
         }
@@ -462,16 +498,16 @@ export const contactVendor = async (req, res) => {
         res.json({
             success: true,
             sessionId: session.sessionId,
-            message: "Vendor chat activated. The vendor will respond shortly."
+            message: "Store chat activated. The store will respond shortly."
         });
         
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Failed to connect to vendor' });
+        res.status(500).json({ error: 'Failed to connect to store' });
     }
 };
 
-// 8. Send message to vendor
+// 9. Send message to store/vendor
 export const sendVendorMessage = async (req, res) => {
     try {
         const { sessionId, message } = req.body;
@@ -497,7 +533,7 @@ export const sendVendorMessage = async (req, res) => {
         
         res.json({
             success: true,
-            message: "Message sent to vendor"
+            message: "Message sent to store"
         });
         
     } catch (error) {
@@ -505,7 +541,7 @@ export const sendVendorMessage = async (req, res) => {
     }
 };
 
-// 9. Seed FAQs endpoint handler (Admin only)
+// 10. Seed FAQs endpoint handler (Admin only)
 export const seedFAQs = async (req, res) => {
     try {
         await seedDefaultFAQs();
@@ -521,7 +557,7 @@ export const seedFAQs = async (req, res) => {
     }
 };
 
-// 10. Generate and save AI FAQs for a product (Vendor or Admin)
+// 11. Generate and save AI FAQs for a product (Store/Vendor or Admin)
 export const generateAIFAQ = async (req, res) => {
     try {
         const { productId } = req.body;
@@ -533,7 +569,8 @@ export const generateAIFAQ = async (req, res) => {
             return res.status(404).json({ error: 'Product not found' });
         }
         
-        const isOwner = product.vendorId === userId.toString();
+        // Check if user owns the store or is admin
+        const isOwner = product.store?._id?.toString() === userId.toString() || product.store?.toString() === userId.toString();
         if (!isOwner && userRole !== 'admin') {
             return res.status(403).json({ error: 'You can only generate FAQs for your own products' });
         }
@@ -544,9 +581,9 @@ export const generateAIFAQ = async (req, res) => {
             return res.status(500).json({ error: 'Failed to generate questions. Please try again.' });
         }
         
-        let productFAQ = await ProductFAQ.findOne({ productId });
+        let productFAQ = await ProductFAQ.findOne({ productId: product._id });
         if (!productFAQ) {
-            productFAQ = new ProductFAQ({ productId });
+            productFAQ = new ProductFAQ({ productId: product._id });
         }
         
         productFAQ.customQuestions = generatedQuestions.map((q, index) => ({
@@ -572,7 +609,7 @@ export const generateAIFAQ = async (req, res) => {
     }
 };
 
-// 11. Preview AI-generated questions (without saving)
+// 12. Preview AI-generated questions (without saving)
 export const previewAIFAQ = async (req, res) => {
     try {
         const { productId } = req.body;
@@ -599,7 +636,7 @@ export const previewAIFAQ = async (req, res) => {
     }
 };
 
-// 12. Manually edit a product's FAQ question
+// 13. Manually edit a product's FAQ question
 export const editProductFAQ = async (req, res) => {
     try {
         const { productId, questionId, question, answer } = req.body;
@@ -610,11 +647,12 @@ export const editProductFAQ = async (req, res) => {
             return res.status(404).json({ error: 'Product not found' });
         }
         
-        if (product.vendorId !== userId.toString() && req.user.role !== 'admin') {
+        const isOwner = product.store?._id?.toString() === userId.toString() || product.store?.toString() === userId.toString();
+        if (!isOwner && req.user.role !== 'admin') {
             return res.status(403).json({ error: 'Permission denied' });
         }
         
-        let productFAQ = await ProductFAQ.findOne({ productId });
+        let productFAQ = await ProductFAQ.findOne({ productId: product._id });
         if (!productFAQ) {
             return res.status(404).json({ error: 'No FAQs found for this product' });
         }
@@ -646,7 +684,7 @@ export const editProductFAQ = async (req, res) => {
     }
 };
 
-// 13. Delete a product's FAQ question
+// 14. Delete a product's FAQ question
 export const deleteProductFAQ = async (req, res) => {
     try {
         const { productId, questionId } = req.body;
@@ -657,11 +695,12 @@ export const deleteProductFAQ = async (req, res) => {
             return res.status(404).json({ error: 'Product not found' });
         }
         
-        if (product.vendorId !== userId.toString() && req.user.role !== 'admin') {
+        const isOwner = product.store?._id?.toString() === userId.toString() || product.store?.toString() === userId.toString();
+        if (!isOwner && req.user.role !== 'admin') {
             return res.status(403).json({ error: 'Permission denied' });
         }
         
-        let productFAQ = await ProductFAQ.findOne({ productId });
+        let productFAQ = await ProductFAQ.findOne({ productId: product._id });
         if (!productFAQ) {
             return res.status(404).json({ error: 'No FAQs found' });
         }
@@ -681,7 +720,7 @@ export const deleteProductFAQ = async (req, res) => {
     }
 };
 
-// 14. Reset product FAQs to category default
+// 15. Reset product FAQs to category default
 export const resetToDefaultFAQ = async (req, res) => {
     try {
         const { productId } = req.body;
@@ -692,16 +731,174 @@ export const resetToDefaultFAQ = async (req, res) => {
             return res.status(404).json({ error: 'Product not found' });
         }
         
-        if (product.vendorId !== userId.toString() && req.user.role !== 'admin') {
+        const isOwner = product.store?._id?.toString() === userId.toString() || product.store?.toString() === userId.toString();
+        if (!isOwner && req.user.role !== 'admin') {
             return res.status(403).json({ error: 'Permission denied' });
         }
         
-        await ProductFAQ.findOneAndDelete({ productId });
+        await ProductFAQ.findOneAndDelete({ productId: product._id });
         
         res.json({
             success: true,
             message: "Reset to category default FAQs"
         });
+        
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// ==================== VENDOR ENDPOINTS ====================
+
+// Get all messages for vendor (their store's chat sessions)
+export const getVendorSessions = async (req, res) => {
+    try {
+        const vendorId = req.user._id;
+        
+        // Find all stores owned by this vendor
+        const Store = await import('../models/Store.js');
+        const stores = await Store.default.find({ createdBy: vendorId });
+        const storeIds = stores.map(s => s._id);
+        
+        // Find all products in these stores
+        const products = await Product.find({ store: { $in: storeIds } });
+        const productIds = products.map(p => p._id);
+        
+        // Find all chat sessions for these products
+        const sessions = await ChatSession.find({
+            productId: { $in: productIds },
+            status: 'transferred_to_vendor'
+        })
+        .populate('userId', 'name email')
+        .populate('productId', 'name')
+        .sort({ updatedAt: -1 });
+        
+        res.json({ success: true, sessions });
+        
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// Get single chat session messages for vendor
+export const getVendorSessionMessages = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const vendorId = req.user._id;
+        
+        const session = await ChatSession.findOne({ sessionId })
+            .populate('userId', 'name email')
+            .populate('productId', 'name');
+        
+        if (!session) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+        
+        // Verify vendor owns this product's store
+        const product = await Product.findById(session.productId).populate('store');
+        if (product.store.createdBy.toString() !== vendorId.toString()) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+        
+        // Mark unread messages as read when vendor views them
+        session.messages.forEach(msg => {
+            if (msg.sender === 'user' && !msg.isRead) {
+                msg.isRead = true;
+            }
+        });
+        await session.save();
+        
+        res.json({ 
+            success: true, 
+            session: {
+                sessionId: session.sessionId,
+                buyer: session.userId,
+                product: session.productId,
+                messages: session.messages,
+                status: session.status
+            }
+        });
+        
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// Vendor reply to buyer
+export const vendorReplyToBuyer = async (req, res) => {
+    try {
+        const { sessionId, message } = req.body;
+        const vendorId = req.user._id;
+        
+        if (!sessionId || !message) {
+            return res.status(400).json({ error: 'SessionId and message required' });
+        }
+        
+        const session = await ChatSession.findOne({ sessionId });
+        if (!session) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+        
+        // Verify vendor owns this product's store
+        const product = await Product.findById(session.productId).populate('store');
+        if (!product || product.store.createdBy.toString() !== vendorId.toString()) {
+            return res.status(403).json({ error: 'You can only reply to messages for your products' });
+        }
+        
+        // Add vendor reply to messages
+        session.messages.push({
+            sender: 'vendor',
+            message: message,
+            timestamp: new Date(),
+            isRead: true
+        });
+        session.updatedAt = new Date();
+        await session.save();
+        
+        res.json({ 
+            success: true, 
+            message: 'Reply sent to buyer',
+            reply: {
+                message: message,
+                timestamp: new Date()
+            }
+        });
+        
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// Close chat session (vendor can close)
+export const closeChatSession = async (req, res) => {
+    try {
+        const { sessionId } = req.body;
+        const vendorId = req.user._id;
+        
+        const session = await ChatSession.findOne({ sessionId });
+        if (!session) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+        
+        // Verify vendor owns this product's store
+        const product = await Product.findById(session.productId).populate('store');
+        if (product.store.createdBy.toString() !== vendorId.toString()) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+        
+        session.status = 'closed';
+        session.messages.push({
+            sender: 'vendor',
+            message: 'This conversation has been closed. Thank you for contacting us!',
+            timestamp: new Date(),
+            isRead: true
+        });
+        await session.save();
+        
+        res.json({ success: true, message: 'Chat session closed' });
         
     } catch (error) {
         res.status(500).json({ error: error.message });
