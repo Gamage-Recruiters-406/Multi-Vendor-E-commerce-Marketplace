@@ -55,8 +55,10 @@ const productSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// Compound unique index: store + name (product name unique per store)
-productSchema.index({ store: 1, name: 1 }, { unique: true });
+productSchema.index(
+    { store: 1, name: 1 },
+    { unique: true, collation: { locale: 'en', strength: 2 } }
+);
 
 
 export default mongoose.model('Product', productSchema);
