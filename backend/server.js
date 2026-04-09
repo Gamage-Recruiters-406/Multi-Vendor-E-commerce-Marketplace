@@ -11,6 +11,9 @@ import userRoutes from './routes/userRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import storeRoutes from './routes/storeRoutes.js';
 
+import orderRoutes from './routes/orderRoutes.js';
+import announcementRoutes from './routes/announcementRoutes.js';
+
 const app = express();
 
 // Load environment variables
@@ -40,6 +43,9 @@ app.use(cors({ origin: true, credentials: true }));
 app.use('/api/v1/user', userRoutes);
 app.use('/api/v1/category', categoryRoutes);
 app.use('/api/v1/store', storeRoutes);
+app.use('/api/v1/orders', orderRoutes);
+app.use('/api/v1/announcements', announcementRoutes);
+
 
 // Test route
 app.get('/', (req, res) => {
