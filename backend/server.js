@@ -4,10 +4,12 @@ import 'colors';
 import connectDB from './config/db.js'; // make sure you have this file
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import { v2 as cloudinary } from 'cloudinary';
 
 // Import your routes (create these files later)
 import userRoutes from './routes/userRoutes.js';
 import chatbotRoutes from './routes/chatbotRoutes.js';
+import categoryRoutes from './routes/categoryRoutes.js';
 
 const app = express();
 
@@ -16,6 +18,17 @@ dotenv.config();
 
 // Connect to database
 connectDB();
+
+// Return "https" URLs by setting secure: true
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true
+});
+
+// Log the configuration
+// console.log("Cloudinary Configuration:", cloudinary.config());
 
 // Middleware
 app.use(express.json());
@@ -27,6 +40,7 @@ app.use(cors({ origin: true, credentials: true }));
 app.use('/api/v1/user', userRoutes);
 app.use('/api/v1/chatbot', chatbotRoutes);
 
+app.use('/api/v1/category', categoryRoutes);
 // Test route
 app.get('/', (req, res) => {
   res.send({ message: 'Welcome to Recruitment Management System API' });
