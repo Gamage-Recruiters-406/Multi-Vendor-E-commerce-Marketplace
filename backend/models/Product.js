@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import { generateSlug } from '../utils/slugify.js';
 
 const variantSchema = new mongoose.Schema({
     sku: { type: String, unique: true, sparse: true },
@@ -17,10 +16,6 @@ const productSchema = new mongoose.Schema(
             type: String,
             required: true,
             trim: true,
-        },
-        slug: {
-            type: String,
-            unique: true,
         },
         description: {
             type: String,
@@ -63,18 +58,5 @@ const productSchema = new mongoose.Schema(
 // Compound unique index: store + name (product name unique per store)
 productSchema.index({ store: 1, name: 1 }, { unique: true });
 
-// Generate slug from product name + store slug? Actually product slug should be unique across platform.
-// We'll use name + store id to generate slug (e.g., "iphone-15-storeid")
-productSchema.pre('validate', async function () {
-    if (this.isModified('name') || !this.slug) {
-        let baseSlug = generateSlug(this.name);
-        let slug = baseSlug;
-        let counter = 1;
-        while (await mongoose.model('Product').exists({ slug, _id: { $ne: this._id } })) {
-            slug = `${baseSlug}-${counter++}`;
-        }
-        this.slug = slug;
-    }
-});
 
 export default mongoose.model('Product', productSchema);

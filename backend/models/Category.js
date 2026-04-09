@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import { toPlural } from '../utils/pluralize.js';
 
 const categorySchema = new mongoose.Schema(
     {
@@ -8,7 +7,6 @@ const categorySchema = new mongoose.Schema(
             required: true,
             unique: true,
             trim: true,
-            set: (value) => toPlural(value), // Automatically pluralize before saving
         },
         parentCategory: {
             type: mongoose.Schema.Types.ObjectId,
