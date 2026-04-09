@@ -14,7 +14,11 @@ import {
     previewAIFAQ,
     editProductFAQ,
     deleteProductFAQ,
-    resetToDefaultFAQ
+    resetToDefaultFAQ,
+    getVendorSessions,
+    getVendorSessionMessages,
+    vendorReplyToBuyer,
+    closeChatSession
 } from '../controllers/chatbotController.js';
 import { requiredSignIn, isAdmin, isBuyer, isAdminOrVendor } from '../middlewares/authMiddleware.js';
 
