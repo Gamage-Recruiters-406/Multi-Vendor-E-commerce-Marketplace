@@ -1,28 +1,46 @@
 import Category from "../models/Category.js";
-import { findSimilarCategories } from "../utils/categorySimilarity.js";
 import { toPlural } from "../utils/pluralize.js";
 
+function formatCategoryName(name) {
+    return name
+        .trim()
+        .toLowerCase()
+        .split(" ")
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+}
+
 // Create category
-export const createCategory = async (req, res, next) => {
+export const createCategory = async (req, res) => {
     try {
         const {name, parentCategory} = req.body;
-        if (!name) {
-            return res.status(400).json({message: "Category name is required"});
-        }
-
-        // Check similarity
-        const similar = await findSimilarCategories(name, Category);
-        if (similar.length > 0) {
-            return res.status(409).json({
+        if (!name || !name.trim()) {
+            return res.status(400).json({
                 success: false,
-                message: 'A similar category already exists',
-                existingCategories: similar.map(cat => ({ id: cat._id, name: cat.name })),
+                message: "Category name is required"
             });
         }
 
-        const pluralName = toPlural(name);
+        // Step 1: normalize + pluralize
+        const plural = toPlural(name.trim().toLowerCase());
+
+        // Step 2: format (Capital Case)
+        const finalName = formatCategoryName(plural);
+
+        // Step 3: Check for existing category with the same name (case-insensitive)
+        const existing = await Category.findOne({
+            name: { $regex: `^${finalName}$`, $options: "i" }
+        });
+
+        if (existing) {
+            return res.status(409).json({
+                success: false,
+                message: "Category already exists"
+            });
+        }
+
         const category = await Category.create({
-            name: pluralName,
+            name: finalName,
             parentCategory: parentCategory || null,
             createdBy: req.user._id,
         });
@@ -31,13 +49,13 @@ export const createCategory = async (req, res, next) => {
             success: true,
             data: category,
         });
+        
     } catch (error) {
-        if (error.code === 11000) { // Duplicate key error
-            return res.status(409).json({ 
-                success: false, 
-                message: 'Category name already exists (case-insensitive)' 
-            });
-        }
-        res.status(500).json({ success: false, message: error.message });
+        console.error(error);
+
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
     }
 };

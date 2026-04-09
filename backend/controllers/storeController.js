@@ -1,20 +1,43 @@
 import Store from '../models/Store.js';
 import { uploadImage } from '../middlewares/imageUploader.js';
 
+// Capitalize each word
+function formatName(name) {
+    return name
+        .trim()
+        .toLowerCase()
+        .split(" ")
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+}
+
+// Create Store
 export const createStore = async (req, res) => {
     try {
         const { name, description } = req.body;
         const vendorId = req.user._id;
 
-        if (!name) {
-            return res.status(400).json({ success: false, message: 'Store name is required' });
-        }
+       if (!name || !name.trim()) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Store name is required' 
+            });
+       }
 
-        // Check if store name already exists
-        const existingStore = await Store.findOne({ name });
-        if (existingStore) {
-            return res.status(409).json({ success: false, message: 'Store name already taken' });
-        }
+       // Step 1: format
+       const finalName = formatName(name);
+
+       // Step 2: case-insensitive check
+       const existingStore = await Store.findOne({
+            name: { $regex: `^${finalName}$`, $options: "i" }
+       });
+
+       if (existingStore) {
+            return res.status(409).json({ 
+                success: false, 
+                message: 'Store already exists' 
+            });
+       }
 
         let logoUrl = '';
         if (req.file) {
@@ -26,18 +49,24 @@ export const createStore = async (req, res) => {
         }
 
         const store = await Store.create({
-            name,
+            name: finalName,
             description: description || '',
             logo: logoUrl,
             vendor: vendorId,
             status: 'active',
         });
 
-        res.status(201).json({ success: true, data: store });
+        res.status(201).json({ 
+            success: true, 
+            data: store 
+        });
+
     } catch (error) {
-        if (error.code === 11000) {
-            return res.status(409).json({ success: false, message: 'Store name already exists' });
-        }
-        res.status(500).json({ success: false, message: error.message });
+        console.error(error);
+
+        res.status(500).json({ 
+            success: false, 
+            message: error.message 
+        });
     }
 };
