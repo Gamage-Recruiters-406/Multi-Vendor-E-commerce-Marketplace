@@ -59,3 +59,44 @@ export const createCategory = async (req, res) => {
         });
     }
 };
+
+
+
+// Build tree recursively
+const buildCategoryTree = (categories, parentId = null) => {
+    return categories
+        .filter(cat => {
+            return String(cat.parentCategory) === String(parentId);
+        })
+        .map(cat => ({
+            _id: cat._id,
+            name: cat.name,
+            parentCategory: cat.parentCategory,
+            children: buildCategoryTree(categories, cat._id)
+        }));
+};
+
+// Get all categories (tree)
+export const getAllCategories = async (req, res) => {
+    try {
+        const categories = await Category.find({})
+            .select("-__v")
+            .lean();
+
+        const categoryTree = buildCategoryTree(categories, null);
+
+        res.status(200).json({
+            success: true,
+            count: categories.length,
+            data: categoryTree
+        });
+
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+}
