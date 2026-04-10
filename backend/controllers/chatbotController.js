@@ -25,13 +25,14 @@ async function getGroqAnswer(userQuestion, product) {
     const categoryName = product.category?.name || 'General';
     const storeName = product.store?.name || 'Vendor';
     
-    // Build specifications string if variants exist
+    // Build specifications string from attributes
     let specsText = '';
-    if (product.variants && product.variants.length > 0) {
-        const sizes = [...new Set(product.variants.map(v => v.attributes?.size).filter(s => s))];
-        const colors = [...new Set(product.variants.map(v => v.attributes?.color).filter(c => c))];
-        if (sizes.length) specsText += `\n- Available Sizes: ${sizes.join(', ')}`;
-        if (colors.length) specsText += `\n- Available Colors: ${colors.join(', ')}`;
+    if (product.attributes && product.attributes.length > 0) {
+        product.attributes.forEach(attr => {
+            if (attr.name && attr.values && attr.values.length > 0) {
+                specsText += `\n- ${attr.name}: ${attr.values.join(', ')}`;
+            }
+        });
     }
     
     const prompt = `You are a helpful customer support assistant for an e-commerce marketplace.
