@@ -1,14 +1,18 @@
 import mongoose from 'mongoose';
 
-const variantSchema = new mongoose.Schema({
-    sku: { type: String, unique: true, sparse: true },
-    attributes: {
-        size: { type: String, default: '' },
-        color: { type: String, default: '' }
+const attributeSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true,
+        trim: true,
     },
-    additionalPrice: { type: Number, default: 0 }, // price difference from base price
-    stock: { type: Number, required: true, min: 0, default: 0 },
-});
+    values: [
+        {
+            type: String,
+            trim: true,
+        }
+    ]
+}, { _id: false });
 
 const productSchema = new mongoose.Schema(
     {
@@ -39,7 +43,7 @@ const productSchema = new mongoose.Schema(
         images: [{
             type: String,
         }],
-        variants: [variantSchema],
+        attributes: [attributeSchema],
         stock: {
             type: Number,
             required: true,
