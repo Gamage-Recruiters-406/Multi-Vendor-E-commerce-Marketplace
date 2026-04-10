@@ -15,7 +15,7 @@ function formatName(name) {
 // Create Product
 export const createProduct = async (req, res) => {
     try {
-        const { name, description, price, category, store, variants, stock } = req.body;
+        const { name, description, price, category, store, stock } = req.body;
 
         // Basic validation
         if(!name || !price || !category || !store) {
@@ -37,7 +37,7 @@ export const createProduct = async (req, res) => {
             });
         }
 
-        // manual duplicate check
+        // Duplicate check
         const existing = await Product.findOne({
             store,
             name: { $regex: `^${finalName}$`, $options: "i" }
@@ -48,6 +48,15 @@ export const createProduct = async (req, res) => {
                 success: false,
                 message: "Product with the same name already exists in this store"
             });
+        }
+
+        // Parse Attributes
+        let parsedAttributes = [];
+
+        if (req.body.attributes) {
+            parsedAttributes = typeof req.body.attributes === "string"
+                ? JSON.parse(req.body.attributes)
+                : req.body.attributes;
         }
 
         // multiple image upload
@@ -68,7 +77,7 @@ export const createProduct = async (req, res) => {
             category,
             store,
             stock: stock || 0,
-            variants: variants || [],
+            attributes: parsedAttributes,
             images: imageUrls
         });
 
