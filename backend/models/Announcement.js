@@ -91,33 +91,31 @@ const announcementSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-announcementSchema.pre("validate", function (next) {
+announcementSchema.pre("validate", function () {
   if (this.expiryDate && this.publishDate && this.expiryDate <= this.publishDate) {
     this.invalidate("expiryDate", "Expiry date must be after publish date");
   }
 
   if (this.status === "Archived" || this.status === "Draft") {
-    return next();
+    return;
   }
 
   const now = new Date();
 
   if (this.expiryDate && this.expiryDate <= now) {
     this.status = "Expired";
-    return next();
+    return;
   }
 
   if (this.publishDate && this.publishDate > now) {
     this.status = "Scheduled";
-    return next();
+    return;
   }
 
   this.status = "Published";
   if (!this.publishedAt) {
     this.publishedAt = now;
   }
-
-  next();
 });
 
 announcementSchema.index({ status: 1, publishDate: -1 });

@@ -28,6 +28,23 @@ const normalizeAudience = (targetAudience) => {
   return cleaned;
 };
 
+const mapAudienceAlias = (value) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) return "All Users";
+
+  if (normalized === "all" || normalized === "all users") return "All Users";
+  if (normalized === "vendors" || normalized === "vendors only" || normalized === "vendor") {
+    return "Vendors Only";
+  }
+  if (normalized === "buyers" || normalized === "buyers only" || normalized === "buyer") {
+    return "Buyers Only";
+  }
+  if (normalized === "premium" || normalized === "premium members") return "Premium Members";
+  if (normalized === "new" || normalized === "new members") return "New Members";
+
+  return String(value).trim();
+};
+
 const validateAudience = (audience) => {
   return audience.every((item) => ANNOUNCEMENT_AUDIENCES.includes(item));
 };
@@ -100,11 +117,15 @@ const parseBasePayload = (body) => {
   const title = body.title ? String(body.title).trim() : "";
   const description = body.description ? String(body.description).trim() : "";
   const type = body.type ? String(body.type).trim() : "";
-  const targetAudience = normalizeAudience(body.targetAudience);
-  const publishDate = body.publishDate ? new Date(body.publishDate) : new Date();
-  const expiryDate = body.expiryDate ? new Date(body.expiryDate) : undefined;
+  const rawAudience = body.targetAudience ?? body.audience;
+  const targetAudience = normalizeAudience(rawAudience).map(mapAudienceAlias);
+  const publishDateInput = body.publishDate ?? body.schedule;
+  const expiryDateInput = body.expiryDate ?? body.expiry;
+  const publishDate = publishDateInput ? new Date(publishDateInput) : new Date();
+  const expiryDate = expiryDateInput ? new Date(expiryDateInput) : undefined;
+  const isPinnedFromLegacyPriority = Number(body.priority) > 0;
   const priorityVisibility = {
-    isPinned: Boolean(body.priorityVisibility?.isPinned),
+    isPinned: Boolean(body.priorityVisibility?.isPinned) || isPinnedFromLegacyPriority,
     sendEmailNotification: Boolean(body.priorityVisibility?.sendEmailNotification),
     showHomepageBanner: Boolean(body.priorityVisibility?.showHomepageBanner),
   };
