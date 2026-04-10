@@ -101,3 +101,36 @@ export const createProduct = async (req, res) => {
         });
     }
 };
+
+
+
+// Get Single Product
+export const getSingleProduct = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const product = await Product.findById(id)
+        .populate("store", "name logo")
+        .populate("category", "name");
+
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: product
+        });
+
+    } catch (error) {
+        console.error(error);
+        
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+}
