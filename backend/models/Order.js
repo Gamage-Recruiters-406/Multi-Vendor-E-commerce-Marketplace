@@ -290,7 +290,6 @@ orderSchema.pre("validate", function (next) {
   next();
 });
 
-orderSchema.index({ orderNumber: 1 }, { unique: true });
 orderSchema.index({ buyer: 1, createdAt: -1 });
 orderSchema.index({ "vendorOrders.vendor": 1, createdAt: -1 });
 
