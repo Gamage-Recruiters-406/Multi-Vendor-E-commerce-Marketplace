@@ -5,6 +5,8 @@ import {
 import SigninPage from './pages/login/SigninPage'
 import SignupPage from './pages/login/SignupPage'
 import './App.css'
+import VendorProductManagemnt from './pages/Vendor/ProductManagement'
+import Products from './pages/Vendor/Products'
 
 
 
@@ -13,11 +15,7 @@ function App() {
     <>
       <Router>
         <Routes>
-
-          {/* Auth Routes */}
-          <Route path="/login" element={<SigninPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          
+          <Route path="/" element={<Footer />} />
         </Routes>
       </Router>
     </>
