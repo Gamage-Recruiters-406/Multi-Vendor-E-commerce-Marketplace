@@ -2,7 +2,8 @@ import {
   BrowserRouter as Router, 
   Routes, 
   Route } from 'react-router-dom'
-import Footer from './components/Layouts/Footer'
+import SigninPage from './pages/login/SigninPage'
+import SignupPage from './pages/login/SignupPage'
 import './App.css'
 
 
@@ -12,7 +13,11 @@ function App() {
     <>
       <Router>
         <Routes>
-          <Route path="/" element={<Footer />} />
+
+          {/* Auth Routes */}
+          <Route path="/login" element={<SigninPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          
         </Routes>
       </Router>
     </>
