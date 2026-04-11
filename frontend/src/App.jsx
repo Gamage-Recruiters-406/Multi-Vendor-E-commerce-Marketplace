@@ -15,7 +15,20 @@ function App() {
     <>
       <Router>
         <Routes>
+
+          {/* Home Page */}
+          <Route path="/" element={<h1>Home Page</h1>} />
+
+          {/* Authentication Routes */}
+          <Route path="/login" element={<SigninPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+
+          {/* Layout */}
           <Route path="/" element={<Footer />} />
+
+          {/* Vendor Routes */}
+          <Route path="/vendor/product_management" element={<VendorProductManagemnt />} />
+          <Route path="/vendor/products" element={<Products />} />
         </Routes>
       </Router>
     </>
