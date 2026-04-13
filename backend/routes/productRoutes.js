@@ -1,5 +1,5 @@
 import express from 'express';
-import { createProduct, getAllProducts, getSingleProduct } from '../controllers/productController.js';
+import { createProduct, deleteProduct, getAllProducts, getSingleProduct } from '../controllers/productController.js';
 import { requiredSignIn, isVendor } from '../middlewares/authMiddleware.js';
 import { upload } from '../middlewares/imageUploader.js';
 
@@ -13,5 +13,8 @@ router.get('/', getAllProducts);
 
 // Get Single product
 router.get("/:id", getSingleProduct);
+
+// Delete product
+router.delete("/:id", requiredSignIn, isVendor, deleteProduct);
 
 export default router;
