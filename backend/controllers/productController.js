@@ -1,5 +1,6 @@
 import Product from "../models/Product.js";
 import Store from "../models/Store.js";
+import Category from "../models/Category.js";
 import { uploadImage } from "../middlewares/imageUploader.js";
 
 // Capitalize each word
@@ -134,3 +135,68 @@ export const getSingleProduct = async (req, res) => {
         });
     }
 }
+
+
+
+// Get All Products
+export const getAllProducts = async (req, res) => {
+    try {
+        const { keyword, category, store } = req.query;
+
+        let query = {};
+
+        // Search
+        if (keyword) {
+            query.$or = [
+                { name: { $regex: keyword, $options: "i" } },
+                { description: { $regex: keyword, $options: "i" } }
+            ];
+        }
+
+        // Store filter
+        if (store) {
+            query.store = store;
+        }
+
+        // Category filter
+        if (category) {
+            // get all categories
+            const categories = await Category.find({}).lean();
+
+            // recursive function
+            const getAllChildIds = (parentId) => {
+                let ids = [parentId];
+
+                categories.forEach(cat => {
+                    if (cat.parent && cat.parent.toString() === parentId.toString()) {
+                        ids = ids.concat(getAllChildIds(cat._id));
+                    }
+                });
+
+                return ids;
+            };
+
+            const categoryIds = getAllChildIds(category);
+
+            query.category = { $in: categoryIds };
+        }
+
+        const products = await Product.find(query)
+        .populate("store", "name logo")
+        .populate("category", "name")
+        .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            count: products.length,
+            data: products
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+};
