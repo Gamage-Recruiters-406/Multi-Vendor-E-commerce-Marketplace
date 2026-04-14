@@ -257,4 +257,48 @@ export const getProductsByStore = async (req, res) => {
             message: "Server error"
         });
     }
-}
+};
+
+
+
+// Get products by category
+export const getProductsByCategory = async (req, res) => {
+    try {
+        const { categoryId } = req.params;
+
+        const categories = await Category.find({}).lean();
+
+        const getAllChildIds = (parentId) => {
+            let ids = [parentId];
+
+            categories.forEach(cat => {
+                if (String(cat.parentCategory) === String(parentId)) {
+                    ids = ids.concat(getAllChildIds(cat._id));
+                }
+            });
+            return ids;
+        };
+
+        const categoryIds = getAllChildIds(categoryId);
+
+        const products = await Product.find({
+            category: { $in: categoryIds }
+        })
+            .populate("store", "name logo")
+            .populate("category", "name")
+            .sort({ createdAt: -1 });
+        
+        res.status(200).json({
+            success: true,
+            count: products.length,
+            data: products
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+};
