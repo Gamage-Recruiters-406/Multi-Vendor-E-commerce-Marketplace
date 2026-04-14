@@ -1,5 +1,5 @@
 import express from 'express';
-import { createProduct, deleteProduct, getAllProducts, getProductsByCategory, getProductsByStore, getSingleProduct } from '../controllers/productController.js';
+import { createProduct, deleteProduct, getAllProducts, getProductsByCategory, getProductsByStore, getSingleProduct, updateProduct } from '../controllers/productController.js';
 import { requiredSignIn, isVendor } from '../middlewares/authMiddleware.js';
 import { upload } from '../middlewares/imageUploader.js';
 
@@ -22,5 +22,8 @@ router.get("/:id", getSingleProduct);
 
 // Delete product
 router.delete("/:id", requiredSignIn, isVendor, deleteProduct);
+
+// Update product
+router.put("/:id", requiredSignIn, isVendor, upload.array('images', 5), updateProduct);
 
 export default router;

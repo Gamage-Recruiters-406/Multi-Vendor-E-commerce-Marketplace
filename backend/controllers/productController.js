@@ -302,3 +302,108 @@ export const getProductsByCategory = async (req, res) => {
         });
     }
 };
+
+
+
+// Update Product
+export const updateProduct = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const product = await Product.findById(id);
+
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found"
+            });
+        }
+
+        // Check store ownership
+        const store = await Store.findById(product.store);
+
+        if (!store) {
+            return res.status(404).json({
+                success: false,
+                message: "Store not found"
+            });
+        }
+
+        if (String(store.vendor) !== String(req.user._id)) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not authorized to update this product"
+            });
+        }
+
+        const { name, description, price, category, stock } = req.body;
+
+        let finalName = product.name;
+
+        if (name) {
+            finalName = name
+                .trim()
+                .toLowerCase()
+                .split(" ")
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(" ");
+        }
+
+        // Duplicate check
+        if (name) {
+            const existing = await Product.findOne({
+                _id: { $ne: id },
+                store: store || product.store,
+                name: { $regex: `^${finalName}$`, $options: "i" }
+            });
+
+            if (existing) {
+                return res.status(409).json({
+                    success: false,
+                    message: "Product with the same name already exists in this store"
+                });
+            }
+        }
+
+        let parsedAttributes = product.attributes;
+
+        if (req.body.attributes) {
+            parsedAttributes = typeof req.body.attributes === "string"
+                ? JSON.parse(req.body.attributes)
+                : req.body.attributes;
+        }
+
+        let imageUrls = product.images;
+
+        if (req.files && req.files.length > 0) {
+            imageUrls = await Promise.all(
+                req.files.map(file =>
+                    uploadImage(file.buffer, "marketplace/products")
+                )
+            );
+        }
+
+        // Update
+        product.name = finalName;
+        product.description = description || product.description;
+        product.price = price || product.price;
+        product.category = category || product.category;
+        product.stock = stock ?? product.stock;
+        product.attributes = parsedAttributes;
+        product.images = imageUrls;
+
+        await product.save();
+
+        res.status(200).json({
+            success: true,
+            data: product
+        });
+        
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+};
