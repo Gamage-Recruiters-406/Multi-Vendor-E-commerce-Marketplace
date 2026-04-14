@@ -1,5 +1,5 @@
 import express from 'express';
-import { createProduct, deleteProduct, getAllProducts, getSingleProduct } from '../controllers/productController.js';
+import { createProduct, deleteProduct, getAllProducts, getProductsByStore, getSingleProduct } from '../controllers/productController.js';
 import { requiredSignIn, isVendor } from '../middlewares/authMiddleware.js';
 import { upload } from '../middlewares/imageUploader.js';
 
@@ -10,6 +10,9 @@ router.post('/', requiredSignIn, isVendor, upload.array('images', 5), createProd
 
 // Get all products
 router.get('/', getAllProducts);
+
+// Get products by store
+router.get('/store/:storeId', getProductsByStore);
 
 // Get Single product
 router.get("/:id", getSingleProduct);

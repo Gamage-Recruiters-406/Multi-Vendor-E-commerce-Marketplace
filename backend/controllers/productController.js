@@ -232,3 +232,29 @@ export const deleteProduct = async (req, res) => {
         });
     }
 }
+
+
+
+// Get products by store
+export const getProductsByStore = async (req, res) => {
+    try {
+        const { storeId } = req.params;
+
+        const products = await Product.find({ store: storeId })
+            .populate("category", "name")
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            count: products.length,
+            data: products
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+}
