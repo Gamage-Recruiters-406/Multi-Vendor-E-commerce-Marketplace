@@ -1,6 +1,7 @@
 import Product from "../models/Product.js";
 import Store from "../models/Store.js";
 import Category from "../models/Category.js";
+import { v2 as cloudinary } from "cloudinary";
 import { uploadImage } from "../middlewares/imageUploader.js";
 
 // Capitalize each word
@@ -215,6 +216,25 @@ export const deleteProduct = async (req, res) => {
                 success: false,
                 message: "Product not found"
             });
+        }
+
+        // Delete images from cloudinary
+        if (product.images && product.images.length > 0) {
+            await Promise.all(
+                product.images.map(async (url) => {
+                    try {
+                        const parts = url.split("/");
+                        const fileName = parts.pop().split(".")[0];
+                        const folder = parts.slice(parts.indexOf("upload") + 1).join("/");
+
+                        const publicId = `${folder}/${fileName}`;
+
+                        await cloudinary.uploader.destroy(publicId);
+                    } catch (error) {
+                        console.error("Error deleting image from Cloudinary:", error);
+                    }
+                })
+            );
         }
 
         await product.deleteOne();
