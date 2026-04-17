@@ -4,6 +4,7 @@ import {
   Route } from 'react-router-dom'
 import SigninPage from './pages/login/SigninPage'
 import SignupPage from './pages/login/SignupPage'
+import Footer from './components/Layouts/Footer'
 import './App.css'
 import VendorProductManagemnt from './pages/Vendor/ProductManagement'
 import Products from './pages/Vendor/Products'
@@ -27,6 +28,7 @@ function App() {
           <Route path="/" element={<Footer />} />
 
           {/* Vendor Routes */}
+          <Route path="/" element={<Footer />} />
           <Route path="/vendor/product_management" element={<VendorProductManagemnt />} />
           <Route path="/vendor/products" element={<Products />} />
         </Routes>
