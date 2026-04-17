@@ -140,10 +140,14 @@ export default function Header({ userRole, userName }) {
 						config.tone === "buyer" ? "md:flex-[1.2]" : "md:flex-[0.9]"
 					}`}
 				>
-					{config.tone === "buyer" && <div className={ui.search}>{config.placeholder}</div>}
+					{config.tone === "buyer" && (
+						<input
+							type="search"
+							placeholder={config.placeholder}
+						className={`${ui.search} focus:border-emerald-500 focus:outline-none`}					/>
+				)}
 
-				{config.tone === "vendor" && (
-					<button type="button" className={ui.cta}>
+				{config.tone === "vendor" && (					<button type="button" className={ui.cta}>
 						{config.cta}
 					</button>
 				)}
