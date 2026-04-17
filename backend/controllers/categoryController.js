@@ -76,6 +76,8 @@ const buildCategoryTree = (categories, parentId = null) => {
         }));
 };
 
+
+
 // Get all categories (tree)
 export const getAllCategories = async (req, res) => {
     try {
@@ -100,3 +102,73 @@ export const getAllCategories = async (req, res) => {
         });
     }
 }
+
+
+
+// Update category
+export const updateCategory = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, parentCategory } = req.body;
+
+        const category = await Category.findById(id);
+
+        if (!category) {
+            return res.status(404).json({
+                success: false,
+                message: "Category not found"
+            });
+        }
+
+        // Format name
+        let finalName = category.name;
+
+        if (name) {
+            const plural = toPlural(name.trim().toLowerCase());
+            finalName = formatCategoryName(plural);
+        }
+
+        // Duplicate Check
+        if (name) {
+            const existing = await Category.findOne({
+                _id: { $ne: id },
+                name: { $regex: `^${finalName}$`, $options: "i" }
+            });
+
+            if (existing) {
+                return res.status(409).json({
+                    success: false,
+                    message: "Category already exists"
+                });
+            }
+        }
+
+        // Prevent self-parent
+        if (parentCategory && parentCategory === id) {
+            return res.status(400).json({
+                success: false,
+                message: "Category cannot be its own parent"
+            });
+        }
+
+        if (parentCategory !== undefined) {
+            category.parentCategory = parentCategory;
+        }
+
+        category.name = finalName;
+
+        await category.save();
+
+        res.status(200).json({
+            success: true,
+            data: category
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+};
