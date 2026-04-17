@@ -1,46 +1,119 @@
 import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import axios from "axios";
 
 function Categories() {
   const [categories, setCategories] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
+  const [parentCategory, setParentCategory] = useState("");
+
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+  const API_VERSION = import.meta.env.VITE_API_VERSION || '/api/v1';
+
+
+  const renderCategoryOptions = (categories, level = 0) => {
+    return categories.map((cat) => (
+      <React.Fragment key={cat._id}>
+        <option value={cat._id}>
+          {`${"↳ ".repeat(level)}${cat.name}`}
+        </option>
+
+        {cat.children && cat.children.length > 0 &&
+          renderCategoryOptions(cat.children, level + 1)}
+      </React.Fragment>
+    ));
+  };
+
+  const renderCategoryTree = (nodes, level = 0) => {
+    return nodes.map((cat) => (
+      <div key={cat._id}>
+        <div
+          className="flex items-center justify-between px-3 py-2 bg-gray-100 rounded-xl mb-2"
+          style={{ marginLeft: `${level * 20}px` }}
+        >
+          <span className="text-sm">
+            {level > 0 && "↳ "}
+            {cat.name}
+          </span>
+
+          <button
+            onClick={() => handleDelete(cat._id)}
+            className="text-gray-400 hover:text-red-500 transition"
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Render children recursively */}
+        {cat.children && cat.children.length > 0 &&
+          renderCategoryTree(cat.children, level + 1)}
+      </div>
+    ));
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await axios.get(
+        `${API_BASE_URL}${API_VERSION}/category`,
+        {withCredentials: true}
+      );
+
+      console.log("Response : ", res.data);
+      // const flat = flattenCategories(res.data.data);
+      setCategories(res.data.data);
+      
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setTimeout(() => {
-      setCategories([
-        "Electronics",
-        "Fashion",
-        "Home & Garden",
-        "Sports",
-        "Books",
-        "Beauty",
-      ]);
-      setLoading(false);
-    }, 1200);
+    fetchCategories();
   }, []);
 
-  const handleAdd = () => {
-  const trimmed = input.trim();
-  if (!trimmed) return;
+  const handleAdd = async() => {
+    const trimmed = input.trim();
+    if (!trimmed) return;
 
-  setCategories(prev => {
-    const exists = prev.some(
-      c => c.toLowerCase() === trimmed.toLowerCase()
-    );
-    if (exists) {
-      alert("Category already exists!");
-      return prev;
+    try {
+      await axios.post(
+        `${API_BASE_URL}${API_VERSION}/category`,
+        {
+          name: trimmed,
+          parentCategory: parentCategory || null,
+        },
+        { withCredentials: true }
+      );
+
+      setInput("");
+      setParentCategory(""); // reset dropdown
+      await fetchCategories(); // keep data consistent
+
+    } catch (err) {
+      console.error("Error adding category:", err);
+
+      if (err.response?.status === 409) {
+        alert("Category already exists!");
+      }
     }
-    return [...prev, trimmed];
-  });
+  };
 
-  setInput("");
-};
+  const handleDelete = (id) => {
+    if (!window.confirm("Delete this category?")) return;
 
-  const handleDelete = (name) => {
-    if (!window.confirm(`Delete \"${name}\"?`)) return;
-    setCategories(categories.filter((c) => c !== name));
+    const removeFromTree = (nodes) => {
+      return nodes
+        .filter((n) => n._id !== id)
+        .map((n) => ({
+          ...n,
+          children: removeFromTree(n.children || []),
+        }));
+    };
+
+    setCategories((prev) => removeFromTree(prev));
   };
 
   return (
@@ -56,6 +129,16 @@ function Categories() {
         {/* Create */}
         <div className="bg-white p-6 rounded-2xl shadow-sm">
           <h2 className="text-lg font-medium mb-4">Create Category</h2>
+          <label className="block mb-1">Parent Category</label>
+          <select
+            value={parentCategory}
+            onChange={(e) => setParentCategory(e.target.value)}
+            className="w-full border rounded-xl px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-[#1A9F73]"
+          >
+            <option value="">No Parent (Top Level)</option>
+
+            {renderCategoryOptions(categories)}
+          </select>
           <label>Category Name</label>
           <input
             value={input}
@@ -65,6 +148,7 @@ function Categories() {
           />
           <button
             onClick={handleAdd}
+            disabled={!input.trim()}
             className="w-full bg-[#1A9F73] hover:bg-green-600 text-white py-2 rounded-xl transition"
           >
             + Add Category
@@ -87,20 +171,7 @@ function Categories() {
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {categories.map((cat) => (
-                <div
-                  key={cat}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full shadow-sm"
-                >
-                  <span className="text-sm">{cat}</span>
-                  <button
-                    onClick={() => handleDelete(cat)}
-                    className="text-gray-400 hover:text-red-500 transition"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
+              {renderCategoryTree(categories)}
             </div>
           )}
         </div>
