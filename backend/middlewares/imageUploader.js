@@ -17,13 +17,13 @@ export const uploadImage = (fileBuffer, folder = 'uploads') => {
       {
         folder,
         use_filename: true,
-        unique_filename: false,
+        unique_filename: true,
         overwrite: true,
       },
       (error, result) => {
         if (error) return reject(error);
         console.log('Cloudinary upload result:', result);
-        resolve(result.public_id);
+        resolve(result.secure_url);
       }
     );
 
