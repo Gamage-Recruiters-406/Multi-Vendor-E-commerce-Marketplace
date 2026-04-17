@@ -1,4 +1,5 @@
 import Category from "../models/Category.js";
+import Product from "../models/Product.js";
 import { toPlural } from "../utils/pluralize.js";
 
 function formatCategoryName(name) {
@@ -172,3 +173,69 @@ export const updateCategory = async (req, res) => {
         });
     }
 };
+
+
+
+// Delete category
+export const deleteCategory = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const category = await Category.findById(id);
+
+        if (!category) {
+            return res.status(404).json({
+                success: false,
+                message: "Category not found"
+            });
+        }
+
+        const parentId = category.parentCategory;
+
+        // Step 1: Move child categories
+        await Category.updateMany(
+            { parentCategory: id },
+            { parentCategory: parentId || null }
+        );
+
+        // Step 2: Handle products
+        if (parentId) {
+            // Move products to parent category
+            await Product.updateMany(
+                { category: id },
+                { category: parentId }
+            );
+        } else {
+            // No parent → move to "Uncategorized"
+            let uncategorized = await Category.findOne({ 
+                name: { $regex: `^Uncategorized$`, $options: "i" }
+             });
+
+            if (!uncategorized) {
+                uncategorized = await Category.create({
+                    name: "Uncategorized",
+                    createdBy: req.user._id,
+                });
+            }
+
+            await Product.updateMany(
+                { category: id },
+                { category: uncategorized._id }
+            );
+        }
+
+        // Step 3: Delete category
+        await category.deleteOne();
+
+        res.status(200).json({
+            success: true,
+            message: "Category deleted successfully"
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+}
