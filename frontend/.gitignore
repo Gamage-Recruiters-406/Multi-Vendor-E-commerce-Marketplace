@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Logs
 logs
 *.log
@@ -27,33 +26,3 @@ dist-ssr
 # dotenv environment variable files
 !.env.example
 .env
-=======
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# dotenv environment variable files
-!.env.example
-.env
->>>>>>> d0fb591b0a93863c920a4ef4785993f39f2af3cc
