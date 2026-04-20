@@ -331,7 +331,7 @@ export default function SigninPage() {
           <p className="text-center text-[14px] text-gray-600 mt-4">
             Don't have an account?{' '}
             <Link
-              to="/signup"
+              to="/register"
               className="text-teal-600 hover:text-teal-700 font-semibold transition"
             >
               Sign up here

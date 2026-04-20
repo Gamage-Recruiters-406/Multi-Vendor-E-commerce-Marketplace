@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import axios from "axios";
+import { showToast } from "../../utils/toast";
 
 function Categories() {
   const [categories, setCategories] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [parentCategory, setParentCategory] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
+  const [selectedName, setSelectedName] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
   const API_VERSION = import.meta.env.VITE_API_VERSION || '/api/v1';
@@ -38,7 +43,7 @@ function Categories() {
           </span>
 
           <button
-            onClick={() => handleDelete(cat._id)}
+            onClick={() => openDeleteModal(cat._id, cat.name)}
             className="text-gray-400 hover:text-red-500 transition"
           >
             <X size={14} />
@@ -92,28 +97,54 @@ function Categories() {
       setParentCategory(""); // reset dropdown
       await fetchCategories(); // keep data consistent
 
+      showToast("success", "Category created");
+
     } catch (err) {
       console.error("Error adding category:", err);
 
       if (err.response?.status === 409) {
-        alert("Category already exists!");
+        showToast("error", "This category already exists");
+    
+      } else {
+        showToast("error", "Something went wrong. Please try again");
+  
       }
     }
   };
 
-  const handleDelete = (id) => {
-    if (!window.confirm("Delete this category?")) return;
+  const openDeleteModal = (id, name) => {
+    setSelectedId(id);
+    setSelectedName(name);
+    setShowModal(true);
+  };
 
-    const removeFromTree = (nodes) => {
-      return nodes
-        .filter((n) => n._id !== id)
-        .map((n) => ({
-          ...n,
-          children: removeFromTree(n.children || []),
-        }));
-    };
+  const confirmDelete = async () => {
+    setDeleting(true);
+    try {
+      await axios.delete(
+        `${API_BASE_URL}${API_VERSION}/category/${selectedId}`, 
+        { withCredentials: true }
+      );
+      setDeleting(false);
+      await fetchCategories();
 
-    setCategories((prev) => removeFromTree(prev));
+      showToast("success", "Category has been deleted.");
+
+
+    } catch (err) {
+      if (err.response?.status === 400) {
+        showToast("error", "Cannot delete category with subcategories");
+        
+      } else {
+        console.error(err);
+        showToast("error", "Failed to delete category.");
+        
+      }
+    } finally {
+      setShowModal(false);
+      setSelectedId(null);
+      setDeleting(false);
+    }
   };
 
   return (
@@ -149,7 +180,7 @@ function Categories() {
           <button
             onClick={handleAdd}
             disabled={!input.trim()}
-            className="w-full bg-[#1A9F73] hover:bg-green-600 text-white py-2 rounded-xl transition"
+            className="w-full bg-[#1A9F73] hover:bg-green-800 text-white py-2 rounded-xl transition"
           >
             + Add Category
           </button>
@@ -176,7 +207,37 @@ function Categories() {
           )}
         </div>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-80 shadow-lg">
+            
+            <h2 className="text-lg font-semibold mb-2">Delete Category</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Are you sure you want to delete "{selectedName}"?
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="px-4 py-2 text-sm rounded-lg bg-red-500 text-white hover:bg-red-600"
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+    
   );
 }
 export default Categories;
