@@ -206,6 +206,68 @@ export const createOrder = async (req, res) => {
       { path: "vendorOrders.vendor", select: "fullname email phone role" },
     ]);
 
+    // ADD NOTIFICATIONS HERE
+    try {
+      // 1. Send notification to BUYER
+      await notificationService.sendToUser(order.buyer._id, {
+        type: 'order_placed',
+        title: 'Order Placed Successfully',
+        message: `Your order #${order.orderNumber} has been placed successfully.`,
+        data: {
+          orderId: order._id,
+          orderNumber: order.orderNumber,
+          totalAmount: order.priceSummary.totalAmount,
+        },
+        sendEmail: true,
+      });
+
+      // 2. Send notification to each VENDOR (only their products)
+      for (const vendorOrder of order.vendorOrders) {
+        const itemCount = vendorOrder.items.reduce((sum, item) => sum + item.quantity, 0);
+        
+        await notificationService.sendToUser(vendorOrder.vendor._id, {
+          type: 'order_placed',
+          title: 'New Order Received! 🎉',
+          message: `You have received a new order #${order.orderNumber} for ${itemCount} item(s).`,
+          data: {
+            orderId: order._id,
+            orderNumber: order.orderNumber,
+            vendorOrderId: vendorOrder._id,
+            items: vendorOrder.items.map(item => ({
+              name: item.productName,
+              quantity: item.quantity,
+              price: item.unitPrice,
+              total: item.quantity * item.unitPrice
+            })),
+            totalAmount: vendorOrder.totalAmount,
+            customerName: order.buyer.fullname,
+            shippingAddress: order.shippingAddress,
+          },
+          sendEmail: true,
+        });
+      }
+
+      // 3. Send notification to ADMINS (optional)
+      const admins = await User.find({ role: 'admin' });
+      for (const admin of admins) {
+        await notificationService.sendToUser(admin._id, {
+          type: 'order_placed',
+          title: 'New Order Received',
+          message: `Order #${order.orderNumber} placed by ${order.buyer.fullname}`,
+          data: {
+            orderId: order._id,
+            orderNumber: order.orderNumber,
+            customerName: order.buyer.fullname,
+            totalAmount: order.priceSummary.totalAmount,
+          },
+          sendEmail: false,
+        });
+      }
+    } catch (notifError) {
+      console.error('Notification sending error:', notifError);
+      // Don't block order creation if notification fails
+    }
+
     return res.status(201).json({
       success: true,
       message: "Order created successfully",
