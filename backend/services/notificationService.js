@@ -38,6 +38,9 @@ class NotificationService {
           ...data
         });
 
+        // small delay (VERY IMPORTANT)
+        await new Promise(resolve => setTimeout(resolve, 50));
+
         emailService.sendEmail(
           user.email,
           template.subject,
@@ -67,7 +70,7 @@ class NotificationService {
 
 
   // Send notification to multiple users (batch + parallel)
-  async sendToMany(users, notificationData, batchSize = 50) {
+  async sendToMany(users, notificationData, batchSize = 20) {
     const results = {
       total: users.length,
       successful: 0,

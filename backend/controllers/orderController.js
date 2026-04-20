@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Order, { ORDER_STATUSES, PAYMENT_STATUSES } from "../models/Order.js";
 import User from "../models/User.js";
+import notificationService from '../services/notificationService.js';
 
 const ORDER_STATUS_TRANSITIONS = {
   Placed: ["Confirmed", "Cancelled"],
@@ -221,31 +222,36 @@ export const createOrder = async (req, res) => {
         sendEmail: true,
       });
 
-      // 2. Send notification to each VENDOR (only their products)
-      for (const vendorOrder of order.vendorOrders) {
-        const itemCount = vendorOrder.items.reduce((sum, item) => sum + item.quantity, 0);
-        
-        await notificationService.sendToUser(vendorOrder.vendor._id, {
-          type: 'order_placed',
-          title: 'New Order Received! 🎉',
-          message: `You have received a new order #${order.orderNumber} for ${itemCount} item(s).`,
-          data: {
-            orderId: order._id,
-            orderNumber: order.orderNumber,
-            vendorOrderId: vendorOrder._id,
-            items: vendorOrder.items.map(item => ({
-              name: item.productName,
-              quantity: item.quantity,
-              price: item.unitPrice,
-              total: item.quantity * item.unitPrice
-            })),
-            totalAmount: vendorOrder.totalAmount,
-            customerName: order.buyer.fullname,
-            shippingAddress: order.shippingAddress,
-          },
-          sendEmail: true,
-        });
-      }
+      // 2. Send notification to each VENDOR (parallel - faster)
+        await Promise.all(
+          order.vendorOrders.map((vendorOrder) => {
+            const itemCount = vendorOrder.items.reduce(
+              (sum, item) => sum + item.quantity,
+              0
+            );
+
+            return notificationService.sendToUser(vendorOrder.vendor._id, {
+              type: 'order_placed',
+              title: 'New Order Received! 🎉',
+              message: `You have received a new order #${order.orderNumber} for ${itemCount} item(s).`,
+              data: {
+                orderId: order._id,
+                orderNumber: order.orderNumber,
+                vendorOrderId: vendorOrder._id,
+                items: vendorOrder.items.map(item => ({
+                  name: item.productName,
+                  quantity: item.quantity,
+                  price: item.unitPrice,
+                  total: item.quantity * item.unitPrice
+                })),
+                totalAmount: vendorOrder.totalAmount,
+                customerName: order.buyer.fullname,
+                shippingAddress: order.shippingAddress,
+              },
+              sendEmail: false,
+            });
+          })
+        );
 
       // 3. Send notification to ADMINS (optional)
       const admins = await User.find({ role: 'admin' });
@@ -584,6 +590,30 @@ export const updateVendorOrderStatus = async (req, res) => {
 
     await order.save();
 
+    //notification sending part
+    await order.populate("buyer", "fullname email");
+
+    const statusToNotificationType = {
+      Placed: "order_placed",
+      Confirmed: "order_confirmed",
+      Shipped: "order_shipped",
+      Delivered: "order_delivered",
+      Cancelled: "order_cancelled",
+    };
+
+    await notificationService.sendToUser(order.buyer._id, {
+      type: statusToNotificationType[status],
+      title: `Order ${status}`,
+      message: `Your order #${order.orderNumber} status has been updated to ${status}.`,
+      data: {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        customerName: order.buyer.fullname,
+        estimatedDelivery: vendorSegment.estimatedDelivery,
+      },
+      sendEmail: true,
+    });
+
     return res.status(200).json({
       success: true,
       message: "Order status updated successfully",
@@ -777,6 +807,30 @@ export const adminUpdateVendorOrderStatus = async (req, res) => {
     });
 
     await order.save();
+
+    //notification sending part
+    await order.populate("buyer", "fullname email");
+
+    const statusToNotificationType = {
+      Placed: "order_placed",
+      Confirmed: "order_confirmed",
+      Shipped: "order_shipped",
+      Delivered: "order_delivered",
+      Cancelled: "order_cancelled",
+    };
+
+    await notificationService.sendToUser(order.buyer._id, {
+      type: statusToNotificationType[status],
+      title: `Order ${status}`,
+      message: `Your order #${order.orderNumber} status has been updated to ${status}.`,
+      data: {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        customerName: order.buyer.fullname,
+        estimatedDelivery: vendorSegment.estimatedDelivery,
+      },
+      sendEmail: true,
+    });
 
     return res.status(200).json({
       success: true,
