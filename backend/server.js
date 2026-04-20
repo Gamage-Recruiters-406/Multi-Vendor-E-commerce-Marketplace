@@ -18,6 +18,8 @@ import orderRoutes from './routes/orderRoutes.js';
 import announcementRoutes from './routes/announcementRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js'; 
 
+import couponRoutes from './routes/couponRoutes.js';
+
 const app = express();
 
 // Load environment variables
@@ -53,6 +55,8 @@ app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/announcements', announcementRoutes);
 app.use('/api/v1/notifications', notificationRoutes); 
 app.use('/api/v1/cart', cartRoutes);
+
+app.use('/api/v1/coupon', couponRoutes);
 
 
 // Test route
