@@ -8,10 +8,10 @@ function Categories() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [parentCategory, setParentCategory] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [selectedId, setSelectedId] = useState(null);
-  const [selectedName, setSelectedName] = useState("");
-  const [deleting, setDeleting] = useState(false);
+  // const [showModal, setShowModal] = useState(false);
+  // const [selectedId, setSelectedId] = useState(null);
+  // const [selectedName, setSelectedName] = useState("");
+  // const [deleting, setDeleting] = useState(false);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
   const API_VERSION = import.meta.env.VITE_API_VERSION || '/api/v1';
@@ -42,12 +42,12 @@ function Categories() {
             {cat.name}
           </span>
 
-          <button
+          {/* <button
             onClick={() => openDeleteModal(cat._id, cat.name)}
             className="text-gray-400 hover:text-red-500 transition"
           >
             <X size={14} />
-          </button>
+          </button> */}
         </div>
 
         {/* Render children recursively */}
@@ -112,40 +112,40 @@ function Categories() {
     }
   };
 
-  const openDeleteModal = (id, name) => {
-    setSelectedId(id);
-    setSelectedName(name);
-    setShowModal(true);
-  };
+  // const openDeleteModal = (id, name) => {
+  //   setSelectedId(id);
+  //   setSelectedName(name);
+  //   setShowModal(true);
+  // };
 
-  const confirmDelete = async () => {
-    setDeleting(true);
-    try {
-      await axios.delete(
-        `${API_BASE_URL}${API_VERSION}/category/${selectedId}`, 
-        { withCredentials: true }
-      );
-      setDeleting(false);
-      await fetchCategories();
+  // const confirmDelete = async () => {
+  //   setDeleting(true);
+  //   try {
+  //     await axios.delete(
+  //       `${API_BASE_URL}${API_VERSION}/category/${selectedId}`, 
+  //       { withCredentials: true }
+  //     );
+  //     setDeleting(false);
+  //     await fetchCategories();
 
-      toast.success("Category has been deleted.");
+  //     toast.success("Category has been deleted.");
 
 
-    } catch (err) {
-      if (err.response?.status === 400) {
-        toast.error("Cannot delete category with subcategories");
+  //   } catch (err) {
+  //     if (err.response?.status === 400) {
+  //       toast.error("Cannot delete category with subcategories");
         
-      } else {
-        console.error(err);
-        toast.error("Failed to delete category.");
+  //     } else {
+  //       console.error(err);
+  //       toast.error("Failed to delete category.");
         
-      }
-    } finally {
-      setShowModal(false);
-      setSelectedId(null);
-      setDeleting(false);
-    }
-  };
+  //     }
+  //   } finally {
+  //     setShowModal(false);
+  //     setSelectedId(null);
+  //     setDeleting(false);
+  //   }
+  // };
 
   return (
     <div className="flex-1 p-6">
@@ -208,7 +208,7 @@ function Categories() {
         </div>
       </div>
 
-      {showModal && (
+      {/* {showModal && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 w-80 shadow-lg">
             
@@ -235,7 +235,7 @@ function Categories() {
             </div>
           </div>
         </div>
-      )}
+      )} */}
     </div>
     
   );
