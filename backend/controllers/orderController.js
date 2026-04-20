@@ -1,6 +1,12 @@
 import mongoose from "mongoose";
 import Order, { ORDER_STATUSES, PAYMENT_STATUSES } from "../models/Order.js";
+import Coupon from "../models/Coupon.js";
 import User from "../models/User.js";
+import {
+  evaluateCoupon,
+  normalizeCouponCode,
+  roundCurrency,
+} from "../utils/couponEngine.js";
 
 const ORDER_STATUS_TRANSITIONS = {
   Placed: ["Confirmed", "Cancelled"],
@@ -69,6 +75,102 @@ const createUniqueOrderNumber = async () => {
   throw new Error("Unable to generate a unique order number");
 };
 
+const calculateItemSubtotal = (item) => {
+  const quantity = Number(item?.quantity) || 0;
+  const unitPrice = Number(item?.unitPrice) || 0;
+  return roundCurrency(quantity * unitPrice);
+};
+
+const calculateSegmentSubtotal = (segment) => {
+  if (!Array.isArray(segment?.items)) return 0;
+  return roundCurrency(segment.items.reduce((sum, item) => sum + calculateItemSubtotal(item), 0));
+};
+
+const calculateSegmentNetAmount = (segment) => {
+  const subtotal = calculateSegmentSubtotal(segment);
+  const existingDiscount = roundCurrency(Number(segment?.discountAmount) || 0);
+  return roundCurrency(Math.max(0, subtotal - existingDiscount));
+};
+
+const calculateCouponEligibleSubtotal = (vendorOrders) => {
+  if (!Array.isArray(vendorOrders)) return 0;
+  return roundCurrency(
+    vendorOrders.reduce((sum, segment) => sum + calculateSegmentNetAmount(segment), 0)
+  );
+};
+
+const applyCouponDiscountToVendorOrders = (vendorOrders, couponDiscountAmount) => {
+  const discount = roundCurrency(couponDiscountAmount);
+  if (!Array.isArray(vendorOrders) || discount <= 0) return vendorOrders;
+
+  const segments = vendorOrders.map((segment) => ({
+    ...segment,
+    discountAmount: roundCurrency(Number(segment.discountAmount) || 0),
+  }));
+
+  const capacities = segments.map((segment) => {
+    const subtotal = calculateSegmentSubtotal(segment);
+    const existingDiscount = roundCurrency(Number(segment.discountAmount) || 0);
+    const available = roundCurrency(Math.max(0, subtotal - existingDiscount));
+
+    return { subtotal, existingDiscount, available };
+  });
+
+  const eligibleIndexes = capacities
+    .map((capacity, index) => ({ index, available: capacity.available }))
+    .filter((entry) => entry.available > 0)
+    .map((entry) => entry.index);
+
+  if (eligibleIndexes.length === 0) {
+    return segments;
+  }
+
+  const totalAvailable = roundCurrency(
+    eligibleIndexes.reduce((sum, index) => sum + capacities[index].available, 0)
+  );
+
+  const targetDiscount = roundCurrency(Math.min(discount, totalAvailable));
+  let distributed = 0;
+
+  eligibleIndexes.forEach((index, position) => {
+    const capacity = capacities[index];
+    let allocation;
+
+    if (position === eligibleIndexes.length - 1) {
+      allocation = roundCurrency(targetDiscount - distributed);
+    } else {
+      allocation = roundCurrency((targetDiscount * capacity.available) / totalAvailable);
+    }
+
+    allocation = roundCurrency(Math.min(allocation, capacity.available));
+    distributed = roundCurrency(distributed + allocation);
+    segments[index].discountAmount = roundCurrency(capacity.existingDiscount + allocation);
+  });
+
+  let remaining = roundCurrency(targetDiscount - distributed);
+  if (remaining > 0) {
+    for (const index of eligibleIndexes) {
+      if (remaining <= 0) break;
+
+      const capacity = capacities[index];
+      const alreadyAdded = roundCurrency(
+        Number(segments[index].discountAmount) - capacity.existingDiscount
+      );
+      const headroom = roundCurrency(Math.max(0, capacity.available - alreadyAdded));
+
+      if (headroom <= 0) continue;
+
+      const extra = roundCurrency(Math.min(headroom, remaining));
+      segments[index].discountAmount = roundCurrency(
+        Number(segments[index].discountAmount) + extra
+      );
+      remaining = roundCurrency(remaining - extra);
+    }
+  }
+
+  return segments;
+};
+
 const validateOrderPayload = async (payload) => {
   const { shippingAddress, vendorOrders } = payload;
 
@@ -132,8 +234,8 @@ const validateOrderPayload = async (payload) => {
   return null;
 };
 
-const formatOrderPayload = (payload, buyerId, orderNumber) => {
-  const vendorOrders = payload.vendorOrders.map((segment) => ({
+const formatOrderPayload = (payload, buyerId, orderNumber, appliedCoupon) => {
+  const baseVendorOrders = payload.vendorOrders.map((segment) => ({
     vendor: segment.vendor,
     status: "Placed",
     discountAmount: Number(segment.discountAmount) || 0,
@@ -160,6 +262,11 @@ const formatOrderPayload = (payload, buyerId, orderNumber) => {
     })),
   }));
 
+  const vendorOrders = applyCouponDiscountToVendorOrders(
+    baseVendorOrders,
+    appliedCoupon?.discountAmount || 0
+  );
+
   return {
     orderNumber,
     buyer: buyerId,
@@ -173,7 +280,7 @@ const formatOrderPayload = (payload, buyerId, orderNumber) => {
       postalCode: payload.shippingAddress.postalCode || "",
       country: payload.shippingAddress.country,
     },
-    couponCode: payload.couponCode || "",
+    couponCode: appliedCoupon?.coupon?.code || normalizeCouponCode(payload.couponCode),
     payment: {
       method: payload.payment?.method || "Card",
       status: PAYMENT_STATUSES.includes(payload.payment?.status)
@@ -196,10 +303,51 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    const couponCode = normalizeCouponCode(req.body.couponCode);
+    let appliedCoupon = null;
+
+    if (couponCode) {
+      const orderSubtotal = calculateCouponEligibleSubtotal(req.body.vendorOrders);
+      const coupon = await Coupon.findOne({ code: couponCode });
+      const evaluation = evaluateCoupon({
+        coupon,
+        userId: req.user._id,
+        orderSubtotal,
+      });
+
+      if (!evaluation.isValid) {
+        return res.status(400).json({
+          success: false,
+          message: evaluation.message,
+        });
+      }
+
+      appliedCoupon = {
+        coupon,
+        discountAmount: evaluation.discountAmount,
+      };
+    }
+
     const orderNumber = await createUniqueOrderNumber();
-    const orderPayload = formatOrderPayload(req.body, req.user._id, orderNumber);
+    const orderPayload = formatOrderPayload(
+      req.body,
+      req.user._id,
+      orderNumber,
+      appliedCoupon
+    );
 
     const order = await Order.create(orderPayload);
+
+    if (appliedCoupon?.coupon) {
+      appliedCoupon.coupon.usageCount = Number(appliedCoupon.coupon.usageCount || 0) + 1;
+      appliedCoupon.coupon.usedBy.push({
+        user: req.user._id,
+        order: order._id,
+        discountAmount: appliedCoupon.discountAmount,
+        usedAt: new Date(),
+      });
+      await appliedCoupon.coupon.save();
+    }
 
     await order.populate([
       { path: "buyer", select: "fullname email phone role" },
@@ -209,6 +357,12 @@ export const createOrder = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Order created successfully",
+      appliedCoupon: appliedCoupon
+        ? {
+            code: appliedCoupon.coupon.code,
+            discountAmount: appliedCoupon.discountAmount,
+          }
+        : null,
       order,
     });
   } catch (error) {
