@@ -1,4 +1,4 @@
-import { Package, PlusCircle, Tag, X } from "lucide-react";
+import { Package, PlusCircle, Tag, X, Store } from "lucide-react";
 
 // ================= SIDEBAR =================
 function Sidebar({ active, onChange }) {
@@ -12,7 +12,9 @@ function Sidebar({ active, onChange }) {
     <div className="w-64 min-h-screen bg-gray-50 p-4">
       {/* Brand */}
       <div className="flex items-center gap-2 mb-8">
-        <div className="w-8 h-8 bg-[#1A9F73] rounded-lg" />
+        <div className="w-8 h-8 bg-[#1A9F73] rounded-lg flex items-center justify-center">
+          <Store size={18} className="text-white" />
+        </div>
         <span className="font-semibold text-lg">VendorHub</span>
       </div>
 
