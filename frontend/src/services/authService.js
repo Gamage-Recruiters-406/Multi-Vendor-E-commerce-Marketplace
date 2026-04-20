@@ -1,13 +1,12 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/$/, '');
-const API_VERSION = (import.meta.env.VITE_API_VERSION || '/api/v1').startsWith('/')
-  ? (import.meta.env.VITE_API_VERSION || '/api/v1')
-  : `/${import.meta.env.VITE_API_VERSION || 'api/v1'}`;
+const normalizeUrlPart = (value = '') => value.replace(/\/\/+$/, '');
+const ensureLeadingSlash = (value = '') => value.startsWith('/') ? value : `/${value}`;
 
+const API_BASE_URL = normalizeUrlPart(import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000');
+const API_VERSION = ensureLeadingSlash(import.meta.env.VITE_API_VERSION || '/api/v1');
 const API_URL = `${API_BASE_URL}${API_VERSION}`;
 
 console.log('🔗 Auth API URL:', API_URL);
 
-// Helper function to get authorization headers
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
   return {
@@ -16,10 +15,35 @@ const getAuthHeaders = () => {
   };
 };
 
-// Login User
+const parseResponse = async (response) => {
+  const text = await response.text();
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
+};
+
+const request = async (url, options) => {
+  const response = await fetch(url, options);
+  const data = await parseResponse(response);
+
+  if (!response.ok) {
+    const message = data?.message || data?.error || response.statusText || 'Request failed';
+    throw new Error(message);
+  }
+
+  return data;
+};
+
+// Login
 export const loginUser = async (credentials) => {
   try {
-    const response = await fetch(`${API_URL}/user/login`, {
+    const data = await request(`${API_URL}/user/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -28,13 +52,6 @@ export const loginUser = async (credentials) => {
       credentials: 'include',
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Login failed');
-    }
-
-    // Store token and user data if provided
     if (data.token) {
       localStorage.setItem('token', data.token);
     }
@@ -48,15 +65,14 @@ export const loginUser = async (credentials) => {
   }
 };
 
-// Backward compatibility alias for existing components
 export const signIn = async (email, password) => {
   return loginUser({ email, password });
 };
 
-// Register User
+// Registration
 export const registerUser = async (userData) => {
   try {
-    const response = await fetch(`${API_URL}/user/register`, {
+    return await request(`${API_URL}/user/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -64,40 +80,24 @@ export const registerUser = async (userData) => {
       body: JSON.stringify(userData),
       credentials: 'include',
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Registration failed');
-    }
-
-    return data;
   } catch (error) {
     throw new Error(error.message || 'Registration failed');
   }
 };
 
-// Backward compatibility alias for existing components
 export const signUp = async (userData) => {
   return registerUser(userData);
 };
 
-// Logout User
+// Logout
 export const logoutUser = async () => {
   try {
-    const response = await fetch(`${API_URL}/user/logout`, {
+    const data = await request(`${API_URL}/user/logout`, {
       method: 'POST',
       headers: getAuthHeaders(),
       credentials: 'include',
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Logout failed');
-    }
-
-    // Clear localStorage on successful logout
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('refreshToken');
@@ -105,7 +105,6 @@ export const logoutUser = async () => {
 
     return data;
   } catch (error) {
-    // Clear localStorage even if request fails
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('refreshToken');
@@ -114,13 +113,12 @@ export const logoutUser = async () => {
   }
 };
 
-// Backward compatibility alias
 export const signOut = logoutUser;
 
-// Change Password
+// Password Management
 export const changePassword = async (currentPassword, newPassword) => {
   try {
-    const response = await fetch(`${API_URL}/user/change-password`, {
+    return await request(`${API_URL}/user/change-password`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify({
@@ -129,14 +127,6 @@ export const changePassword = async (currentPassword, newPassword) => {
       }),
       credentials: 'include',
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to change password');
-    }
-
-    return data;
   } catch (error) {
     throw new Error(error.message || 'Failed to change password');
   }
@@ -145,19 +135,11 @@ export const changePassword = async (currentPassword, newPassword) => {
 // Get User Profile
 export const getUserProfile = async () => {
   try {
-    const response = await fetch(`${API_URL}/user/profile`, {
+    return await request(`${API_URL}/user/profile`, {
       method: 'GET',
       headers: getAuthHeaders(),
       credentials: 'include',
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to fetch profile');
-    }
-
-    return data;
   } catch (error) {
     throw new Error(error.message || 'Failed to fetch profile');
   }
@@ -166,20 +148,13 @@ export const getUserProfile = async () => {
 // Update User Profile
 export const updateUserProfile = async (profileData) => {
   try {
-    const response = await fetch(`${API_URL}/user/update-profile`, {
+    const data = await request(`${API_URL}/user/update-profile`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(profileData),
       credentials: 'include',
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to update profile');
-    }
-
-    // Update user in localStorage if returned
     if (data.user) {
       localStorage.setItem('user', JSON.stringify(data.user));
     }
@@ -190,8 +165,8 @@ export const updateUserProfile = async (profileData) => {
   }
 };
 
-// Get current user from localStorage
-export const getCurrentUser = () => {
+// Get Current User
+/*export const getCurrentUser = () => {
   try {
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
@@ -200,17 +175,14 @@ export const getCurrentUser = () => {
   }
 };
 
-// Get access token
 export const getToken = () => {
   return localStorage.getItem('token');
 };
 
-// Check if user is authenticated
 export const isAuthenticated = () => {
   return !!localStorage.getItem('token');
 };
 
-// Save remember email preference
 export const rememberEmail = (email) => {
   if (email) {
     localStorage.setItem('rememberEmail', email);
@@ -219,7 +191,6 @@ export const rememberEmail = (email) => {
   }
 };
 
-// Get remembered email
 export const getRememberedEmail = () => {
   return localStorage.getItem('rememberEmail');
-};
+};*/
