@@ -132,50 +132,53 @@ class NotificationService {
 
 
   // Send to specific audience
-  async sendToAudience(targetAudiences, notificationData) {
-    try {
-      const conditions = [];
+async sendToAudience(targetAudiences, notificationData) {
+  try {
+    const isAll = targetAudiences.includes('All Users');
+    const conditions = [];
 
-      if (targetAudiences.includes('All Users')) {
-        const users = await User.find({}).lean();
-        return this.sendToMany(users, notificationData);
-      }
-
-      if (targetAudiences.includes('Buyers Only')) {
-        conditions.push({ role: 'Buyer' });
-      }
-
-      if (targetAudiences.includes('Vendors Only')) {
-        conditions.push({ role: 'Vendor' });
-      }
-
-      if (targetAudiences.includes('Premium Members')) {
-        conditions.push({ isPremium: true });
-      }
-
-      if (targetAudiences.includes('New Members')) {
-        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-        conditions.push({ createdAt: { $gte: thirtyDaysAgo } });
-      }
-
-      if (conditions.length === 0) {
-        return { success: false, error: 'No valid audience specified' };
-      }
-
-      const users = await User.find({ $or: conditions }).lean();
-
-      // Remove duplicates
-      const uniqueUsers = [
-        ...new Map(users.map(u => [u._id.toString(), u])).values()
-      ];
-
-      return this.sendToMany(uniqueUsers, notificationData);
-
-    } catch (error) {
-      console.error('sendToAudience error:', error);
-      return { success: false, error: error.message };
+    if (isAll) {
+      // All Users means no filter - get everyone
+      const users = await User.find({}).lean();
+      return this.sendToMany(users, notificationData);
     }
+
+    // Only process other audiences if NOT "All Users"
+    if (targetAudiences.includes('Buyers Only')) {
+      conditions.push({ role: 'Buyer' });
+    }
+
+    if (targetAudiences.includes('Vendors Only')) {
+      conditions.push({ role: 'Vendor' });
+    }
+
+    if (targetAudiences.includes('Premium Members')) {
+      conditions.push({ isPremium: true });
+    }
+
+    if (targetAudiences.includes('New Members')) {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      conditions.push({ createdAt: { $gte: thirtyDaysAgo } });
+    }
+
+    if (conditions.length === 0) {
+      return { success: false, error: 'No valid audience specified' };
+    }
+
+    const users = await User.find({ $or: conditions }).lean();
+
+    // Remove duplicates
+    const uniqueUsers = [
+      ...new Map(users.map(u => [u._id.toString(), u])).values()
+    ];
+
+    return this.sendToMany(uniqueUsers, notificationData);
+
+  } catch (error) {
+    console.error('sendToAudience error:', error);
+    return { success: false, error: error.message };
   }
+}
 
 
   // Get notifications (pagination)
