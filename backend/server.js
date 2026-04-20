@@ -16,6 +16,7 @@ import cartRoutes from './routes/cartRoutes.js';
 
 import orderRoutes from './routes/orderRoutes.js';
 import announcementRoutes from './routes/announcementRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js'; 
 
 import couponRoutes from './routes/couponRoutes.js';
 
@@ -47,12 +48,12 @@ app.use(cors({ origin: true, credentials: true }));
 // Routes
 app.use('/api/v1/user', userRoutes);
 app.use('/api/v1/chatbot', chatbotRoutes);
-
 app.use('/api/v1/category', categoryRoutes);
 app.use('/api/v1/store', storeRoutes);
 app.use('/api/v1/product', productRoutes);
 app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/announcements', announcementRoutes);
+app.use('/api/v1/notifications', notificationRoutes); 
 app.use('/api/v1/cart', cartRoutes);
 
 app.use('/api/v1/coupon', couponRoutes);

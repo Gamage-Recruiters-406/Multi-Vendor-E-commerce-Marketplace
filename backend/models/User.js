@@ -54,6 +54,11 @@ const userSchema = new mongoose.Schema(
       type: String,  // Store Cloudinary URL
       default: null
     },
+
+    isPremium: {
+      type: Boolean,
+      default: false,
+    },
     
   },
   { timestamps: true }
