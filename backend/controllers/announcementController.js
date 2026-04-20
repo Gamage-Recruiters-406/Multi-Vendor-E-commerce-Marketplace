@@ -4,6 +4,7 @@ import Announcement, {
   ANNOUNCEMENT_STATUSES,
   ANNOUNCEMENT_TYPES,
 } from "../models/Announcement.js";
+import notificationService from "../services/notificationService.js";
 
 const parsePagination = (query) => {
   const page = Math.max(1, Number.parseInt(query.page, 10) || 1);
@@ -208,6 +209,31 @@ export const createAnnouncement = async (req, res) => {
     });
 
     await announcement.populate("createdBy", "fullname email role");
+
+     // ADD THIS - Send notifications if published immediately (publishNow: true)
+    if (status === "Published" && announcement.priorityVisibility.sendEmailNotification) {
+      try {
+        const notificationType = announcement.type === "Offer / Promotion"
+          ? "promotion"
+          : "announcement";
+
+        await notificationService.sendToAudience(announcement.targetAudience, {
+          type: notificationType,
+          title: announcement.title,
+          message: announcement.description,
+          data: {
+            announcementId: announcement._id,
+            announcementType: announcement.type,
+          },
+          sendEmail: true,
+        });
+        console.log(`Notifications sent for announcement: ${announcement.title}`);
+      } catch (notifError) {
+        console.error("Announcement notification error:", notifError);
+        // Don't block the response
+      }
+    }
+
 
     return res.status(201).json({
       success: true,
@@ -430,6 +456,33 @@ export const publishAnnouncement = async (req, res) => {
     announcement.updatedBy = req.user._id;
 
     await announcement.save();
+
+    //  SEND NOTIFICATIONS AFTER PUBLISH
+    try {
+      if (announcement.priorityVisibility.sendEmailNotification) {
+
+        const notificationType =
+          announcement.type === "Offer / Promotion"
+            ? "promotion"
+            : "announcement";
+
+        await notificationService.sendToAudience(
+          announcement.targetAudience,
+          {
+            type: notificationType,
+            title: announcement.title,
+            message: announcement.description,
+            data: {
+              announcementId: announcement._id,
+              announcementType: announcement.type,
+            },
+            sendEmail: true,
+          }
+        );
+      }
+    } catch (notifError) {
+      console.error("Announcement notification error:", notifError);
+    }
 
     return res.status(200).json({
       success: true,
