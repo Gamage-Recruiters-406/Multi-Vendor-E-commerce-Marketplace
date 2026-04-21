@@ -1,5 +1,5 @@
 import express from 'express';
-import { createStore, getRecentStores, getSingleStore, updateStore } from '../controllers/storeController.js';
+import { createStore, deleteStore, getRecentStores, getSingleStore, updateStore } from '../controllers/storeController.js';
 import { requiredSignIn, isVendor } from '../middlewares/authMiddleware.js';
 import { upload } from '../middlewares/imageUploader.js';
 
@@ -16,5 +16,8 @@ router.get('/:id', getSingleStore);
 
 // Update store
 router.put('/:id', requiredSignIn, isVendor, upload.single('logo'), updateStore);
+
+// Delete store
+router.delete('/:id', requiredSignIn, isVendor, deleteStore);
 
 export default router;
