@@ -8,7 +8,7 @@ import './App.css'
 import VendorProductManagemnt from './pages/Vendor/ProductManagement'
 import Products from './pages/Vendor/Products'
 
-
+import ProductCreate from './pages/product _create/ProductCreate'
 
 function App() {
   return (
@@ -23,12 +23,13 @@ function App() {
           <Route path="/login" element={<SigninPage />} />
           <Route path="/signup" element={<SignupPage />} />
 
-          {/* Layout */}
-          <Route path="/" element={<Footer />} />
+          {/* Layout 
+          <Route path="/" element={<Footer />} />*/}
 
           {/* Vendor Routes */}
           <Route path="/vendor/product_management" element={<VendorProductManagemnt />} />
           <Route path="/vendor/products" element={<Products />} />
+          <Route path="/vendor/product_create" element={<ProductCreate />} />
         </Routes>
       </Router>
     </>

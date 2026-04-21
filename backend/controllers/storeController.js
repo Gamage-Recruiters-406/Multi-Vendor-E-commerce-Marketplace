@@ -97,4 +97,26 @@ export const getSingleStore = async (req, res) => {
             message: "Server error"
         });
     }
-}
+};
+
+// Get Vendor Stores
+export const getStoresByVendor = async (req, res) => {
+    try {
+        const vendorId = req.user._id;
+
+        const stores = await Store.find({ vendor: vendorId }).lean();
+
+        res.status(200).json({
+            success: true,
+            data: stores
+        });
+
+    } catch (error) {
+        console.error(error);
+        
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+};
