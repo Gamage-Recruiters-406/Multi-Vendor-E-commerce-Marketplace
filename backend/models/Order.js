@@ -235,9 +235,9 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-orderSchema.pre("validate", function (next) {
+orderSchema.pre("validate", function () {
   if (!Array.isArray(this.vendorOrders) || this.vendorOrders.length === 0) {
-    return next();
+    return;
   }
 
   let subtotal = 0;
@@ -287,7 +287,6 @@ orderSchema.pre("validate", function (next) {
   }
 
   this.overallStatus = deriveOverallStatus(this.vendorOrders);
-  next();
 });
 
 orderSchema.index({ buyer: 1, createdAt: -1 });
