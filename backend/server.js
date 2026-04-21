@@ -64,6 +64,7 @@ app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/announcements', announcementRoutes);
 app.use('/api/v1/notifications', notificationRoutes); 
 app.use('/api/v1/cart', cartRoutes);
+app.use('/api/v1/review', reviewRoutes);
 
 app.use('/api/v1/coupon', couponRoutes);
 
