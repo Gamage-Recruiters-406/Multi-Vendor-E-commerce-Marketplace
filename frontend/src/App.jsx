@@ -10,6 +10,7 @@ import ViewStore from "./pages/Vendor/ViewStore";
 import Announcements from "./pages/Announcements";
 import CreateAnnouncement from "./pages/CreateAnnouncement";
 import EditAnnouncement from "./pages/EditAnnouncement";
+import Home from './pages/Home';
 import CheckoutPage from "./pages/CheckoutPage";
 
 import "./App.css";
@@ -21,8 +22,9 @@ function App() {
       <Router>
         <Routes>
 
-          {/* Home Page Placeholder */}
-          <Route path="/" element={<h1>Home Page</h1>} />
+          
+          {/* Home Page */}
+           <Route path="/" element={<Home />} />
 
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />

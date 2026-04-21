@@ -98,3 +98,30 @@ export const getSingleStore = async (req, res) => {
         });
     }
 }
+
+
+
+// Get Recent Stores
+export const getRecentStores = async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 6;
+        
+        const recentStores = await Store.find({ status: 'active' })
+            .sort({ createdAt: -1 })
+            .limit(limit)
+            .populate('vendor', 'name email');
+
+        res.status(200).json({
+            success: true,
+            count: recentStores.length,
+            data: recentStores
+        });
+
+    } catch (error) {
+        console.error('Error in getRecentStores:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Server error"
+        });
+    }
+}
