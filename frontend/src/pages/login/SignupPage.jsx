@@ -1,157 +1,133 @@
-import React from 'react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader } from 'lucide-react';
-import * as authService from '../../services/authService';
+import toast from 'react-hot-toast';
+import { registerUser } from '../../services/authService';
 
-// Form validation functions
-const validateEmail = (email) => {
-  if (!email || email.trim() === '') {
-    return 'Email is required';
-  }
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return 'Please enter a valid email address';
-  }
-  return null;
-};
-
-const validatePassword = (password) => {
-  if (!password) {
-    return 'Password is required';
-  }
-  if (password.length < 6) {
-    return 'Password must be at least 6 characters';
-  }
-  return null;
-};
-
-const validateName = (name) => {
-  if (!name || name.trim() === '') {
-    return 'Full name is required';
-  }
-  if (name.trim().length < 2) {
-    return 'Name must be at least 2 characters';
-  }
-  return null;
-};
-
-const validatePasswordMatch = (password, confirmPassword) => {
-  if (password !== confirmPassword) {
-    return 'Passwords do not match';
-  }
-  return null;
-};
+const brandColor = '#0d9488';
 
 export default function SignupPage() {
-  // Form state
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState('buyer');
-  const [agreeToTerms, setAgreeToTerms] = useState(false);
-
-  // UI state
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [generalError, setGeneralError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  // Navigation
   const navigate = useNavigate();
 
-  /** Handle form submission */
+  const [formData, setFormData] = useState({
+    fullname: '',  // ✅ FIXED: Changed from 'name' to 'fullname'
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+    role: 'Buyer',  // ✅ FIXED: Changed from 'buyer' to 'Buyer' (capitalized)
+    agreeToTerms: false,
+  });
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prevState => ({
+      ...prevState,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+    setError('');
+  };
+
+  const validateForm = () => {
+    if (!formData.fullname || !formData.email || !formData.phone || !formData.password || !formData.confirmPassword) {
+      setError('Please fill in all fields');
+      return false;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setError('Please enter a valid email address');
+      return false;
+    }
+
+    const normalizedPhone = formData.phone.replace(/\D/g, '');
+    if (normalizedPhone.length !== 10) {
+      setError('Phone number must be exactly 10 digits');
+      return false;
+    }
+
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return false;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return false;
+    }
+
+    if (!formData.agreeToTerms) {
+      setError('Please agree to Terms of Services and Privacy Policies');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('📝 Form submitted');
 
-    // Clear previous errors
-    setErrors({});
-    setGeneralError('');
-
-    // Client-side validation
-    const nameError = validateName(name);
-    const emailError = validateEmail(email);
-    const passwordError = validatePassword(password);
-    const confirmPasswordError = validatePasswordMatch(password, confirmPassword);
-
-    if (nameError || emailError || passwordError || confirmPasswordError) {
-      console.log('❌ Validation errors');
-      setErrors({
-        ...(nameError && { name: nameError }),
-        ...(emailError && { email: emailError }),
-        ...(passwordError && { password: passwordError }),
-        ...(confirmPasswordError && { confirmPassword: confirmPasswordError }),
-      });
+    if (!validateForm()) {
       return;
     }
 
-    if (!agreeToTerms) {
-      console.log('❌ Must agree to terms');
-      setErrors({ agreeToTerms: 'You must agree to the terms and conditions' });
-      return;
-    }
-
-    setLoading(true);
+    setIsLoading(true);
+    setError('');
 
     try {
-      console.log('👤 Attempting sign up...');
-
-      // Call auth service
-      const response = await authService.signUp({
-        name: name.trim(),
-        email: email.trim(),
-        password,
-        role,
+      console.log('📝 Sending registration data:', {
+        fullname: formData.fullname,
+        email: formData.email,
+        phone: formData.phone.replace(/\D/g, ''),
+        password: '***',
+        confirmPassword: '***',
+        role: formData.role
       });
 
-      console.log('✅ Sign up successful');
-      console.log('📦 Response:', response);
+      const response = await registerUser({
+        fullname: formData.fullname,  // ✅ FIXED: Using 'fullname' not 'name'
+        email: formData.email,
+        phone: formData.phone.replace(/\D/g, ''),
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        role: formData.role,  // ✅ This now sends 'Buyer' or 'Vendor' (capitalized)
+      });
 
-      // Redirect to sign in page
-      console.log('📍 Redirecting to sign in page');
-      navigate('/login', { state: { message: 'Signup successful! Please sign in.' } });
+      console.log('✅ Registration successful:', response);
+
+      if (response.token) {
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify({
+          id: response.user._id,
+          fullname: response.user.fullname,
+          email: response.user.email,
+          role: response.user.role,
+          phone: response.user.phone,
+        }));
+      }
+
+      toast.success(response.message || 'Account created successfully!');
+
+      // Navigate based on role (now properly capitalized)
+      const userRole = String(response.user.role || '').toLowerCase();
+      if (userRole === 'vendor') {
+        navigate('/vendor/dashboard');
+      } else if (userRole === 'buyer') {
+        navigate('/buyer/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
-      console.error('❌ Sign up failed:', err.message);
-
-      const errorMessage = err.message || 'Failed to create account';
-      setGeneralError(errorMessage);
+      const errorMessage = err.message || 'Registration failed. Please try again.';
+      console.error('❌ Registration error:', errorMessage);
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
-      setLoading(false);
-    }
-  };
-
-  /** Handle name input change */
-  const handleNameChange = (e) => {
-    setName(e.target.value);
-    if (errors.name) {
-      setErrors(prev => ({ ...prev, name: '' }));
-    }
-  };
-
-  /** Handle email input change */
-  const handleEmailChange = (e) => {
-    setEmail(e.target.value);
-    if (errors.email) {
-      setErrors(prev => ({ ...prev, email: '' }));
-    }
-  };
-
-  /** Handle password input change */
-  const handlePasswordChange = (e) => {
-    setPassword(e.target.value);
-    if (errors.password) {
-      setErrors(prev => ({ ...prev, password: '' }));
-    }
-  };
-
-  /** Handle confirm password input change */
-  const handleConfirmPasswordChange = (e) => {
-    setConfirmPassword(e.target.value);
-    if (errors.confirmPassword) {
-      setErrors(prev => ({ ...prev, confirmPassword: '' }));
+      setIsLoading(false);
     }
   };
 
@@ -167,7 +143,7 @@ export default function SignupPage() {
         {/* Dark Overlay */}
         <div className="absolute inset-0 bg-opacity-30 flex flex-col items-center justify-center p-8">
           {/* Glass Morphism Card */}
-          <div className="backdrop-blur-sm rounded-4xl p-12 max-w-[550px] min-h-[600px] border border-white border-opacity-20 shadow-2xl flex flex-col justify-center">
+          <div className="backdrop-blur-sm rounded-4xl p-12 max-w-137.5 min-h-150 border border-white border-opacity-20 shadow-2xl flex flex-col justify-center">
             {/* Logo Section */}
             <div className="rounded-3xl p-1 mb-10 mx-auto w-fit">
               <img
@@ -192,12 +168,13 @@ export default function SignupPage() {
       </div>
 
       {/* Right Side - Sign Up Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white overflow-y-auto">
+      <div className="w-full lg:w-1/2 flex items-start justify-center p-8 bg-white overflow-y-auto">
         <div className="w-full max-w-md">
           {/* Header Section */}
           <div className="mb-8">
             <h2 className="text-4xl font-bold text-teal-600 mb-1">
-              Create Account
+              <span className='text-teal-600'>Welcome to NE</span>
+              <span className='text-yellow-400'>XIO</span>
             </h2>
             <p className="text-gray-500">
               Fill in the details to get started
@@ -205,12 +182,12 @@ export default function SignupPage() {
           </div>
 
           {/* General Error Message */}
-          {generalError && (
+          {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-              <span className="text-red-600 text-xl mt-1 flex-shrink-0">⚠️</span>
+              <span className="text-red-600 text-xl mt-1 shrink-0">⚠️</span>
               <div>
                 <p className="text-red-600 font-medium text-sm">Sign Up Failed</p>
-                <p className="text-red-600 text-sm">{generalError}</p>
+                <p className="text-red-600 text-sm">{error}</p>
               </div>
             </div>
           )}
@@ -220,32 +197,26 @@ export default function SignupPage() {
             {/* Full Name Input Field */}
             <div>
               <label
-                htmlFor="name"
+                htmlFor="fullname"
                 className="block text-gray-800 font-medium mb-2"
               >
                 Full Name
               </label>
               <input
-                id="name"
+                id="fullname"
                 type="text"
                 placeholder="John Doe"
-                value={name}
-                onChange={handleNameChange}
+                value={formData.fullname}
+                onChange={handleInputChange}
+                name="fullname"  // ✅ FIXED: Changed from 'name' to 'fullname'
                 aria-label="Full name"
-                aria-describedby={errors.name ? "name-error" : undefined}
-                aria-invalid={!!errors.name}
-                disabled={loading}
+                disabled={isLoading}
                 className={`w-full px-4 py-3 border-2 rounded-lg transition focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                  errors.name
+                  error
                     ? 'border-red-500 focus:border-red-600 bg-red-50'
                     : 'border-teal-500 focus:border-teal-600'
                 }`}
               />
-              {errors.name && (
-                <p id="name-error" className="text-red-600 text-sm mt-2">
-                  {errors.name}
-                </p>
-              )}
             </div>
 
             {/* Email Input Field */}
@@ -260,56 +231,60 @@ export default function SignupPage() {
                 id="email"
                 type="email"
                 placeholder="you@example.com"
-                value={email}
-                onChange={handleEmailChange}
+                value={formData.email}
+                onChange={handleInputChange}
+                name="email"
                 aria-label="Email address"
-                aria-describedby={errors.email ? "email-error" : undefined}
-                aria-invalid={!!errors.email}
-                disabled={loading}
+                disabled={isLoading}
                 className={`w-full px-4 py-3 border-2 rounded-lg transition focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                  errors.email
+                  error
                     ? 'border-red-500 focus:border-red-600 bg-red-50'
                     : 'border-teal-500 focus:border-teal-600'
                 }`}
               />
-              {errors.email && (
-                <p id="email-error" className="text-red-600 text-sm mt-2">
-                  {errors.email}
-                </p>
-              )}
+            </div>
+
+            {/* Phone Input Field */}
+            <div>
+              <label
+                htmlFor="phone"
+                className="block text-gray-800 font-medium mb-2"
+              >
+                Phone Number
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                placeholder="e.g. 5551234567"
+                value={formData.phone}
+                onChange={handleInputChange}
+                name="phone"
+                aria-label="Phone number"
+                disabled={isLoading}
+                className={`w-full px-4 py-3 border-2 rounded-lg transition focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                  error
+                    ? 'border-red-500 focus:border-red-600 bg-red-50'
+                    : 'border-teal-500 focus:border-teal-600'
+                }`}
+              />
             </div>
 
             {/* Role Selection */}
             <div>
-              <label className="block text-gray-800 font-medium mb-2">
-                I want to:
+              <label htmlFor="role" className="block text-gray-800 font-medium mb-2">
+                Role
               </label>
-              <div className="flex gap-4">
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="role"
-                    value="buyer"
-                    checked={role === 'buyer'}
-                    onChange={(e) => setRole(e.target.value)}
-                    disabled={loading}
-                    className="cursor-pointer accent-teal-500 disabled:cursor-not-allowed"
-                  />
-                  <span className="ml-2 text-gray-700">Buy Products</span>
-                </label>
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="role"
-                    value="vendor"
-                    checked={role === 'vendor'}
-                    onChange={(e) => setRole(e.target.value)}
-                    disabled={loading}
-                    className="cursor-pointer accent-teal-500 disabled:cursor-not-allowed"
-                  />
-                  <span className="ml-2 text-gray-700">Sell Products</span>
-                </label>
-              </div>
+              <select
+                id="role"
+                value={formData.role}
+                onChange={handleInputChange}
+                name="role"
+                disabled={isLoading}
+                className="w-full px-4 py-3 border-2 rounded-lg transition focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed border-teal-500 focus:border-teal-600"
+              >
+                <option value="Buyer">Buyer</option>  {/* ✅ FIXED: Capitalized */}
+                <option value="Vendor">Vendor</option>  {/* ✅ FIXED: Capitalized */}
+              </select>
             </div>
 
             {/* Password Input Field */}
@@ -325,14 +300,13 @@ export default function SignupPage() {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
-                  value={password}
-                  onChange={handlePasswordChange}
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  name="password"
                   aria-label="Password"
-                  aria-describedby={errors.password ? "password-error" : undefined}
-                  aria-invalid={!!errors.password}
-                  disabled={loading}
+                  disabled={isLoading}
                   className={`w-full px-4 py-3 border-2 rounded-lg transition focus:outline-none pr-12 disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                    errors.password
+                    error
                       ? 'border-red-500 focus:border-red-600 bg-red-50'
                       : 'border-teal-500 focus:border-teal-600'
                   }`}
@@ -340,7 +314,7 @@ export default function SignupPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  disabled={loading}
+                  disabled={isLoading}
                   className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition disabled:cursor-not-allowed"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
@@ -351,11 +325,6 @@ export default function SignupPage() {
                   )}
                 </button>
               </div>
-              {errors.password && (
-                <p id="password-error" className="text-red-600 text-sm mt-2">
-                  {errors.password}
-                </p>
-              )}
             </div>
 
             {/* Confirm Password Input Field */}
@@ -371,14 +340,13 @@ export default function SignupPage() {
                   id="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
                   placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={handleConfirmPasswordChange}
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  name="confirmPassword"
                   aria-label="Confirm password"
-                  aria-describedby={errors.confirmPassword ? "confirm-password-error" : undefined}
-                  aria-invalid={!!errors.confirmPassword}
-                  disabled={loading}
+                  disabled={isLoading}
                   className={`w-full px-4 py-3 border-2 rounded-lg transition focus:outline-none pr-12 disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                    errors.confirmPassword
+                    error
                       ? 'border-red-500 focus:border-red-600 bg-red-50'
                       : 'border-teal-500 focus:border-teal-600'
                   }`}
@@ -386,7 +354,7 @@ export default function SignupPage() {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  disabled={loading}
+                  disabled={isLoading}
                   className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition disabled:cursor-not-allowed"
                   aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                 >
@@ -397,11 +365,6 @@ export default function SignupPage() {
                   )}
                 </button>
               </div>
-              {errors.confirmPassword && (
-                <p id="confirm-password-error" className="text-red-600 text-sm mt-2">
-                  {errors.confirmPassword}
-                </p>
-              )}
             </div>
 
             {/* Terms Agreement */}
@@ -409,14 +372,10 @@ export default function SignupPage() {
               <input
                 type="checkbox"
                 id="agreeToTerms"
-                checked={agreeToTerms}
-                onChange={(e) => {
-                  setAgreeToTerms(e.target.checked);
-                  if (errors.agreeToTerms) {
-                    setErrors(prev => ({ ...prev, agreeToTerms: '' }));
-                  }
-                }}
-                disabled={loading}
+                checked={formData.agreeToTerms}
+                onChange={handleInputChange}
+                name="agreeToTerms"
+                disabled={isLoading}
                 className="w-5 h-5 accent-teal-500 cursor-pointer mt-1 rounded disabled:cursor-not-allowed"
                 aria-label="Agree to terms"
               />
@@ -431,19 +390,15 @@ export default function SignupPage() {
                     Privacy Policy
                   </Link>
                 </label>
-                {errors.agreeToTerms && (
-                  <p className="text-red-600 text-sm mt-1">{errors.agreeToTerms}</p>
-                )}
               </div>
             </div>
 
-            {/* Sign Up Button */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={isLoading}
               className="w-full bg-teal-600 hover:bg-teal-700 text-white text-[18px] font-semibold py-3 rounded-lg transition duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
             >
-              {loading ? (
+              {isLoading ? (
                 <>
                   <Loader size={20} className="animate-spin" />
                   Creating Account...

@@ -9,3 +9,4 @@ const require = createRequire(import.meta.url);
 export default defineConfig({
   plugins: [react(), tailwindcss()],
 });
+})
