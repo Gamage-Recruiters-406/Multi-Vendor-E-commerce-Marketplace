@@ -223,15 +223,19 @@ export const deleteProduct = async (req, res) => {
             await Promise.all(
                 product.images.map(async (url) => {
                     try {
-                        const parts = url.split("/");
-                        const fileName = parts.pop().split(".")[0];
-                        const folder = parts.slice(parts.indexOf("upload") + 1).join("/");
+                        const afterUpload = url.split("/upload/")[1];
+                        const parts = afterUpload.split("/");
+                        const publicPath = parts.slice(1).join("/");
+                        const publicId = publicPath.split(".")[0];
 
-                        const publicId = `${folder}/${fileName}`;
+                        await cloudinary.uploader.destroy(publicId, {
+                            invalidate: true
+                        });
 
-                        await cloudinary.uploader.destroy(publicId);
-                    } catch (error) {
-                        console.error("Error deleting image from Cloudinary:", error);
+                        console.log("Deleted:", publicId);
+
+                    } catch (err) {
+                        console.error("Error deleting image:", err.message);
                     }
                 })
             );
