@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getUserProfile } from "../../services/authService";
 
 const roleConfigs = {
 	Vendor: {
@@ -47,9 +48,44 @@ const getStoredUser = () => {
 	}
 };
 
+const normalizeRole = (value) => {
+	if (!value) return "Buyer";
+	const role = String(value).toLowerCase();
+	if (role === "vendor") return "Vendor";
+	if (role === "admin") return "admin";
+	return "Buyer";
+};
+
 export default function Header({ userRole, userName }) {
 	const storedUser = typeof window !== "undefined" ? getStoredUser() : null;
-	const role = userRole || storedUser?.role || "Buyer";
+	const [dbUser, setDbUser] = useState(storedUser);
+
+	useEffect(() => {
+		let isMounted = true;
+
+		const loadProfile = async () => {
+			try {
+				const response = await getUserProfile();
+				const fetchedUser = response?.user;
+
+				if (!isMounted || !fetchedUser) return;
+
+				setDbUser((prev) => ({ ...(prev || {}), ...fetchedUser }));
+				const currentLocalUser = getStoredUser() || {};
+				localStorage.setItem("user", JSON.stringify({ ...currentLocalUser, ...fetchedUser }));
+			} catch {
+				// Keep local user fallback if profile request fails.
+			}
+		};
+
+		loadProfile();
+
+		return () => {
+			isMounted = false;
+		};
+	}, []);
+
+	const role = normalizeRole(userRole || dbUser?.role || storedUser?.role);
 	const currentPath = typeof window !== "undefined" ? window.location.pathname : "/";
 
 	const config = useMemo(() => roleConfigs[role] || roleConfigs.Buyer, [role]);
@@ -106,7 +142,8 @@ export default function Header({ userRole, userName }) {
 				? link.path === "/"
 				: link.path !== "/" && currentPath.startsWith(link.path)
 		)?.path || config.links[0].path;
-	const currentName = userName || storedUser?.fullname || "Perera";
+	const currentName = userName || dbUser?.fullname || storedUser?.fullname || "Perera";
+	const profilePicture = dbUser?.profilePicture || storedUser?.profilePicture || null;
 
 	return (
 		<header
@@ -158,8 +195,12 @@ export default function Header({ userRole, userName }) {
 					</button>
 				)}
 
-				<div className={`grid h-7 w-7 place-items-center rounded-full text-xs font-bold ${ui.avatar}`}>
-					{currentName.slice(0, 1).toUpperCase()}
+				<div className={`grid h-7 w-7 place-items-center overflow-hidden rounded-full text-xs font-bold ${ui.avatar}`}>
+					{profilePicture ? (
+						<img src={profilePicture} alt={currentName} className="h-full w-full object-cover" />
+					) : (
+						currentName.slice(0, 1).toUpperCase()
+					)}
 				</div>
 
 					<div className="grid leading-tight">

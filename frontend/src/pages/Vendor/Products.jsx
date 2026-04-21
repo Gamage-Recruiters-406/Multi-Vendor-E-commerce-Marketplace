@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, Filter, PencilLine, Plus, Search, Trash2 } from "lucide-react";
+import { ChevronDown, Filter, PencilLine, Plus, Search, Trash2, X } from "lucide-react";
 import Layout from "../../components/Layouts/Layout";
 
 const stockStyles = {
@@ -38,10 +38,22 @@ export default function Products() {
 	const [products, setProducts] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
+	const [selectedProduct, setSelectedProduct] = useState(null);
+	const [activeImageIndex, setActiveImageIndex] = useState(0);
 	const [searchKeyword, setSearchKeyword] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState("all");
 	const [selectedStock, setSelectedStock] = useState("all");
 	const [selectedPriceSort, setSelectedPriceSort] = useState("all");
+
+	const closeProductModal = () => {
+		setSelectedProduct(null);
+		setActiveImageIndex(0);
+	};
+
+	const openProductModal = (product) => {
+		setSelectedProduct(product);
+		setActiveImageIndex(0);
+	};
 
 	const categoryOptions = useMemo(() => {
 		const categories = products
@@ -77,6 +89,24 @@ export default function Products() {
 	useEffect(() => {
 		fetchProducts();
 	}, []);
+
+	useEffect(() => {
+		if (!selectedProduct) return;
+
+		const onKeyDown = (event) => {
+			if (event.key === "Escape") {
+				closeProductModal();
+			}
+		};
+
+		document.body.style.overflow = "hidden";
+		window.addEventListener("keydown", onKeyDown);
+
+		return () => {
+			document.body.style.overflow = "";
+			window.removeEventListener("keydown", onKeyDown);
+		};
+	}, [selectedProduct]);
 
 	const filteredProducts = useMemo(() => {
 		const keyword = searchKeyword.trim().toLowerCase();
@@ -136,6 +166,10 @@ export default function Products() {
 		if (typeof category === "string") return category;
 		return category?.name || "";
 	}
+
+	const modalImages = Array.isArray(selectedProduct?.images) ? selectedProduct.images : [];
+	const primaryModalImage = modalImages[activeImageIndex] || "";
+	const selectedStockStatus = selectedProduct ? getStockStatus(selectedProduct?.stock || 0) : null;
 
 	return (
 		<Layout>
@@ -264,7 +298,11 @@ export default function Products() {
 														: "";
 
 												return (
-													<tr key={product?._id} className="hover:bg-slate-50/80">
+													<tr
+														key={product?._id}
+														className="cursor-pointer hover:bg-slate-50/80"
+														onClick={() => openProductModal(product)}
+													>
 														<td className="px-4 py-4">
 															<div className="flex items-center gap-3">
 																<div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-slate-100">
@@ -312,6 +350,7 @@ export default function Products() {
 																	type="button"
 																	className="transition hover:text-emerald-600"
 																	aria-label={`Edit ${product?.name || "product"}`}
+																	onClick={(event) => event.stopPropagation()}
 																>
 																	<PencilLine size={16} />
 																</button>
@@ -319,7 +358,10 @@ export default function Products() {
 																	type="button"
 																	className="transition hover:text-rose-500"
 																	aria-label={`Delete ${product?.name || "product"}`}
-																	onClick={() => handleDelete(product?._id)}
+																	onClick={(event) => {
+																		event.stopPropagation();
+																		handleDelete(product?._id);
+																	}}
 																>
 																	<Trash2 size={16} />
 																</button>
@@ -335,6 +377,116 @@ export default function Products() {
 						)}
 					</main>
 				</div>
+
+				{selectedProduct && (
+					<div
+						className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-8 backdrop-blur-[2px]"
+						onClick={closeProductModal}
+					>
+						<div
+							className="w-full max-w-4xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+							onClick={(event) => event.stopPropagation()}
+						>
+							<div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
+								<div>
+									<p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-600">Product Quick View</p>
+									<h3 className="text-lg font-semibold text-slate-900">{selectedProduct?.name || "Product"}</h3>
+								</div>
+								<button
+									type="button"
+									onClick={closeProductModal}
+									className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-rose-200 hover:text-rose-500"
+									aria-label="Close product details"
+								>
+									<X size={16} />
+								</button>
+							</div>
+
+							<div className="grid gap-6 p-5 md:grid-cols-[1.1fr_1fr] md:p-6">
+								<div>
+									<div className="relative grid h-72 place-items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 md:h-80">
+										{primaryModalImage ? (
+											<img
+												src={primaryModalImage}
+												alt={selectedProduct?.name || "Product image"}
+												className="h-full w-full object-cover"
+											/>
+										) : (
+											<span className="text-5xl font-semibold text-slate-400">
+												{(selectedProduct?.name || "P").charAt(0).toUpperCase()}
+											</span>
+										)}
+									</div>
+
+									{modalImages.length > 1 && (
+										<div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+											{modalImages.map((image, index) => (
+												<button
+													key={`${selectedProduct?._id || "product"}-${index}`}
+													type="button"
+													onClick={() => setActiveImageIndex(index)}
+													className={`h-14 w-14 shrink-0 overflow-hidden rounded-xl border transition ${
+														index === activeImageIndex
+															? "border-emerald-500 ring-2 ring-emerald-100"
+															: "border-slate-200 hover:border-emerald-300"
+													}`}
+												>
+													<img src={image} alt={`Preview ${index + 1}`} className="h-full w-full object-cover" />
+												</button>
+											))}
+										</div>
+									)}
+								</div>
+
+								<div className="space-y-4">
+									<div className="grid grid-cols-2 gap-3">
+										<div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+											<p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Category</p>
+											<p className="mt-1 text-sm font-semibold text-slate-900">
+												{getCategoryName(selectedProduct?.category) || "N/A"}
+											</p>
+										</div>
+
+										<div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+											<p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Price</p>
+											<p className="mt-1 text-sm font-semibold text-slate-900">
+												${Number(selectedProduct?.price || 0).toFixed(2)}
+											</p>
+										</div>
+
+										<div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+											<p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Stock</p>
+											<div className="mt-1 flex items-center gap-2">
+												<span
+													className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
+														stockStyles[selectedStockStatus?.tone || "green"]
+													}`}
+												>
+													{selectedStockStatus?.text || "In Stock"}
+												</span>
+												<span className="text-xs text-slate-500">{selectedProduct?.stock || 0} units</span>
+											</div>
+										</div>
+
+										<div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+											<p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Status</p>
+											<p className="mt-1 text-sm font-semibold text-slate-900">
+												{selectedProduct?.status || "active"}
+											</p>
+										</div>
+									</div>
+
+									<div className="rounded-2xl border border-slate-200 bg-white p-4">
+										<p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Description</p>
+										<p className="mt-2 text-sm leading-relaxed text-slate-700">
+											{selectedProduct?.description || "No description available for this product yet."}
+										</p>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				)}
 			</div>
 		</Layout>
 	);
