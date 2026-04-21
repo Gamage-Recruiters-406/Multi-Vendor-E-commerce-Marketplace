@@ -124,6 +124,14 @@ const ProductCreate = () => {
     }
   };
 
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      const y = el.getBoundingClientRect().top + window.scrollY - 100;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-800 pb-24 font-sans">
       
@@ -145,41 +153,53 @@ const ProductCreate = () => {
           </button>
         </div>
 
-        {/* Stepper placeholder */}
+        {/* Stepper Navigation */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex items-center justify-between mt-8 relative overflow-hidden">
           <div className="flex items-center space-x-4 z-10 w-full justify-between">
-            <div className="flex items-center space-x-3 w-1/4">
-              <div className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold shadow-md">1</div>
+            <div 
+              onClick={() => scrollToSection('section-basic-details')}
+              className="flex items-center space-x-3 w-1/4 cursor-pointer group"
+            >
+              <div className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold shadow-md group-hover:scale-105 transition-transform">1</div>
               <div>
-                <p className="font-semibold text-slate-900">Basic Details</p>
+                <p className="font-semibold text-slate-900 group-hover:text-emerald-600 transition-colors">Basic Details</p>
                 <p className="text-xs text-slate-500">Title & description</p>
               </div>
             </div>
             <div className="w-12 h-px bg-slate-200 mx-2 hidden md:block flex-grow"></div>
             
-            <div className="flex items-center space-x-3 w-1/4">
-              <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold">2</div>
+            <div 
+              onClick={() => scrollToSection('section-media-pricing')}
+              className="flex items-center space-x-3 w-1/4 cursor-pointer group"
+            >
+              <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold group-hover:bg-slate-200 transition-colors">2</div>
               <div>
-                <p className="font-semibold text-slate-900">Media & Pricing</p>
+                <p className="font-semibold text-slate-900 group-hover:text-emerald-600 transition-colors">Media & Pricing</p>
                 <p className="text-xs text-slate-500">Images & cost</p>
               </div>
             </div>
             <div className="w-12 h-px bg-slate-200 mx-2 hidden md:block flex-grow"></div>
 
-            <div className="flex items-center space-x-3 w-1/4">
-              <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold">3</div>
+            <div 
+              onClick={() => scrollToSection('section-organization')}
+              className="flex items-center space-x-3 w-1/4 cursor-pointer group"
+            >
+              <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold group-hover:bg-slate-200 transition-colors">3</div>
               <div>
-                <p className="font-semibold text-slate-900">Organization</p>
+                <p className="font-semibold text-slate-900 group-hover:text-emerald-600 transition-colors">Organization</p>
                 <p className="text-xs text-slate-500">Category & tags</p>
               </div>
             </div>
             <div className="w-12 h-px bg-slate-200 mx-2 hidden md:block flex-grow"></div>
 
-            <div className="flex items-center space-x-3 w-1/4">
-              <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold">4</div>
+            <div 
+              onClick={() => scrollToSection('section-priority')}
+              className="flex items-center space-x-3 w-1/4 cursor-pointer group"
+            >
+              <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold group-hover:bg-slate-200 transition-colors">4</div>
               <div>
-                <p className="font-semibold text-slate-900">Review</p>
-                <p className="text-xs text-slate-500">Preview & publish</p>
+                <p className="font-semibold text-slate-900 group-hover:text-emerald-600 transition-colors">Priority & Visibility</p>
+                <p className="text-xs text-slate-500">Placement settings</p>
               </div>
             </div>
           </div>
@@ -193,7 +213,7 @@ const ProductCreate = () => {
         <div className="lg:col-span-2 space-y-8">
           
           {/* Section: Product Details */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div id="section-basic-details" className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">Product Details</h2>
@@ -241,7 +261,7 @@ const ProductCreate = () => {
           </div>
 
           {/* Section: Media & Pricing */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div id="section-media-pricing" className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="px-8 py-6 border-b border-slate-50 bg-slate-50/50">
                 <h2 className="text-lg font-bold text-slate-900">Media & Pricing</h2>
                 <p className="text-sm text-slate-500 mt-1">Add images and set your price and inventory</p>
@@ -317,7 +337,7 @@ const ProductCreate = () => {
           </div>
 
           {/* Section: Organization */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div id="section-organization" className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="px-8 py-6 border-b border-slate-50 bg-slate-50/50">
                 <h2 className="text-lg font-bold text-slate-900">Organization</h2>
                 <p className="text-sm text-slate-500 mt-1">Categorize your product for better discoverability</p>
@@ -383,7 +403,7 @@ const ProductCreate = () => {
           </div>
 
           {/* Section: Priority & Visibility */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div id="section-priority" className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="px-8 py-6 border-b border-slate-50 bg-slate-50/50">
               <h2 className="text-lg font-bold text-slate-900">Priority & Visibility</h2>
               <p className="text-sm text-slate-500 mt-1">Control how prominently this product is displayed</p>
