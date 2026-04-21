@@ -127,7 +127,7 @@ const ProductCreate = () => {
   const scrollToSection = (id) => {
     const el = document.getElementById(id);
     if (el) {
-      const y = el.getBoundingClientRect().top + window.scrollY - 100;
+      const y = el.getBoundingClientRect().top + window.scrollY - 160;
       window.scrollTo({ top: y, behavior: 'smooth' });
     }
   };
@@ -152,9 +152,12 @@ const ProductCreate = () => {
             <span>Back to List</span>
           </button>
         </div>
+      </header>
 
-        {/* Stepper Navigation */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex items-center justify-between mt-8 relative overflow-hidden">
+      {/* Sticky Stepper Navigation */}
+      <div className="sticky top-0 z-40 bg-[#f8fafc]/95 backdrop-blur-md pt-4 pb-6 mb-8 border-b border-[#f8fafc]">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex items-center justify-between relative overflow-hidden">
           <div className="flex items-center space-x-4 z-10 w-full justify-between">
             <div 
               onClick={() => scrollToSection('section-basic-details')}
@@ -204,7 +207,8 @@ const ProductCreate = () => {
             </div>
           </div>
         </div>
-      </header>
+      </div>
+    </div>
 
       {/* Main Content Layout */}
       <main className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
