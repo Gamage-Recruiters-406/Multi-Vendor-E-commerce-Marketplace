@@ -13,6 +13,7 @@ import categoryRoutes from './routes/categoryRoutes.js';
 import storeRoutes from './routes/storeRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import cartRoutes from './routes/cartRoutes.js';
+import reviewRoutes from './routes/reviewRoute.js';
 
 import orderRoutes from './routes/orderRoutes.js';
 import announcementRoutes from './routes/announcementRoutes.js';
