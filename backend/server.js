@@ -20,6 +20,8 @@ import notificationRoutes from './routes/notificationRoutes.js';
 
 import couponRoutes from './routes/couponRoutes.js';
 
+import { stripeWebhook } from './controllers/paymentController.js';
+
 const app = express();
 
 // Load environment variables
@@ -35,6 +37,13 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
   secure: true
 });
+
+// import stripe webhook route (Must be before express.json())
+app.post(
+  "/api/v1/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  stripeWebhook
+);
 
 // Log the configuration
 // console.log("Cloudinary Configuration:", cloudinary.config());
