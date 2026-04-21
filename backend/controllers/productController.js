@@ -400,6 +400,31 @@ export const updateProduct = async (req, res) => {
         let imageUrls = product.images;
 
         if (req.files && req.files.length > 0) {
+
+            // 🔥 DELETE OLD IMAGES FIRST
+            if (product.images && product.images.length > 0) {
+                await Promise.all(
+                    product.images.map(async (url) => {
+                        try {
+                            const afterUpload = url.split("/upload/")[1];
+                            const parts = afterUpload.split("/");
+                            const publicPath = parts.slice(1).join("/");
+                            const publicId = publicPath.split(".")[0];
+
+                            await cloudinary.uploader.destroy(publicId, {
+                                invalidate: true
+                            });
+
+                            console.log("Deleted:", publicId);
+
+                        } catch (err) {
+                            console.error("Error deleting image:", err.message);
+                        }
+                    })
+                );
+            }
+
+            // 🔥 Upload new images
             imageUrls = await Promise.all(
                 req.files.map(file =>
                     uploadImage(file.buffer, "marketplace/products")
