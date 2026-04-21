@@ -1,4 +1,5 @@
 import { ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom'; // Add this import
 import heroImage from '../../assets/hero-illustration.png';
 
 const HERO_ILLUSTRATION = heroImage;
@@ -86,8 +87,9 @@ export default function Hero({ features }) {
               , with convenience, quality, and a touch of inspiration
             </p>
 
-            {/* Mobile: Arrow only button | Desktop: Full text button */}
-            <button
+            {/* Link  button */}
+            <Link
+              to="/login" 
               className="inline-flex items-center justify-center gap-2 rounded-full font-semibold text-white transition hover:gap-3 active:scale-95 mx-auto md:mx-0"
               style={{
                 background: 'rgba(255,255,255,0.15)',
@@ -106,7 +108,7 @@ export default function Hero({ features }) {
               <span className="hidden sm:inline-flex items-center gap-2 px-5 sm:px-7 py-2 sm:py-3.5 text-xs sm:text-sm">
                 Get started <ArrowRight size={15} />
               </span>
-            </button>
+            </Link>
           </div>
 
           {/* Right: Illustration */}

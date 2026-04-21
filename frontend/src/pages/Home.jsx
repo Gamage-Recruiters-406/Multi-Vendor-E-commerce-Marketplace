@@ -1,8 +1,17 @@
 import { useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, ArrowRight, ShoppingBag, Store, ShieldCheck, MessageSquare } from 'lucide-react';
+import {
+  ChevronRight,
+  ChevronLeft,
+  ArrowRight,
+  ShoppingBag,
+  Store,
+  ShieldCheck,
+  MessageSquare,
+} from 'lucide-react';
 import Hero from '../components/home/Hero';
 import Announcements from '../components/home/Announcements';
 import HomeService from '../services/HomeService';
+import { Link } from 'react-router-dom'; 
 
 const GREEN = '#1A9F73';
 const GREEN_DARK = '#158a62';
@@ -247,7 +256,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white font-sans antialiased">
       <Hero features={features} />
-      
+
       <Announcements
         loadingAnnouncements={loadingAnnouncements}
         announcements={announcements}
@@ -657,7 +666,9 @@ export default function Home() {
               discerning customers worldwide.
             </p>
           </div>
-          <button
+
+          <Link
+            to="/register"
             className="self-center md:self-auto shrink-0 inline-flex items-center gap-2 rounded-full px-6 sm:px-8 py-3 sm:py-4 text-xs sm:text-sm font-bold text-white transition hover:gap-3 active:scale-95"
             style={{
               border: '2px solid rgba(255,255,255,0.35)',
@@ -668,7 +679,7 @@ export default function Home() {
           >
             Start Selling Today{' '}
             <ArrowRight size={14} className="sm:w-4 sm:h-4" />
-          </button>
+          </Link>
         </div>
       </section>
     </div>
