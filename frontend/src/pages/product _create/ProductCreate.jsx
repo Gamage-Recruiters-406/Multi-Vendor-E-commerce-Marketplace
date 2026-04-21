@@ -11,7 +11,6 @@ const ProductCreate = () => {
     price: '',
     stock: '',
     category: '',
-    store: '',
     images: [],
     attributes: {
       isPremium: false,
@@ -25,8 +24,6 @@ const ProductCreate = () => {
   const [categories, setCategories] = useState([]);
   const [isLoadingCats, setIsLoadingCats] = useState(true);
 
-  const [stores, setStores] = useState([]);
-  const [isLoadingStores, setIsLoadingStores] = useState(true);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -47,32 +44,7 @@ const ProductCreate = () => {
       }
     };
 
-    const fetchStores = async () => {
-      try {
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${baseUrl}/api/v1/store`, {
-          headers: { ...(token && { 'Authorization': `Bearer ${token}` }) }
-        });
-        
-        if (response.ok) {
-           const result = await response.json();
-           if (result.success) {
-             setStores(result.data);
-             if (result.data.length > 0) {
-               setFormData(prev => ({ ...prev, store: result.data[0]._id }));
-             }
-           }
-        }
-      } catch (error) {
-        console.error("Failed to fetch stores", error);
-      } finally {
-        setIsLoadingStores(false);
-      }
-    };
-
     fetchCategories();
-    fetchStores();
   }, []);
 
   const handleInputChange = (e) => {
@@ -122,13 +94,6 @@ const ProductCreate = () => {
       data.append('category', formData.category);
       data.append('stock', formData.stock);
       data.append('attributes', JSON.stringify(formData.attributes));
-      if (formData.store) {
-         data.append('store', formData.store);
-      } else {
-         alert("Please select a store to publish to.");
-         setIsSubmitting(false);
-         return;
-      }
       
       formData.images.forEach(file => data.append('images', file));
 
@@ -359,32 +324,7 @@ const ProductCreate = () => {
             </div>
             
             <div className="p-8 space-y-8">
-               {/* Store Selection */}
-               <div>
-                 <label className="block text-sm font-semibold text-slate-900 mb-4">Select Store <span className="text-rose-500">*</span></label>
-                 {isLoadingStores ? (
-                    <div className="text-sm text-slate-500 py-2">Loading stores...</div>
-                 ) : stores.length === 0 ? (
-                    <div className="text-sm text-amber-600 bg-amber-50 p-4 rounded-xl border border-amber-200">
-                      You don't have any stores yet. Please create a store before publishing a product.
-                    </div>
-                 ) : (
-                    <select 
-                      name="store"
-                      value={formData.store}
-                      onChange={handleInputChange}
-                      className="w-full md:w-1/2 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm bg-white"
-                    >
-                      {stores.map(store => (
-                        <option key={store._id} value={store._id}>
-                          {store.name} 
-                        </option>
-                      ))}
-                    </select>
-                 )}
-               </div>
 
-               <hr className="border-slate-100" />
 
                {/* Category Selection */}
                <div>
