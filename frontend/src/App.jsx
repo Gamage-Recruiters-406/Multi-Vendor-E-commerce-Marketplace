@@ -10,8 +10,8 @@ import ViewStore from "./pages/Vendor/ViewStore";
 import Announcements from "./pages/Announcements";
 import CreateAnnouncement from "./pages/CreateAnnouncement";
 import EditAnnouncement from "./pages/EditAnnouncement";
-import Home from './pages/Home'
-
+import Home from './pages/Home';
+import CheckoutPage from "./pages/CheckoutPage";
 
 import "./App.css";
 
@@ -44,6 +44,9 @@ function App() {
           <Route path="/admin/announcements" element={<Announcements />} />
           <Route path="/admin/announcements/create" element={<CreateAnnouncement />} />
           <Route path="/admin/announcements/edit/:id" element={<EditAnnouncement />} />
+          
+          {/* Checkout */}
+          <Route path="/checkout" element={<CheckoutPage />} />
           
         </Routes>
       </Router>
