@@ -10,8 +10,12 @@ import ViewStore from "./pages/Vendor/ViewStore";
 import Announcements from "./pages/Announcements";
 import CreateAnnouncement from "./pages/CreateAnnouncement";
 import EditAnnouncement from "./pages/EditAnnouncement";
+import VendorProfile from "./pages/Profiles/vendorProfile";
+import Home from './pages/Home';
+import CheckoutPage from "./pages/CheckoutPage";
 
 import "./App.css";
+
 
 function App() {
   return (  
@@ -20,8 +24,9 @@ function App() {
       <Router>
         <Routes>
 
-          {/* Home Page Placeholder */}
-          <Route path="/" element={<h1>Home Page</h1>} />
+          
+          {/* Home Page */}
+           <Route path="/" element={<Home />} />
 
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
@@ -32,6 +37,7 @@ function App() {
           <Route path="/vendor/products" element={<Products />} />
           <Route path="/vendor/create-store" element={<CreateStore />} />
           <Route path="/vendor/store/:id" element={<ViewStore />} />
+          <Route path="/vendor/profile" element={<VendorProfile />} />
       
           {/* Vendor Routes */}
           <Route path="/vendor/product_management" element={<VendorProductManagemnt />} />
@@ -41,6 +47,9 @@ function App() {
           <Route path="/admin/announcements" element={<Announcements />} />
           <Route path="/admin/announcements/create" element={<CreateAnnouncement />} />
           <Route path="/admin/announcements/edit/:id" element={<EditAnnouncement />} />
+          
+          {/* Checkout */}
+          <Route path="/checkout" element={<CheckoutPage />} />
           
         </Routes>
       </Router>
