@@ -1,6 +1,8 @@
 import Payment from '../models/paymentModel.js';
 import Cart from '../models/Cart.js';
 import Stripe from 'stripe';
+import notificationService from '../services/notificationService.js';
+import User from '../models/User.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -85,6 +87,32 @@ export const createPayment = async (req, res) => {
       stripePaymentIntentId: paymentIntent.id,
     });
 
+    // In createPayment function - after creating payment
+    try {
+      const buyer = await User.findById(customerId);
+      
+      if (buyer) {
+        const itemCount = cart.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+        
+        await notificationService.sendToUser(buyer._id, {
+          type: 'payment_initiated',
+          title: 'Payment Initiated 💳',
+          message: `Your payment of $${payableAmount} has been initiated.`,
+          data: {
+            paymentId: newPayment._id,
+            amount: payableAmount,
+            platformFee: platformFee,
+            totalAmount: totalAmount,
+            itemCount: itemCount,
+          },
+          sendEmail: true,
+        });
+      }
+    } catch (notifError) {
+      console.error("Create payment notification error:", notifError);
+      // Don't block payment creation
+    }
+
     res.status(201).json({
       success: true,
       message: "Payment created successfully.",
@@ -131,13 +159,60 @@ export const stripeWebhook = async (req, res) => {
       });
 
       if (existingPayment) {
+
+        // ✅ IMPORTANT: Prevent duplicate webhook processing
+        if (existingPayment.status === "paid") {
+          return res.json({ received: true });
+        }
+
         existingPayment.status = "paid";
         await existingPayment.save();
 
-        // NOTE: Order placement is handled separately by another module.
-        // The order service should listen for payments with status "paid"
-        // and cartId to create the order after this webhook fires.
-        console.log(`Payment ${existingPayment._id} marked as paid. Order placement is handled externally.`);
+        // 🔔 SEND NOTIFICATIONS
+        try {
+          const [buyer, vendor] = await Promise.all([
+            User.findById(existingPayment.customerId),
+            User.findById(existingPayment.OwnerId),
+          ]);
+
+          const amount = Number(existingPayment.amount?.amount || 0);
+
+          // 1. Buyer notification
+          if (buyer) {
+            await notificationService.sendToUser(buyer._id, {
+              type: "payment_succeeded",
+              title: "Payment Successful! ✅",
+              message: `Your payment of $${amount.toFixed(2)} has been successfully processed.`,
+              data: {
+                paymentId: existingPayment._id,
+                amount: amount,
+                paymentDate: existingPayment.paymentDate,
+              },
+              sendEmail: true,
+            });
+          }
+
+          // 2. Vendor notification
+          if (vendor) {
+            await notificationService.sendToUser(vendor._id, {
+              type: "payment_received",
+              title: "Payment Received! 💰",
+              message: `You have received a payment of $${amount.toFixed(2)} from ${buyer?.fullname || "Customer"}.`,
+              data: {
+                paymentId: existingPayment._id,
+                amount: amount,
+                buyerName: buyer?.fullname || "Customer",
+                paymentDate: existingPayment.paymentDate,
+              },
+              sendEmail: true,
+            });
+          }
+
+        } catch (notifError) {
+          console.error("Webhook notification error:", notifError);
+        }
+
+        console.log(`Payment ${existingPayment._id} marked as paid.`);
       }
     }
 
@@ -145,22 +220,74 @@ export const stripeWebhook = async (req, res) => {
     if (event.type === "payment_intent.payment_failed") {
       const intent = event.data.object;
 
-      await Payment.findOneAndDelete({
+      const payment = await Payment.findOne({
         stripePaymentIntentId: intent.id,
       });
 
-      console.log(`Payment record deleted for failed intent: ${intent.id}`);
+      if (payment) {
+        try {
+          const buyer = await User.findById(payment.customerId);
+          const amount = Number(payment.amount?.amount || 0);
+
+          if (buyer) {
+            await notificationService.sendToUser(buyer._id, {
+              type: "payment_failed",
+              title: "Payment Failed ❌",
+              message: `Your payment of $${amount.toFixed(2)} failed. Please try again.`,
+              data: {
+                paymentId: payment._id,
+                amount: amount,
+              },
+              sendEmail: true,
+            });
+          }
+        } catch (notifError) {
+          console.error("Webhook notification error:", notifError);
+        }
+
+        await Payment.findOneAndDelete({
+          stripePaymentIntentId: intent.id,
+        });
+
+        console.log(`Payment record deleted for failed intent: ${intent.id}`);
+      }
     }
 
     // ❌ PAYMENT CANCELED
     if (event.type === "payment_intent.canceled") {
       const intent = event.data.object;
 
-      await Payment.findOneAndDelete({
+      const payment = await Payment.findOne({
         stripePaymentIntentId: intent.id,
       });
 
-      console.log(`Payment record deleted for canceled intent: ${intent.id}`);
+      if (payment) {
+        try {
+          const buyer = await User.findById(payment.customerId);
+          const amount = Number(payment.amount?.amount || 0);
+
+          if (buyer) {
+            await notificationService.sendToUser(buyer._id, {
+              type: "payment_failed",
+              title: "Payment Cancelled",
+              message: `Your payment of $${amount.toFixed(2)} was cancelled.`,
+              data: {
+                paymentId: payment._id,
+                amount: amount,
+              },
+              sendEmail: true,
+            });
+          }
+        } catch (notifError) {
+          console.error("Webhook notification error:", notifError);
+        }
+
+        await Payment.findOneAndDelete({
+          stripePaymentIntentId: intent.id,
+        });
+
+        console.log(`Payment record deleted for canceled intent: ${intent.id}`);
+      }
     }
 
     res.json({ received: true });
