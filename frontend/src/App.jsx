@@ -17,6 +17,7 @@ function App() {
   return (
     <Router>
       <Routes>
+<<<<<<< Updated upstream
         {/* Home Page Placeholder */}
         <Route path="/" element={<h1>Home Page</h1>} />
 
@@ -25,6 +26,16 @@ function App() {
         <Route path="/signup" element={<SignupPage />} />
 
         {/* Vendor Module (REQ4 & REQ5) */}
+=======
+        {/* Home Page */}
+        <Route path="/" element={<h1>Home Page</h1>} />
+
+        {/* Authentication Routes */}
+        <Route path="/login" element={<SigninPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+
+        {/* Vendor Routes */}
+>>>>>>> Stashed changes
         <Route path="/vendor/product_management" element={<VendorProductManagemnt />} />
         <Route path="/vendor/products" element={<Products />} />
         <Route path="/vendor/create-store" element={<CreateStore />} />
