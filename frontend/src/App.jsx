@@ -10,10 +10,12 @@ import ViewStore from "./pages/Vendor/ViewStore";
 import Announcements from "./pages/Announcements";
 import CreateAnnouncement from "./pages/CreateAnnouncement";
 import EditAnnouncement from "./pages/EditAnnouncement";
+import VendorProfile from "./pages/Profiles/vendorProfile";
 import Home from './pages/Home';
 import CheckoutPage from "./pages/CheckoutPage";
 
 import "./App.css";
+
 
 function App() {
   return (  
@@ -35,6 +37,7 @@ function App() {
           <Route path="/vendor/products" element={<Products />} />
           <Route path="/vendor/create-store" element={<CreateStore />} />
           <Route path="/vendor/store/:id" element={<ViewStore />} />
+          <Route path="/vendor/profile" element={<VendorProfile />} />
       
           {/* Vendor Routes */}
           <Route path="/vendor/product_management" element={<VendorProductManagemnt />} />
