@@ -7,6 +7,7 @@ import SignupPage from './pages/login/SignupPage'
 import './App.css'
 import VendorProductManagemnt from './pages/Vendor/ProductManagement'
 import Products from './pages/Vendor/Products'
+import ShoppingCartPage from './pages/ShoppingCart/ShoppingCartPage'
 
 
 
@@ -23,12 +24,12 @@ function App() {
           <Route path="/login" element={<SigninPage />} />
           <Route path="/signup" element={<SignupPage />} />
 
-          {/* Layout */}
-          <Route path="/" element={<Footer />} />
-
           {/* Vendor Routes */}
           <Route path="/vendor/product_management" element={<VendorProductManagemnt />} />
           <Route path="/vendor/products" element={<Products />} />
+
+          {/* Buyer Routes */}
+          <Route path="/cart" element={<ShoppingCartPage />} />
         </Routes>
       </Router>
     </>
