@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
+import ProductCreate from './pages/product _create/ProductCreate';
 import { Toaster } from 'react-hot-toast';
 import SigninPage from "./pages/login/SigninPage";
 import SignupPage from "./pages/login/SignupPage";
@@ -11,8 +12,13 @@ import Announcements from "./pages/Announcements";
 import CreateAnnouncement from "./pages/CreateAnnouncement";
 import EditAnnouncement from "./pages/EditAnnouncement";
 import AdminDashboard from "./pages/AdminDashboard";
+import VendorProfile from "./pages/Profiles/vendorProfile";
+import Home from './pages/Home';
+import CheckoutPage from "./pages/CheckoutPage";
 
 import "./App.css";
+
+
 
 function App() {
   return (  
@@ -21,22 +27,33 @@ function App() {
       <Router>
         <Routes>
 
-          {/* Home Page Placeholder */}
-          <Route path="/" element={<h1>Home Page</h1>} />
+          
+          {/* Home Page */}
+           <Route path="/" element={<Home />} />
 
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
+
+          <Route path="/signup" element={<SignupPage />} />
+
+          {/* Layout 
+          <Route path="/" element={<Footer />} />*/}
+
           <Route path="/register" element={<SignupPage />} />
+
 
           {/* Vendor Module (REQ4 & REQ5) */}
           <Route path="/vendor/product_management" element={<VendorProductManagemnt />} />
           <Route path="/vendor/products" element={<Products />} />
           <Route path="/vendor/create-store" element={<CreateStore />} />
           <Route path="/vendor/store/:id" element={<ViewStore />} />
+          <Route path="/vendor/profile" element={<VendorProfile />} />
       
           {/* Vendor Routes */}
           <Route path="/vendor/product_management" element={<VendorProductManagemnt />} />
           <Route path="/vendor/products" element={<Products />} />
+          <Route path="/vendor/product_create" element={<ProductCreate />} />
+
             
           {/* Admin Module */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
@@ -44,6 +61,10 @@ function App() {
           <Route path="/admin/announcements/create" element={<CreateAnnouncement />} />
           <Route path="/admin/announcements/edit/:id" element={<EditAnnouncement />} />
           
+          {/* Checkout */}
+          <Route path="/checkout" element={<CheckoutPage />} />
+          
+
         </Routes>
       </Router>
     </>

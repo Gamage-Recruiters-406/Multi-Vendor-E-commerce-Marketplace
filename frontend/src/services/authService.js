@@ -166,7 +166,7 @@ export const updateUserProfile = async (profileData) => {
 };
 
 // Get Current User
-/*export const getCurrentUser = () => {
+export const getCurrentUser = () => {
   try {
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
@@ -193,4 +193,4 @@ export const rememberEmail = (email) => {
 
 export const getRememberedEmail = () => {
   return localStorage.getItem('rememberEmail');
-};*/
+};
