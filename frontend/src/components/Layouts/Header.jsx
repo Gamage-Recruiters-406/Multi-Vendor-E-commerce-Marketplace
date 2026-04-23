@@ -1,5 +1,36 @@
 import { useEffect, useMemo, useState } from "react";
-import { getUserProfile } from "../../services/authService";
+import { Bell } from "lucide-react";
+
+const normalizeUrlPart = (value = "") => value.replace(/\/+$/, "");
+const ensureLeadingSlash = (value = "") => (value.startsWith("/") ? value : `/${value}`);
+
+const API_BASE_URL = normalizeUrlPart(import.meta.env.VITE_API_BASE_URL || "http://localhost:5000");
+const API_VERSION = ensureLeadingSlash(import.meta.env.VITE_API_VERSION || "/api/v1");
+const API_URL = `${API_BASE_URL}${API_VERSION}`;
+
+const parseResponse = async (response) => {
+	const text = await response.text();
+	if (!text) {
+		return {};
+	}
+
+	try {
+		return JSON.parse(text);
+	} catch {
+		return { message: text };
+	}
+};
+
+const request = async (url, options) => {
+	const response = await fetch(url, options);
+	const data = await parseResponse(response);
+
+	if (!response.ok) {
+		throw new Error(data?.message || data?.error || response.statusText || "Request failed");
+	}
+
+	return data;
+};
 
 const roleConfigs = {
 	Vendor: {
@@ -65,7 +96,16 @@ export default function Header({ userRole, userName }) {
 
 		const loadProfile = async () => {
 			try {
-				const response = await getUserProfile();
+				const response = await request(`${API_URL}/user/profile`, {
+					method: "GET",
+					headers: {
+						"Content-Type": "application/json",
+						...(localStorage.getItem("token") && {
+							Authorization: `Bearer ${localStorage.getItem("token")}`,
+						}),
+					},
+					credentials: "include",
+				});
 				const fetchedUser = response?.user;
 
 				if (!isMounted || !fetchedUser) return;
@@ -99,6 +139,7 @@ export default function Header({ userRole, userName }) {
 				navIdle: "text-white/85 border-b-2 border-transparent",
 				navActive: "text-emerald-100 border-b-2 border-emerald-100 font-bold",
 				cta: "border border-white/45 bg-white/15 text-white rounded-lg px-4 py-2 text-xs font-semibold",
+				notification: "text-white/90 hover:text-white hover:bg-white/10",
 				search: "",
 				avatar: "bg-white/20 border border-white/40 text-white",
 				name: "text-white",
@@ -114,6 +155,7 @@ export default function Header({ userRole, userName }) {
 				navIdle: "text-slate-700 border-b-2 border-transparent",
 				navActive: "text-emerald-600 border-b-2 border-emerald-600 font-bold",
 				cta: "border border-slate-300 bg-emerald-100 text-emerald-700 rounded-full px-4 py-2 text-[11px] font-bold tracking-wide",
+				notification: "text-slate-600 hover:text-emerald-600 hover:bg-emerald-50",
 				search: "",
 				avatar: "bg-white border border-slate-300 text-slate-800",
 				name: "text-slate-800",
@@ -128,6 +170,7 @@ export default function Header({ userRole, userName }) {
 			navIdle: "text-slate-700 border-b-2 border-transparent",
 			navActive: "text-emerald-600 border-b-2 border-emerald-600 font-bold",
 			cta: "",
+				notification: "text-slate-600 hover:text-emerald-600 hover:bg-emerald-50",
 			search:
 				"flex-1 max-w-[330px] rounded-full border border-slate-300 bg-white px-4 py-2 text-xs text-slate-400 whitespace-nowrap overflow-hidden text-ellipsis",
 			avatar: "bg-white border border-slate-300 text-slate-800",
@@ -194,6 +237,15 @@ export default function Header({ userRole, userName }) {
 						{config.cta}
 					</button>
 				)}
+
+				<button
+					type="button"
+					aria-label="Notifications"
+					className={`relative grid h-9 w-9 place-items-center rounded-full border border-transparent transition ${ui.notification}`}
+				>
+					<Bell size={16} />
+					<span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-current" />
+				</button>
 
 				<div className={`grid h-7 w-7 place-items-center overflow-hidden rounded-full text-xs font-bold ${ui.avatar}`}>
 					{profilePicture ? (

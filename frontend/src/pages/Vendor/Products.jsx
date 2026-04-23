@@ -14,9 +14,26 @@ const getStockStatus = (stock = 0) => {
 	return { text: "In Stock", tone: "green" };
 };
 
+const normalizeUrlPart = (value = "") => value.replace(/\/+$/, "");
+const ensureLeadingSlash = (value = "") => (value.startsWith("/") ? value : `/${value}`);
+
 const getApiBaseUrl = () => {
-	const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1";
-	return base.endsWith("/") ? base.slice(0, -1) : base;
+	const base = normalizeUrlPart(import.meta.env.VITE_API_BASE_URL || "http://localhost:5000");
+	const version = ensureLeadingSlash(import.meta.env.VITE_API_VERSION || "/api/v1");
+	return `${base}${version}`;
+};
+
+const parseResponse = async (response) => {
+	const text = await response.text();
+	if (!text) {
+		return {};
+	}
+
+	try {
+		return JSON.parse(text);
+	} catch {
+		return { message: text };
+	}
 };
 
 const getAuthToken = () => {
@@ -69,7 +86,7 @@ export default function Products() {
 			setError("");
 
 			const response = await fetch(`${getApiBaseUrl()}/product`);
-			const payload = await response.json();
+			const payload = await parseResponse(response);
 
 			if (!response.ok) {
 				throw new Error(payload?.message || "Failed to fetch products");
@@ -139,18 +156,17 @@ export default function Products() {
 
 		try {
 			const token = getAuthToken();
-			if (!token) {
-				throw new Error("Login required to delete products");
-			}
+			const headers = {
+				...(token ? { Authorization: `Bearer ${token}` } : {}),
+			};
 
 			const response = await fetch(`${getApiBaseUrl()}/product/${productId}`, {
 				method: "DELETE",
-				headers: {
-					Authorization: `Bearer ${token}`,
-				},
+				headers,
+				credentials: "include",
 			});
 
-			const payload = await response.json();
+			const payload = await parseResponse(response);
 			if (!response.ok) {
 				throw new Error(payload?.message || "Failed to delete product");
 			}
