@@ -30,7 +30,7 @@ const data = [
   commission: 25000
 }];
 
-export function SalesPerformance() {
+export function SalesPerformance({ totalRevenue = 128450, totalCommission = 19267.50 }) {
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col h-full">
       <div className="flex justify-between items-start mb-6">
@@ -42,10 +42,9 @@ export function SalesPerformance() {
         </div>
         <div className="flex bg-gray-50 rounded-lg p-1 border border-gray-100">
           {['Daily', 'Weekly', 'Monthly', 'Yearly'].map((tab) =>
-          <button
-            key={tab}
-            className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${tab === 'Weekly' ? 'bg-white text-[#1A9F73] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-            
+            <button
+              key={tab}
+              className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${tab === 'Weekly' ? 'bg-white text-[#1A9F73] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
               {tab}
             </button>
           )}
@@ -56,12 +55,12 @@ export function SalesPerformance() {
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-[#1A9F73]"></div>
           <span className="text-gray-600 font-medium">Total Revenue</span>
-          <span className="font-bold text-gray-900">$128,450.00</span>
+          <span className="font-bold text-gray-900">${totalRevenue.toLocaleString()}</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-[#8dd4b6]"></div>
           <span className="text-gray-600 font-medium">Commission (15%)</span>
-          <span className="font-bold text-gray-900">$19,267.50</span>
+          <span className="font-bold text-gray-900">${totalCommission.toLocaleString()}</span>
         </div>
       </div>
 

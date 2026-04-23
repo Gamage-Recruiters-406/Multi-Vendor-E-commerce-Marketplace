@@ -23,7 +23,9 @@ const vendors = [
   statusColor: 'bg-gray-100 text-gray-500'
 }];
 
-export function NewVendors() {
+export function NewVendors({ vendors }) {
+  const displayVendors = vendors || [];
+
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col h-full">
       <div className="flex justify-between items-center mb-6">
@@ -34,30 +36,34 @@ export function NewVendors() {
       </div>
 
       <div className="space-y-6 flex-grow">
-        {vendors.map((vendor, index) =>
-        <div key={index} className="flex items-center justify-between">
+        {displayVendors.map((vendor, index) => (
+          <div key={index} className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gray-800 flex-shrink-0 overflow-hidden">
                 <img
-                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${vendor.name}`}
-                alt={vendor.name}
-                className="w-full h-full object-cover" />
-              
+                  src={vendor.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${vendor.fullname}`}
+                  alt={vendor.fullname}
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div>
                 <h4 className="font-bold text-sm text-gray-900">
-                  {vendor.name}
+                  {vendor.fullname}
                 </h4>
                 <p className="text-xs text-gray-500 font-medium">
-                  {vendor.category} • {vendor.time}
+                  {vendor.email}
                 </p>
               </div>
             </div>
             <span
-            className={`px-2 py-1 rounded text-[10px] font-bold tracking-wider ${vendor.statusColor}`}>
-            
-              {vendor.status}
+              className={`px-2 py-1 rounded text-[10px] font-bold tracking-wider bg-[#e8f7f0] text-[#1A9F73]`}>
+              NEW
             </span>
+          </div>
+        ))}
+        {displayVendors.length === 0 && (
+          <div className="py-8 text-center text-gray-400 italic">
+            No new vendors found
           </div>
         )}
       </div>
@@ -65,6 +71,6 @@ export function NewVendors() {
       <button className="w-full mt-6 py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-500 font-semibold text-sm rounded-xl transition-colors border-dashed">
         Review All Applications
       </button>
-    </div>);
-
+    </div>
+  );
 }
