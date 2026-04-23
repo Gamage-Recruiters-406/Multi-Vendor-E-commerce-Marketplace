@@ -11,7 +11,7 @@ import ViewStore from "./pages/Vendor/ViewStore";
 import Announcements from "./pages/Announcements";
 import CreateAnnouncement from "./pages/CreateAnnouncement";
 import EditAnnouncement from "./pages/EditAnnouncement";
-import AdminDashboard from "./pages/AdminDashboard";
+import { AdminDashboard } from "./pages/AdminDashboard/AdminDashboard";
 import VendorProfile from "./pages/Profiles/vendorProfile";
 import Home from './pages/Home';
 import CheckoutPage from "./pages/CheckoutPage";
