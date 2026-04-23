@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Filter, PencilLine, Plus, Search, Trash2, X } from "lucide-react";
+import { Link } from "react-router-dom";
 import Layout from "../../components/Layouts/Layout";
 
 const stockStyles = {
@@ -214,13 +215,13 @@ export default function Products() {
 									/>
 								</label>
 
-								<button
-									type="button"
+								<Link
+									to="/vendor/product_create"
 									className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
 								>
 									<Plus size={16} />
 									Add New Product
-								</button>
+								</Link>
 							</div>
 						</div>
 
