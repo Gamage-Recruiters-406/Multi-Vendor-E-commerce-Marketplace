@@ -10,6 +10,7 @@ import ViewStore from "./pages/Vendor/ViewStore";
 import Announcements from "./pages/Announcements";
 import CreateAnnouncement from "./pages/CreateAnnouncement";
 import EditAnnouncement from "./pages/EditAnnouncement";
+import AdminDashboard from "./pages/AdminDashboard";
 
 import "./App.css";
 
@@ -38,6 +39,7 @@ function App() {
           <Route path="/vendor/products" element={<Products />} />
             
           {/* Admin Module */}
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/announcements" element={<Announcements />} />
           <Route path="/admin/announcements/create" element={<CreateAnnouncement />} />
           <Route path="/admin/announcements/edit/:id" element={<EditAnnouncement />} />
