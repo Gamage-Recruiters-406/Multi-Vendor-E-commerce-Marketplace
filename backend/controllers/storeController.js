@@ -97,26 +97,31 @@ export const getSingleStore = async (req, res) => {
             message: "Server error"
         });
     }
-};
+}
 
-// Get Vendor Stores
-export const getStoresByVendor = async (req, res) => {
+
+
+// Get Recent Stores
+export const getRecentStores = async (req, res) => {
     try {
-        const vendorId = req.user._id;
-
-        const stores = await Store.find({ vendor: vendorId }).lean();
+        const limit = parseInt(req.query.limit) || 6;
+        
+        const recentStores = await Store.find({ status: 'active' })
+            .sort({ createdAt: -1 })
+            .limit(limit)
+            .populate('vendor', 'name email');
 
         res.status(200).json({
             success: true,
-            data: stores
+            count: recentStores.length,
+            data: recentStores
         });
 
     } catch (error) {
-        console.error(error);
-        
+        console.error('Error in getRecentStores:', error);
         res.status(500).json({
             success: false,
-            message: "Server error"
+            message: error.message || "Server error"
         });
     }
-};
+}
