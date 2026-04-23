@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import Header from '../../components/Layouts/Header';
 import Footer from '../../components/Layouts/Footer';
 import { getVendorProfile, getToken } from '../../services/profileServices';
-import { showToast } from '../../utils/toast';
+
 
 export default function VendorProfile() {
   const [vendorData, setVendorData] = useState(null);

@@ -13,8 +13,9 @@ import EditAnnouncement from "./pages/EditAnnouncement";
 import VendorProfile from "./pages/Profiles/vendorProfile";
 import Home from './pages/Home';
 import CheckoutPage from "./pages/CheckoutPage";
-
+import UserProfileAndAddressBook from "./pages/Profiles/userProfile&AddressBook";
 import "./App.css";
+
 
 
 function App() {
@@ -50,6 +51,8 @@ function App() {
           
           {/* Checkout */}
           <Route path="/checkout" element={<CheckoutPage />} />
+
+          <Route path="/addressbook" element={<UserProfileAndAddressBook />} />
           
         </Routes>
       </Router>
