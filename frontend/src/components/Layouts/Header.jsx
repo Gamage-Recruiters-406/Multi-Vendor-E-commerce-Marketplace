@@ -32,6 +32,31 @@ const request = async (url, options) => {
 	return data;
 };
 
+const getAuthHeaders = () => ({
+	"Content-Type": "application/json",
+	...(localStorage.getItem("token") && {
+		Authorization: `Bearer ${localStorage.getItem("token")}`,
+	}),
+});
+
+const normalizeProfilePictureUrl = (value) => {
+	if (!value || typeof value !== "string") return null;
+
+	const trimmed = value.trim();
+	if (!trimmed) return null;
+
+	const cloudinaryMarker = "https://res.cloudinary.com/";
+	const firstIndex = trimmed.indexOf(cloudinaryMarker);
+	if (firstIndex === -1) return trimmed;
+
+	const secondIndex = trimmed.indexOf(cloudinaryMarker, firstIndex + cloudinaryMarker.length);
+	if (secondIndex !== -1) {
+		return trimmed.slice(secondIndex);
+	}
+
+	return trimmed;
+};
+
 const roleConfigs = {
 	Vendor: {
 		brand: "NEXIO",
@@ -98,21 +123,36 @@ export default function Header({ userRole, userName }) {
 			try {
 				const response = await request(`${API_URL}/user/profile`, {
 					method: "GET",
-					headers: {
-						"Content-Type": "application/json",
-						...(localStorage.getItem("token") && {
-							Authorization: `Bearer ${localStorage.getItem("token")}`,
-						}),
-					},
+					headers: getAuthHeaders(),
 					credentials: "include",
 				});
+
 				const fetchedUser = response?.user;
+
+				let profilePicture = normalizeProfilePictureUrl(fetchedUser?.profilePicture);
+				if (!profilePicture) {
+					try {
+						const pictureResponse = await request(`${API_URL}/user/get-profile-picture`, {
+							method: "GET",
+							headers: getAuthHeaders(),
+							credentials: "include",
+						});
+						profilePicture = normalizeProfilePictureUrl(pictureResponse?.profilePicture);
+					} catch {
+						// Ignore when picture endpoint returns not found.
+					}
+				}
 
 				if (!isMounted || !fetchedUser) return;
 
-				setDbUser((prev) => ({ ...(prev || {}), ...fetchedUser }));
+				const mergedUser = {
+					...fetchedUser,
+					...(profilePicture ? { profilePicture } : {}),
+				};
+
+				setDbUser((prev) => ({ ...(prev || {}), ...mergedUser }));
 				const currentLocalUser = getStoredUser() || {};
-				localStorage.setItem("user", JSON.stringify({ ...currentLocalUser, ...fetchedUser }));
+				localStorage.setItem("user", JSON.stringify({ ...currentLocalUser, ...mergedUser }));
 			} catch {
 				// Keep local user fallback if profile request fails.
 			}
