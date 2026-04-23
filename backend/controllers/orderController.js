@@ -366,6 +366,13 @@ export const createOrder = async (req, res) => {
           orderId: order._id,
           orderNumber: order.orderNumber,
           totalAmount: order.priceSummary.totalAmount,
+          paymentStatus: order.payment?.status || 'Pending',
+          // Customer fields (for email template)
+          customerName: order.buyer.fullname,
+    
+          // Payment fields (standardized)
+          amount: order.priceSummary.totalAmount,
+          paymentDate: order.createdAt,
         },
         sendEmail: true,
       });
@@ -768,8 +775,11 @@ export const updateVendorOrderStatus = async (req, res) => {
         data: {
           orderId: order._id,
           orderNumber: order.orderNumber,
+          status: status,
           customerName: order.buyer.fullname,
           estimatedDelivery: vendorSegment.estimatedDelivery,
+          amount: order.priceSummary.totalAmount,
+          paymentDate: order.updatedAt,
         },
         sendEmail: true,
       });
@@ -966,6 +976,9 @@ export const updatePaymentStatus = async (req, res) => {
             oldPaymentStatus: oldPaymentStatus,
             amount: order.priceSummary.totalAmount,
             transactionId: transactionId,
+            customerName: order.buyer.fullname,  // ✅ ADD THIS
+            paymentDate: order.payment.paidAt || order.updatedAt,  // ✅ ADD THIS
+
           },
           sendEmail: true,
         });
