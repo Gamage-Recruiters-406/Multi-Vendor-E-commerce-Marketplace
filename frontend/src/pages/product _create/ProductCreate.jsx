@@ -3,6 +3,8 @@ import {
   ArrowLeft, CheckCircle2, ShieldAlert, Image as ImageIcon, 
   Send, Star, Upload, X, Check
 } from 'lucide-react';
+import Header from '../../components/Layouts/Header';
+import Footer from '../../components/Layouts/Footer';
 
 const ProductCreate = () => {
   const [formData, setFormData] = useState({
@@ -134,6 +136,7 @@ const ProductCreate = () => {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-800 pb-24 font-sans">
+      <Header userRole="Vendor" />
       
       {/* Header Area */}
       <header className="max-w-6xl mx-auto px-6 pt-10 pb-6">
@@ -580,6 +583,7 @@ const ProductCreate = () => {
         </div>
       </div>
 
+      <Footer />
     </div>
   );
 };
