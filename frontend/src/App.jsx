@@ -14,6 +14,7 @@ import Home from './pages/Home';
 import CheckoutPage from "./pages/CheckoutPage";
 
 import "./App.css";
+import StoresPage from "./pages/Vendor/Stores";
 
 function App() {
   return (  
@@ -35,6 +36,8 @@ function App() {
           <Route path="/vendor/products" element={<Products />} />
           <Route path="/vendor/create-store" element={<CreateStore />} />
           <Route path="/vendor/store/:id" element={<ViewStore />} />
+          <Route path="/vendor/profile" element={<VendorProfile />} />
+          <Route path="/vendor/store" element={<StoresPage />} />
       
           {/* Vendor Routes */}
           <Route path="/vendor/product_management" element={<VendorProductManagemnt />} />
