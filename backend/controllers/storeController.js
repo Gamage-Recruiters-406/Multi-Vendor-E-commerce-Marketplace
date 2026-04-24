@@ -314,3 +314,28 @@ export const deleteStore = async (req, res) => {
         });
     }
 }
+
+
+
+// Get Vendor's Stores
+export const getMyStores = async (req, res) => {
+    try {
+        const vendorId = req.user._id;
+
+        const stores = await Store.find({ vendor: vendorId })
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            count: stores.length,
+            data: stores
+        });
+
+    } catch (error) {
+        console.error("GET MY STORES ERROR:", error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Server error"
+        });
+    }
+}
