@@ -7,11 +7,14 @@ import {
   getVendorSalesAnalytics,
   getVendorProducts,
 } from "../api/vendorDashboard";
+import Header from "../components/Layouts/Header";
+import Footer from "../components/Layouts/Footer";
 
 const STATUS_STYLES = {
-  Completed: "bg-green-100 text-green-800",
-  Processing: "bg-yellow-100 text-yellow-800",
+  Placed: "bg-slate-100 text-slate-700",
+  Confirmed: "bg-yellow-100 text-yellow-800",
   Shipped: "bg-blue-100 text-blue-800",
+  Delivered: "bg-green-100 text-green-800",
   Cancelled: "bg-red-100 text-red-800",
 };
 
@@ -144,6 +147,8 @@ export default function VendorDashboard() {
     getVendorSalesAnalytics(chartPeriod).then(setChartData);
   }, [chartPeriod]);
 
+  const totalOrders = orders.length;
+
   const STAT_CARDS = stats
     ? [
         {
@@ -156,8 +161,8 @@ export default function VendorDashboard() {
         },
         {
           label: "Total Orders",
-          value: stats.totalOrders,
-          change: "+8.2%",
+          value: totalOrders,
+          change: `${totalOrders} orders`,
           up: true,
           icon: "🛒",
           alert: false,
@@ -186,35 +191,16 @@ export default function VendorDashboard() {
   const displayOrders =
     orders.length > 0
       ? orders.slice(0, 5).map((o) => ({
-          id: `#${o._id?.slice(-6).toUpperCase()}`,
-          product: o.orderItems?.[0]?.product?.title || "—",
-          customer: o.buyer?.name || "—",
-          status: o.status,
-          amount: `$${o.totalAmount?.toFixed(2)}`,
+          id: o.orderNumber || `#${o.orderId?.slice(-6).toUpperCase()}`,
+          product:
+            o.vendorOrder?.items?.length > 1
+              ? `${o.vendorOrder.items[0].productName} +${o.vendorOrder.items.length - 1} more`
+              : o.vendorOrder?.items?.[0]?.productName || "—",
+          customer: o.buyer?.fullname || o.shippingAddress?.fullName || "—",
+          status: o.vendorOrder?.status || "—",
+          amount: `Rs. ${Number(o.vendorOrder?.totalAmount || 0).toLocaleString()}`,
         }))
-      : [
-          {
-            id: "#ORD-001",
-            product: "Wireless Headphones",
-            customer: "Sarah Johnson",
-            status: "Completed",
-            amount: "$89.99",
-          },
-          {
-            id: "#ORD-002",
-            product: "Smart Watch",
-            customer: "Mike Chen",
-            status: "Processing",
-            amount: "$199.99",
-          },
-          {
-            id: "#ORD-003",
-            product: "USB Cable",
-            customer: "Emma Davis",
-            status: "Shipped",
-            amount: "$12.99",
-          },
-        ];
+      : [];
 
   //  shape from /api/announcements/feed
   // { _id, title, message, type, createdAt }
@@ -267,257 +253,268 @@ export default function VendorDashboard() {
     );
 
   return (
-    <div className="w-full max-w-[1900px] mx-auto px-4 md:px-6 lg:px-8 py-4">
-      {/* Top bar */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="text-lg font-bold text-gray-900">
-            Good morning, {profile?.fullname?.split(" ")[0] || "prime"} 👋
-          </h1>
-          <p className="text-xs text-gray-400 mt-0.5">
-            Here's what's happening with your store today.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {/*  POST /api/products/ */}
-          <button
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition"
-            style={{ background: "#1A9F73" }}
-          >
-            + Add New Product
-          </button>
-          {/* : bell for /api/announcements/feed */}
-          <div className="relative w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center cursor-pointer hover:border-[#1A9F73] transition">
-            <span className="text-base">🔔</span>
-            <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-          </div>
-        </div>
-      </div>
-
-      {/* STAT CARDS —  */}
-      <div className="grid grid-cols-4 gap-4 mb-5">
-        {STAT_CARDS.map((s, i) => (
-          <div
-            key={i}
-            className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-md transition-shadow"
-          >
-            <div className="flex justify-between items-start mb-3">
-              <span className="text-xs text-gray-400 font-medium">
-                {s.label}
-              </span>
-              <div
-                className={`w-9 h-9 rounded-xl flex items-center justify-center text-base ${s.alert ? "bg-amber-50" : "bg-green-50"}`}
-              >
-                {s.icon}
-              </div>
-            </div>
-            <p className="text-2xl font-bold text-gray-900 mb-1">{s.value}</p>
-            <p
-              className={`text-xs font-medium ${s.up ? "text-[#1A9F73]" : s.alert ? "text-amber-500" : "text-red-400"}`}
-            >
-              {s.up ? "↑ " : s.alert ? "⚠ " : "↓ "}
-              {s.change}
+    <>
+      <Header />
+      <div className="w-full max-w-[1900px] mx-auto px-4 md:px-6 lg:px-8 py-4">
+        {/* Top bar */}
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">
+              Good morning, {profile?.fullname?.split(" ")[0] || "prime"} 👋
+            </h1>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Here's what's happening with your store today.
             </p>
           </div>
-        ))}
-      </div>
-
-      {/* QUICK ACCESS */}
-      <div className="grid grid-cols-4 gap-3 mb-5">
-        {[
-          {
-            icon: "📦",
-            label: "Product Management",
-            sub: "Add, edit products",
-          },
-          {
-            icon: "🛒",
-            label: "Order Management",
-            sub: "Track orders",
-          },
-          {
-            icon: "📊",
-            label: "Sales Analytics",
-            sub: "View reports",
-          },
-          {
-            icon: "🏪",
-            label: "My Store",
-            sub: "Manage store",
-          },
-        ].map((q, i) => (
-          <div
-            key={i}
-            className="bg-white rounded-xl p-3 border border-gray-100 flex items-center gap-3 cursor-pointer hover:border-[#1A9F73] hover:shadow-sm transition-all"
-          >
-            <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
-              {q.icon}
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-gray-800">{q.label}</p>
-              <p className="text-[10px] text-gray-400">{q.sub}</p>
+          <div className="flex items-center gap-3">
+            {/*  POST /api/products/ */}
+            <button
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition"
+              style={{ background: "#1A9F73" }}
+            >
+              + Add New Product
+            </button>
+            {/* : bell for /api/announcements/feed */}
+            <div className="relative w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center cursor-pointer hover:border-[#1A9F73] transition">
+              <span className="text-base">🔔</span>
+              <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
             </div>
           </div>
-        ))}
-      </div>
-
-      {/* CHART + NOTIFICATIONS */}
-      <div className="grid grid-cols-3 gap-4 mb-4">
-        {/* Chart —  */}
-        <div className="col-span-2 bg-white rounded-2xl p-5 border border-gray-100">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h2 className="text-sm font-bold text-gray-800">
-                Sales Overview
-              </h2>
-            </div>
-            <div className="flex gap-1">
-              {["daily", "weekly", "monthly"].map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setChartPeriod(p)}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium capitalize transition ${chartPeriod === p ? "text-white" : "text-gray-400 hover:bg-gray-50"}`}
-                  style={chartPeriod === p ? { background: "#1A9F73" } : {}}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
-          {chartData && (
-            <SalesChart data={chartData.data} labels={chartData.labels} />
-          )}
         </div>
 
-        {/* Notifications —  */}
-        <div className="bg-white rounded-2xl p-5 border border-gray-100">
-          <div className="mb-3">
-            <h2 className="text-sm font-bold text-gray-800">Notifications</h2>
-          </div>
-          {displayNotifs.map((n) => (
+        {/* STAT CARDS —  */}
+        <div className="grid grid-cols-4 gap-4 mb-5">
+          {STAT_CARDS.map((s, i) => (
             <div
-              key={n.id}
-              className="flex gap-3 py-2.5 border-b border-gray-50 last:border-0"
+              key={i}
+              className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-md transition-shadow"
             >
-              <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-sm flex-shrink-0">
-                {notifIcon(n.type)}
+              <div className="flex justify-between items-start mb-3">
+                <span className="text-xs text-gray-400 font-medium">
+                  {s.label}
+                </span>
+                <div
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center text-base ${s.alert ? "bg-amber-50" : "bg-green-50"}`}
+                >
+                  {s.icon}
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-semibold text-gray-800">{n.title}</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">{n.desc}</p>
-                <p className="text-[10px] text-gray-300 mt-0.5">{n.time}</p>
+              <p className="text-2xl font-bold text-gray-900 mb-1">{s.value}</p>
+              <p
+                className={`text-xs font-medium ${s.up ? "text-[#1A9F73]" : s.alert ? "text-amber-500" : "text-red-400"}`}
+              >
+                {s.up ? "↑ " : s.alert ? "⚠ " : "↓ "}
+                {s.change}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* QUICK ACCESS */}
+        <div className="grid grid-cols-4 gap-3 mb-5">
+          {[
+            {
+              icon: "📦",
+              label: "Product Management",
+              sub: "Add, edit products",
+            },
+            {
+              icon: "🛒",
+              label: "Order Management",
+              sub: "Track orders",
+            },
+            {
+              icon: "📊",
+              label: "Sales Analytics",
+              sub: "View reports",
+            },
+            {
+              icon: "🏪",
+              label: "My Store",
+              sub: "Manage store",
+            },
+          ].map((q, i) => (
+            <div
+              key={i}
+              className="bg-white rounded-xl p-3 border border-gray-100 flex items-center gap-3 cursor-pointer hover:border-[#1A9F73] hover:shadow-sm transition-all"
+            >
+              <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
+                {q.icon}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-gray-800">{q.label}</p>
+                <p className="text-[10px] text-gray-400">{q.sub}</p>
               </div>
             </div>
           ))}
         </div>
-      </div>
 
-      {/* ORDERS + TOP PRODUCTS + QUICK ACTIONS */}
-      <div className="grid grid-cols-3 gap-4">
-        {/* Orders —  */}
-        <div className="col-span-2 bg-white rounded-2xl p-5 border border-gray-100">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h2 className="text-sm font-bold text-gray-800">Recent Orders</h2>
+        {/* CHART + NOTIFICATIONS */}
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          {/* Chart —  */}
+          <div className="col-span-2 bg-white rounded-2xl p-5 border border-gray-100">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-sm font-bold text-gray-800">
+                  Sales Overview
+                </h2>
+              </div>
+              <div className="flex gap-1">
+                {["daily", "weekly", "monthly"].map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setChartPeriod(p)}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium capitalize transition ${chartPeriod === p ? "text-white" : "text-gray-400 hover:bg-gray-50"}`}
+                    style={chartPeriod === p ? { background: "#1A9F73" } : {}}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
             </div>
-            <button
-              className="text-xs font-semibold hover:underline"
-              style={{ color: "#1A9F73" }}
-            >
-              View all →
-            </button>
-          </div>
-          <div className="grid grid-cols-5 gap-2 pb-2 border-b border-gray-100">
-            {["Order ID", "Product", "Customer", "Status", "Amount"].map(
-              (h) => (
-                <span
-                  key={h}
-                  className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide"
-                >
-                  {h}
-                </span>
-              ),
+            {chartData && (
+              <SalesChart data={chartData.data} labels={chartData.labels} />
             )}
           </div>
-          {displayOrders.map((o) => (
-            <div
-              key={o.id}
-              className="grid grid-cols-5 gap-2 py-2.5 border-b border-gray-50 items-center last:border-0"
-            >
-              <span className="text-xs font-bold" style={{ color: "#1A9F73" }}>
-                {o.id}
-              </span>
-              <span className="text-xs text-gray-700 truncate">
-                {o.product}
-              </span>
-              <span className="text-xs text-gray-400 truncate">
-                {o.customer}
-              </span>
-              <span
-                className={`text-[10px] font-semibold px-2 py-0.5 rounded-md w-fit ${STATUS_STYLES[o.status] || "bg-gray-100 text-gray-600"}`}
-              >
-                {o.status}
-              </span>
-              <span className="text-xs font-bold text-gray-800">
-                {o.amount}
-              </span>
+
+          {/* Notifications —  */}
+          <div className="bg-white rounded-2xl p-5 border border-gray-100">
+            <div className="mb-3">
+              <h2 className="text-sm font-bold text-gray-800">Notifications</h2>
             </div>
-          ))}
+            {displayNotifs.map((n) => (
+              <div
+                key={n.id}
+                className="flex gap-3 py-2.5 border-b border-gray-50 last:border-0"
+              >
+                <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-sm flex-shrink-0">
+                  {notifIcon(n.type)}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-800">
+                    {n.title}
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">{n.desc}</p>
+                  <p className="text-[10px] text-gray-300 mt-0.5">{n.time}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="flex flex-col gap-4">
-          {/* Top Products — */}
-          <div className="bg-white rounded-2xl p-5 border border-gray-100 flex-1">
-            <div className="mb-3">
-              <h2 className="text-sm font-bold text-gray-800">
-                Top Selling Products
-              </h2>
-            </div>
-            {products.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0"
+        {/* ORDERS + TOP PRODUCTS + QUICK ACTIONS */}
+        <div className="grid grid-cols-3 gap-4">
+          {/* Orders —  */}
+          <div className="col-span-2 bg-white rounded-2xl p-5 border border-gray-100">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-sm font-bold text-gray-800">
+                  Recent Orders
+                </h2>
+              </div>
+              <button
+                className="text-xs font-semibold hover:underline"
+                style={{ color: "#1A9F73" }}
               >
-                <div className="w-9 h-9 bg-green-50 rounded-lg flex items-center justify-center text-lg flex-shrink-0">
-                  {p.img}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-gray-800 truncate">
-                    {p.name}
-                  </p>
-                  <p className="text-[10px] text-gray-400">
-                    {p.sold} sold this month
-                  </p>
-                </div>
+                View all →
+              </button>
+            </div>
+            <div className="grid grid-cols-5 gap-2 pb-2 border-b border-gray-100">
+              {["Order ID", "Product", "Customer", "Status", "Amount"].map(
+                (h) => (
+                  <span
+                    key={h}
+                    className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide"
+                  >
+                    {h}
+                  </span>
+                ),
+              )}
+            </div>
+            {displayOrders.map((o) => (
+              <div
+                key={o.id}
+                className="grid grid-cols-5 gap-2 py-2.5 border-b border-gray-50 items-center last:border-0"
+              >
                 <span
-                  className="text-xs font-bold flex-shrink-0"
+                  className="text-xs font-bold"
                   style={{ color: "#1A9F73" }}
                 >
-                  ${p.price}
+                  {o.id}
+                </span>
+                <span className="text-xs text-gray-700 truncate">
+                  {o.product}
+                </span>
+                <span className="text-xs text-gray-400 truncate">
+                  {o.customer}
+                </span>
+                <span
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-md w-fit ${STATUS_STYLES[o.status] || "bg-gray-100 text-gray-600"}`}
+                >
+                  {o.status}
+                </span>
+                <span className="text-xs font-bold text-gray-800">
+                  {o.amount}
                 </span>
               </div>
             ))}
           </div>
 
-          {/* Quick Actions */}
-          <div className="bg-white rounded-2xl p-5 border border-gray-100">
-            <h2 className="text-sm font-bold text-gray-800 mb-3">
-              Quick Actions
-            </h2>
-            {/* : POST /api/products/ */}
-            <button
-              className="w-full py-2.5 rounded-xl text-white text-sm font-semibold mb-2 hover:opacity-90 transition"
-              style={{ background: "#1A9F73" }}
-            >
-              + Add New Product
-            </button>
-            {/*  GET /api/orders/vendor/list */}
-            <button className="w-full py-2.5 rounded-xl bg-gray-50 text-gray-700 text-sm font-medium border border-gray-100 hover:border-[#1A9F73] transition">
-              👁 View All Orders
-            </button>
+          <div className="flex flex-col gap-4">
+            {/* Top Products — */}
+            <div className="bg-white rounded-2xl p-5 border border-gray-100 flex-1">
+              <div className="mb-3">
+                <h2 className="text-sm font-bold text-gray-800">
+                  Top Selling Products
+                </h2>
+              </div>
+              {products.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0"
+                >
+                  <div className="w-9 h-9 bg-green-50 rounded-lg flex items-center justify-center text-lg flex-shrink-0">
+                    {p.img}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-gray-800 truncate">
+                      {p.name}
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      {p.sold} sold this month
+                    </p>
+                  </div>
+                  <span
+                    className="text-xs font-bold flex-shrink-0"
+                    style={{ color: "#1A9F73" }}
+                  >
+                    ${p.price}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="bg-white rounded-2xl p-5 border border-gray-100">
+              <h2 className="text-sm font-bold text-gray-800 mb-3">
+                Quick Actions
+              </h2>
+              {/* : POST /api/products/ */}
+              <button
+                className="w-full py-2.5 rounded-xl text-white text-sm font-semibold mb-2 hover:opacity-90 transition"
+                style={{ background: "#1A9F73" }}
+              >
+                + Add New Product
+              </button>
+              {/*  GET /api/orders/vendor/list */}
+              <button className="w-full py-2.5 rounded-xl bg-gray-50 text-gray-700 text-sm font-medium border border-gray-100 hover:border-[#1A9F73] transition">
+                👁 View All Orders
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      <Footer />
+    </>
   );
 }

@@ -13,6 +13,7 @@ import EditAnnouncement from "./pages/EditAnnouncement";
 import VendorDashboard from "./pages/VendorDashboard";
 
 import "./App.css";
+import BuyerProductDetailsPage from "./pages/Buyer/BuyerProductDetailsPage";
 
 function App() {
   return (
@@ -54,6 +55,10 @@ function App() {
             element={<EditAnnouncement />}
           />
           <Route path="/vendor/dashboard" element={<VendorDashboard />} />
+          <Route
+            path="/buyer/productdetails/:id"
+            element={<BuyerProductDetailsPage />}
+          />
         </Routes>
       </Router>
     </>
