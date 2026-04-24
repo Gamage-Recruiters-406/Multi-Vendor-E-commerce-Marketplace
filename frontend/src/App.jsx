@@ -21,22 +21,6 @@ import "./App.css";
 
 
 function App() {
-        {/* Home Page */}
-        <Route path="/" element={<h1>Home Page</h1>} />
-
-        {/* Authentication Routes */}
-        <Route path="/login" element={<SigninPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-
-        {/* Vendor Routes */}
-        <Route path="/vendor/product_management" element={<VendorProductManagemnt />} />
-        <Route path="/vendor/products" element={<Products />} />
-        <Route path="/vendor/create-store" element={<CreateStore />} />
-        <Route path="/vendor/store/:id" element={<ViewStore />} />
-      </Routes>
-    </Router>
-  );
-
   return (  
     <>
       <Toaster position="top-right" />
@@ -58,17 +42,13 @@ function App() {
           <Route path="/register" element={<SignupPage />} />
 
 
-          {/* Vendor Module (REQ4 & REQ5) */}
-          <Route path="/vendor/product_management" element={<VendorProductManagemnt />} />
-          <Route path="/vendor/products" element={<Products />} />
-          <Route path="/vendor/create-store" element={<CreateStore />} />
-          <Route path="/vendor/store/:id" element={<ViewStore />} />
-          <Route path="/vendor/profile" element={<VendorProfile />} />
-      
-          {/* Vendor Routes */}
+          {/* Vendor Module */}
           <Route path="/vendor/product_management" element={<VendorProductManagemnt />} />
           <Route path="/vendor/products" element={<Products />} />
           <Route path="/vendor/product_create" element={<ProductCreate />} />
+          <Route path="/vendor/create-store" element={<CreateStore />} />
+          <Route path="/vendor/store/:id" element={<ViewStore />} />
+          <Route path="/vendor/profile" element={<VendorProfile />} />
 
             
           {/* Admin Module */}
