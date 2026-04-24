@@ -17,6 +17,7 @@ import Home from './pages/Home';
 import CheckoutPage from "./pages/CheckoutPage";
 
 import "./App.css";
+import StoresPage from "./pages/Vendor/Stores";
 
 
 
@@ -49,7 +50,9 @@ function App() {
           <Route path="/vendor/create-store" element={<CreateStore />} />
           <Route path="/vendor/store/:id" element={<ViewStore />} />
           <Route path="/vendor/profile" element={<VendorProfile />} />
-
+          <Route path="/vendor/store" element={<StoresPage />} />
+      
+        frontend
             
           {/* Admin Module */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
