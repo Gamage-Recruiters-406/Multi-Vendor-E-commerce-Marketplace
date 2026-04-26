@@ -15,9 +15,10 @@ import { AdminDashboard } from "./pages/AdminDashboard/AdminDashboard";
 import VendorProfile from "./pages/Profiles/vendorProfile";
 import Home from './pages/Home';
 import CheckoutPage from "./pages/CheckoutPage";
-
+import UserProfileAndAddressBook from "./pages/Profiles/userProfile&AddressBook";
 import "./App.css";
 import StoresPage from "./pages/Vendor/Stores";
+
 
 
 
@@ -62,6 +63,8 @@ function App() {
           
           {/* Checkout */}
           <Route path="/checkout" element={<CheckoutPage />} />
+
+          <Route path="/addressbook" element={<UserProfileAndAddressBook />} />
           
 
         </Routes>
