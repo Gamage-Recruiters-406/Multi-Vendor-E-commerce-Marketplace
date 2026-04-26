@@ -1,4 +1,4 @@
-/* Profile Service */
+/* Vendor Profile Services */
 
 // Normalize URL - remove trailing slashes
 const normalizeUrlPart = (value = '') => value.replace(/\/\/+$/, '');
@@ -6,12 +6,12 @@ const normalizeUrlPart = (value = '') => value.replace(/\/\/+$/, '');
 // Ensure leading slash for path
 const ensureLeadingSlash = (value = '') => value.startsWith('/') ? value : `/${value}`;
 
-// Configure API endpoints using Vite environment variables
+// Configure API endpoints using Vite environment variables or fallbacks
 const API_BASE_URL = normalizeUrlPart(import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000');
-const API_VERSION = ensureLeadingSlash(import.meta.env.VITE_API_VERSION || '/api/v1');
+const API_VERSION = ensureLeadingSlash(import.meta.env.VITE_API_VERSION || '/api');
 const API_URL = `${API_BASE_URL}${API_VERSION}`;
 
-console.log('🔗 Profile API URL:', API_URL);
+console.log('🔗 Vendor Profile Service API URL:', API_URL);
 
 /* Get authorization headers */
 const getAuthHeaders = () => {
@@ -22,7 +22,7 @@ const getAuthHeaders = () => {
   };
 };
 
-/* Parse API response */
+/* Parse API response safely */
 const parseResponse = async (response) => {
   const text = await response.text();
   if (!text) {
@@ -38,185 +38,73 @@ const parseResponse = async (response) => {
 
 /* Make HTTP request with error handling */
 const request = async (url, options) => {
-  const response = await fetch(url, options);
-  const data = await parseResponse(response);
-
-  if (!response.ok) {
-    const message = data?.message || data?.error || response.statusText || 'Request failed';
-    throw new Error(message);
-  }
-
-  return data;
-};
-
-// CURRENT USER PROFILE OPERATIONS
-
-/* Get current logged-in user's profile */
-export const getUserProfile = async () => {
   try {
-    return await request(`${API_URL}/user/profile`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-      credentials: 'include',
-    });
-  } catch (error) {
-    throw new Error(error.message || 'Failed to fetch profile');
-  }
-};
-
-/* Update current user's profile (currently supports phone updates) */
-export const updateUserProfile = async (profileData) => {
-  try {
-    // If updating phone, use the dedicated updatePhone endpoint
-    if (profileData.phone && Object.keys(profileData).length === 1) {
-      return await updatePhone(profileData.phone);
-    }
-
-    // For other profile data, you may need to extend this based on backend capabilities
-    const data = await request(`${API_URL}/user/profile`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(profileData),
-      credentials: 'include',
-    });
-
-    if (data.user) {
-      localStorage.setItem('user', JSON.stringify(data.user));
-    }
-
-    return data;
-  } catch (error) {
-    throw new Error(error.message || 'Failed to update profile');
-  }
-};
-
-/* Get current user's profile picture */
-export const getProfilePicture = async () => {
-  try {
-    return await request(`${API_URL}/user/get-profile-picture`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-      credentials: 'include',
-    });
-  } catch (error) {
-    throw new Error(error.message || 'Failed to fetch profile picture');
-  }
-};
-
-/* Upload profile picture for current user (PROTECTED - requires authentication) */
-export const uploadProfilePicture = async (file) => {
-  if (!file) {
-    throw new Error('File is required');
-  }
-
-  try {
-    const formData = new FormData();
-    formData.append('profilePicture', file);
-
-    const token = localStorage.getItem('token');
-    const headers = {};
-
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_URL}/user/upload-profile-picture`, {
-      method: 'POST',
-      headers,
-      body: formData,
-      credentials: 'include',
-    });
-
+    const response = await fetch(url, options);
     const data = await parseResponse(response);
 
     if (!response.ok) {
-      const message = data?.message || data?.error || response.statusText || 'Upload failed';
+      const message = data?.message || data?.error || response.statusText || 'Request failed';
       throw new Error(message);
     }
 
     return data;
   } catch (error) {
-    console.error('Profile Picture Upload Error:', error);
-    throw new Error(error.message || 'Failed to upload profile picture');
+    console.error('API Error:', error);
+    throw error;
   }
 };
 
-/* Remove profile picture for current user */
-export const removeProfilePicture = async () => {
+// ==================== VENDOR PROFILE OPERATIONS ====================
+
+/**
+ * Get current logged-in vendor's profile
+ * Uses user/profile endpoint since vendors are users with vendor role
+ * @returns {Promise} Vendor profile data
+ */
+export const getVendorProfile = async () => {
   try {
-    return await request(`${API_URL}/user/remove-profile-picture`, {
-      method: 'DELETE',
-      headers: getAuthHeaders(),
-      credentials: 'include',
-    });
-  } catch (error) {
-    throw new Error(error.message || 'Failed to remove profile picture');
-  }
-};
-
-/* Update phone number for current user  */
-export const updatePhone = async (phone) => {
-  if (!phone) {
-    throw new Error('Phone number is required');
-  }
-  try {
-    return await request(`${API_URL}/user/update-phone`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ phone }),
-      credentials: 'include',
-    });
-  } catch (error) {
-    throw new Error(error.message || 'Failed to update phone');
-  }
-};
-
-/* Change password for current user */
-export const changePassword = async (currentPassword, newPassword) => {
-  try {
-    return await request(`${API_URL}/user/change-password`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({
-        currentPassword,
-        newPassword,
-      }),
-      credentials: 'include',
-    });
-  } catch (error) {
-    throw new Error(error.message || 'Failed to change password');
-  }
-};
-
-/* Get current vendor profile - Uses user/profile endpoint since vendors are users with vendor role */
-export const getVendorProfile = async (vendorId = null) => {
-  // If no vendorId provided, get the current logged-in vendor's profile
-  if (!vendorId) {
-    try {
-      // Use the user profile endpoint for current logged-in vendor
-      const url = `${API_URL}/user/profile`;
-      console.log('🔗 Fetching vendor profile from:', url);
-      
-      const response = await request(url, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-        credentials: 'include',
-      });
-      
-      console.log('✅ Vendor profile response:', response);
-      
-      if (!response) {
-        throw new Error('Empty response from vendor profile endpoint');
-      }
-      
-      return response;
-    } catch (error) {
-      console.error('❌ Error fetching vendor profile:', error);
-      throw new Error(error.message || 'Failed to fetch current vendor profile');
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      throw new Error('You must be logged in as a vendor to view this profile');
     }
+
+    const url = `${API_URL}/user/profile`;
+    console.log('🔗 Fetching vendor profile from:', url);
+    
+    const response = await request(url, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+      credentials: 'include',
+    });
+    
+    console.log('✅ Vendor profile response:', response);
+    
+    if (!response) {
+      throw new Error('Empty response from vendor profile endpoint');
+    }
+    
+    return {
+      success: true,
+      user: response.user || response.data || response,
+      data: response.user || response.data || response,
+    };
+  } catch (error) {
+    console.error('❌ Error fetching vendor profile:', error);
+    throw error;
   }
-  
-  // If vendorId provided, get specific vendor's profile (requires backend vendor endpoint)
+};
+
+/**
+ * Get specific vendor's public profile by ID
+ * @param {string} vendorId - Vendor ID to fetch
+ * @returns {Promise} Vendor profile data
+ */
+export const getVendorProfileById = async (vendorId) => {
+  if (!vendorId) {
+    throw new Error('Vendor ID is required');
+  }
+
   try {
     const url = `${API_URL}/vendors/${vendorId}`;
     console.log('🔗 Fetching vendor by ID from:', url);
@@ -231,165 +119,169 @@ export const getVendorProfile = async (vendorId = null) => {
     
     console.log('✅ Vendor by ID response:', response);
     
-    if (!response) {
-      throw new Error('Empty response from vendor endpoint');
-    }
-    
-    return response;
+    return {
+      success: true,
+      user: response.user || response.data || response,
+      data: response.user || response.data || response,
+    };
   } catch (error) {
     console.error('❌ Error fetching vendor by ID:', error);
-    throw new Error(error.message || 'Failed to fetch vendor profile');
+    throw error;
   }
 };
 
-/* Get specific vendor profile by ID (PUBLIC) - Alias for getVendorProfile with ID */
-export const getVendorProfileById = async (vendorId) => {
-  if (!vendorId) {
-    throw new Error('Vendor ID is required');
-  }
-  return getVendorProfile(vendorId);
-};
-
-/* Get current logged-in vendor's profile (PROTECTED) */
-export const getCurrentVendorProfile = async () => {
-  return getVendorProfile();
-};
-
-/* Get vendor profile picture (PUBLIC) */
-export const getVendorProfilePicture = async (vendorId) => {
-  if (!vendorId) {
-    throw new Error('Vendor ID is required');
-  }
-  try {
-    return await request(`${API_URL}/vendors/${vendorId}/profile-picture`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-    });
-  } catch (error) {
-    throw new Error(error.message || 'Failed to fetch vendor picture');
-  }
-};
-
-/* Get vendor's products (PUBLIC) */
+/**
+ * Get vendor's products
+ * @param {string} vendorId - Vendor ID
+ * @param {Object} filters - Filter parameters (page, limit, category, etc.)
+ * @returns {Promise} Products list
+ */
 export const getVendorProducts = async (vendorId, filters = {}) => {
   if (!vendorId) {
     throw new Error('Vendor ID is required');
   }
+
   try {
     const queryParams = new URLSearchParams(filters);
-    return await request(`${API_URL}/vendors/${vendorId}/products?${queryParams}`, {
+    const url = `${API_URL}/vendors/${vendorId}/products?${queryParams}`;
+    
+    return await request(url, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
   } catch (error) {
-    throw new Error(error.message || 'Failed to fetch products');
+    console.error('Error fetching vendor products:', error);
+    throw error;
   }
 };
 
-/* Get vendor's reviews (PUBLIC) */
+/**
+ * Get vendor's reviews
+ * @param {string} vendorId - Vendor ID
+ * @param {Object} filters - Filter parameters
+ * @returns {Promise} Reviews list
+ */
 export const getVendorReviews = async (vendorId, filters = {}) => {
   if (!vendorId) {
     throw new Error('Vendor ID is required');
   }
+
   try {
     const queryParams = new URLSearchParams(filters);
-    return await request(`${API_URL}/vendors/${vendorId}/reviews?${queryParams}`, {
+    const url = `${API_URL}/vendors/${vendorId}/reviews?${queryParams}`;
+    
+    return await request(url, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
   } catch (error) {
-    throw new Error(error.message || 'Failed to fetch reviews');
+    console.error('Error fetching vendor reviews:', error);
+    throw error;
   }
 };
 
-/* Get vendor statistics (PUBLIC) */
+/**
+ * Get vendor statistics
+ * @param {string} vendorId - Vendor ID
+ * @returns {Promise} Vendor stats
+ */
 export const getVendorStats = async (vendorId) => {
   if (!vendorId) {
     throw new Error('Vendor ID is required');
   }
+
   try {
     return await request(`${API_URL}/vendors/${vendorId}/stats`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
   } catch (error) {
-    throw new Error(error.message || 'Failed to fetch vendor stats');
+    console.error('Error fetching vendor stats:', error);
+    throw error;
   }
 };
 
-/* Get rating breakdown (PUBLIC) */
+/**
+ * Get vendor rating breakdown
+ * @param {string} vendorId - Vendor ID
+ * @returns {Promise} Rating breakdown
+ */
 export const getRatingsBreakdown = async (vendorId) => {
   if (!vendorId) {
     throw new Error('Vendor ID is required');
   }
+
   try {
     return await request(`${API_URL}/vendors/${vendorId}/ratings-breakdown`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
   } catch (error) {
-    throw new Error(error.message || 'Failed to fetch ratings breakdown');
+    console.error('Error fetching ratings breakdown:', error);
+    throw error;
   }
 };
 
-/* Get vendor verification badges (PUBLIC) */
+/**
+ * Get vendor verification badges
+ * @param {string} vendorId - Vendor ID
+ * @returns {Promise} Badges list
+ */
 export const getVendorBadges = async (vendorId) => {
   if (!vendorId) {
     throw new Error('Vendor ID is required');
   }
+
   try {
     return await request(`${API_URL}/vendors/${vendorId}/badges`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
   } catch (error) {
-    throw new Error(error.message || 'Failed to fetch badges');
+    console.error('Error fetching vendor badges:', error);
+    throw error;
   }
 };
 
-/* Get vendor journey/milestones (PUBLIC) */
+/**
+ * Get vendor journey/milestones
+ * @param {string} vendorId - Vendor ID
+ * @returns {Promise} Journey milestones
+ */
 export const getVendorJourney = async (vendorId) => {
   if (!vendorId) {
     throw new Error('Vendor ID is required');
   }
+
   try {
     return await request(`${API_URL}/vendors/${vendorId}/journey`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
   } catch (error) {
-    throw new Error(error.message || 'Failed to fetch vendor journey');
+    console.error('Error fetching vendor journey:', error);
+    throw error;
   }
 };
 
-// FOLLOW OPERATIONS (Protected - Auth required)
+// ==================== FOLLOW OPERATIONS ====================
 
-/* Follow a vendor (PROTECTED - Requires authentication) */
+/**
+ * Follow a vendor (PROTECTED - Requires authentication)
+ * @param {string} vendorId - Vendor ID to follow
+ * @returns {Promise} Follow response
+ */
 export const followVendor = async (vendorId) => {
   if (!vendorId) {
     throw new Error('Vendor ID is required');
   }
+
   try {
     return await request(`${API_URL}/vendors/${vendorId}/follow`, {
       method: 'POST',
@@ -397,15 +289,21 @@ export const followVendor = async (vendorId) => {
       credentials: 'include',
     });
   } catch (error) {
-    throw new Error(error.message || 'Failed to follow vendor');
+    console.error('Error following vendor:', error);
+    throw error;
   }
 };
 
-/* Unfollow a vendor (PROTECTED - Requires authentication) */
+/**
+ * Unfollow a vendor (PROTECTED - Requires authentication)
+ * @param {string} vendorId - Vendor ID to unfollow
+ * @returns {Promise} Unfollow response
+ */
 export const unfollowVendor = async (vendorId) => {
   if (!vendorId) {
     throw new Error('Vendor ID is required');
   }
+
   try {
     return await request(`${API_URL}/vendors/${vendorId}/unfollow`, {
       method: 'POST',
@@ -413,15 +311,21 @@ export const unfollowVendor = async (vendorId) => {
       credentials: 'include',
     });
   } catch (error) {
-    throw new Error(error.message || 'Failed to unfollow vendor');
+    console.error('Error unfollowing vendor:', error);
+    throw error;
   }
 };
 
-/* Check follow status for a vendor (PROTECTED) */
+/**
+ * Check follow status for a vendor
+ * @param {string} vendorId - Vendor ID
+ * @returns {Promise} Follow status
+ */
 export const checkFollowStatus = async (vendorId) => {
   if (!vendorId) {
     throw new Error('Vendor ID is required');
   }
+
   try {
     return await request(`${API_URL}/vendors/${vendorId}/follow-status`, {
       method: 'GET',
@@ -429,15 +333,22 @@ export const checkFollowStatus = async (vendorId) => {
       credentials: 'include',
     });
   } catch (error) {
-    throw new Error(error.message || 'Failed to check follow status');
+    console.error('Error checking follow status:', error);
+    throw error;
   }
 };
 
-/* Report a vendor (PROTECTED - Requires authentication) */
+/**
+ * Report a vendor
+ * @param {string} vendorId - Vendor ID to report
+ * @param {Object} reportData - Report details (reason, description, etc.)
+ * @returns {Promise} Report response
+ */
 export const reportVendor = async (vendorId, reportData) => {
   if (!vendorId) {
     throw new Error('Vendor ID is required');
   }
+
   try {
     return await request(`${API_URL}/vendors/${vendorId}/report`, {
       method: 'POST',
@@ -446,44 +357,33 @@ export const reportVendor = async (vendorId, reportData) => {
       credentials: 'include',
     });
   } catch (error) {
-    throw new Error(error.message || 'Failed to report vendor');
+    console.error('Error reporting vendor:', error);
+    throw error;
   }
 };
 
-// ADMIN OPERATIONS
+// ==================== UTILITY FUNCTIONS ====================
 
-/* Get all users (ADMIN only) */
-export const getAllUsers = async () => {
-  try {
-    return await request(`${API_URL}/user/all-users`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-      credentials: 'include',
-    });
-  } catch (error) {
-    throw new Error(error.message || 'Failed to fetch users');
-  }
+/**
+ * Get authentication token from localStorage
+ * @returns {string|null} JWT token or null
+ */
+export const getToken = () => {
+  return localStorage.getItem('token');
 };
 
-/* Get users by role (ADMIN only) */
-export const getUsersByRole = async (role) => {
-  if (!role) {
-    throw new Error('Role is required');
-  }
-  try {
-    return await request(`${API_URL}/user/users-by-role/${role}`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-      credentials: 'include',
-    });
-  } catch (error) {
-    throw new Error(error.message || 'Failed to fetch users by role');
-  }
+/**
+ * Check if user is authenticated
+ * @returns {boolean} True if authenticated
+ */
+export const isAuthenticated = () => {
+  return !!localStorage.getItem('token');
 };
 
-// UTILITY FUNCTIONS
-
-/* Get current user from localStorage */
+/**
+ * Get current user from localStorage
+ * @returns {Object|null} Current user object or null
+ */
 export const getCurrentUser = () => {
   try {
     const userStr = localStorage.getItem('user');
@@ -493,32 +393,33 @@ export const getCurrentUser = () => {
   }
 };
 
-/* Get authentication token from localStorage */
-export const getToken = () => {
-  return localStorage.getItem('token');
+/**
+ * Get user role from localStorage
+ * @returns {string|null} User role (Buyer, Vendor, Admin) or null
+ */
+export const getUserRole = () => {
+  try {
+    const user = getCurrentUser();
+    return user?.role || null;
+  } catch (error) {
+    return null;
+  }
 };
 
-/* Check if user is authenticated */
-export const isAuthenticated = () => {
-  return !!localStorage.getItem('token');
+/**
+ * Check if user is a vendor
+ * @returns {boolean} True if user is a vendor
+ */
+export const isVendor = () => {
+  return getUserRole() === 'Vendor';
 };
 
-/* Export all functions as default object for easier importing */
+// ==================== DEFAULT EXPORT ====================
+
 export default {
-  // User Profile
-  getUserProfile,
-  updateUserProfile,
-  getProfilePicture,
-  uploadProfilePicture,
-  removeProfilePicture,
-  updatePhone,
-  changePassword,
-
   // Vendor Profile
   getVendorProfile,
   getVendorProfileById,
-  getCurrentVendorProfile,
-  getVendorProfilePicture,
   getVendorProducts,
   getVendorReviews,
   getVendorStats,
@@ -532,12 +433,10 @@ export default {
   checkFollowStatus,
   reportVendor,
 
-  // Admin
-  getAllUsers,
-  getUsersByRole,
-
   // Utility
-  getCurrentUser,
   getToken,
   isAuthenticated,
+  getCurrentUser,
+  getUserRole,
+  isVendor,
 };

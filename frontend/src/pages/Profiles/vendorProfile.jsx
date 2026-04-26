@@ -2,18 +2,28 @@ import { Star, MapPin, Phone, Mail, Trophy, Shield, CheckCircle, Users, Clock, T
 import { useState, useEffect } from 'react';
 import Header from '../../components/Layouts/Header';
 import Footer from '../../components/Layouts/Footer';
-import { getVendorProfile, getToken } from '../../services/profileServices';
+import { 
+  getVendorProfile, 
+  getToken,
+  followVendor,
+  unfollowVendor,
+  checkFollowStatus,
+} from '../../services/profileServices';
 
 
 export default function VendorProfile() {
   const [vendorData, setVendorData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [checkingFollowStatus, setCheckingFollowStatus] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
 
   useEffect(() => {
     const fetchVendorProfile = async () => {
       try {
         setLoading(true);
+        setError(null);
         
         // Check if user is authenticated
         const token = getToken();
@@ -29,7 +39,7 @@ export default function VendorProfile() {
         console.log('Vendor Profile Response:', response);
         
         // Extract vendor/user data from response
-        const vendorDataFetched = response.user || response.vendor || response;
+        const vendorDataFetched = response.user || response.vendor || response.data || response;
         
         if (!vendorDataFetched) {
           throw new Error('No vendor data received from server. Please ensure you are logged in as a vendor.');
@@ -41,11 +51,14 @@ export default function VendorProfile() {
         }
         
         setVendorData(vendorDataFetched);
-        setError(null);
+
+        // Check follow status if we have a vendor ID
+        if (vendorDataFetched._id) {
+          await checkFollowStatusHandler(vendorDataFetched._id);
+        }
       } catch (err) {
         console.error('Error fetching vendor profile:', err);
         setError(err.message);
-        showToast('error', err.message || 'Failed to load vendor profile');
       } finally {
         setLoading(false);
       }
@@ -53,6 +66,52 @@ export default function VendorProfile() {
 
     fetchVendorProfile();
   }, []);
+
+  // Check if current user is following this vendor
+  const checkFollowStatusHandler = async (vendorId) => {
+    try {
+      setCheckingFollowStatus(true);
+      const response = await checkFollowStatus(vendorId);
+      setIsFollowing(response.isFollowing || response.following || false);
+    } catch (err) {
+      console.error('Error checking follow status:', err);
+      // Silently fail - don't block UI
+    } finally {
+      setCheckingFollowStatus(false);
+    }
+  };
+
+  // Handle follow vendor
+  const handleFollowVendor = async () => {
+    if (!vendorData?._id) return;
+
+    try {
+      setIsFollowLoading(true);
+      await followVendor(vendorData._id);
+      setIsFollowing(true);
+    } catch (err) {
+      console.error('Error following vendor:', err);
+      alert(err.message || 'Failed to follow vendor');
+    } finally {
+      setIsFollowLoading(false);
+    }
+  };
+
+  // Handle unfollow vendor
+  const handleUnfollowVendor = async () => {
+    if (!vendorData?._id) return;
+
+    try {
+      setIsFollowLoading(true);
+      await unfollowVendor(vendorData._id);
+      setIsFollowing(false);
+    } catch (err) {
+      console.error('Error unfollowing vendor:', err);
+      alert(err.message || 'Failed to unfollow vendor');
+    } finally {
+      setIsFollowLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -152,14 +211,22 @@ export default function VendorProfile() {
       <Header userRole="Vendor" />
       
       {/* Header with Vendor Info Card */}
-      <div className=" bg-teal-600 text-white">
+      <div className="bg-teal-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ">
           <div className="flex items-start justify-between gap-8 ">
             {/* Left Side - Vendor Info */}
             <div className="flex items-start space-x-4 flex-1  mt-9">
               {/* Vendor Logo */}
               <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center shrink-0 mt-6">
-                <span className="text-3xl font-bold text-teal-600">🛒</span>
+                {vendorData.profilePicture ? (
+                  <img 
+                    src={vendorData.profilePicture} 
+                    alt={vendorData.name}
+                    className="w-full h-full object-cover rounded-2xl"
+                  />
+                ) : (
+                  <span className="text-3xl font-bold text-teal-600">🛒</span>
+                )}
               </div>
               
               {/* Vendor Info */}
@@ -228,8 +295,6 @@ export default function VendorProfile() {
                   )}
                 </div>
               </div>
-
-              
             </div>
           </div>
         </div>
@@ -240,9 +305,19 @@ export default function VendorProfile() {
         <button className="flex px-3 py-2.5 border-2 border-gray-500 text-gray-800 rounded-full hover:bg-teal-500 transition font-semibold text-sm">
           Get Report
         </button>
-        <button className="flex px-3 py-2.5 border-2 border-gray-500 text-gray-800 rounded-full hover:bg-teal-500 transition font-semibold text-sm">
-          Follow
+        
+        <button
+          onClick={isFollowing ? handleUnfollowVendor : handleFollowVendor}
+          disabled={isFollowLoading || checkingFollowStatus}
+          className={`flex px-3 py-2.5 border-2 rounded-full transition font-semibold text-sm ${
+            isFollowing
+              ? 'border-teal-500 text-teal-700 hover:bg-teal-100'
+              : 'border-gray-500 text-gray-800 hover:bg-teal-500'
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
+        >
+          {isFollowLoading ? 'Loading...' : isFollowing ? 'Following' : 'Follow'}
         </button>
+
         <button className="flex px-3 py-2.5 bg-teal-600 text-white rounded-full hover:bg-teal-500 transition font-semibold text-sm">
           Visit Store
         </button>
@@ -297,7 +372,12 @@ export default function VendorProfile() {
                     <Clock size={16} />
                     <span>Member Since</span>
                     </p>
-                  <p className="font-medium text-green-600">{vendorData.memberSince}</p>
+                  <p className="font-medium text-green-600">
+                    {vendorData.memberSince 
+                      ? new Date(vendorData.memberSince).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                      : 'N/A'
+                    }
+                  </p>
                 </div>
                 <hr className='text-gray-300' />
                 
@@ -307,7 +387,7 @@ export default function VendorProfile() {
                     <span>Email</span>
                     </p>
                   <a href={`mailto:${vendorData.email}`} className="text-green-600 font-medium hover:underline">
-                    {vendorData.email}
+                    {vendorData.email || 'N/A'}
                   </a>
                 </div>
                 <hr className='text-gray-300' />
@@ -318,7 +398,7 @@ export default function VendorProfile() {
                     <span>Business Email</span>
                     </p>
                   <a href={`mailto:${vendorData.businessEmail}`} className="text-green-600 font-medium hover:underline">
-                    {vendorData.businessEmail}
+                    {vendorData.businessEmail || 'N/A'}
                   </a>
                 </div>
                 <hr className='text-gray-300' />
@@ -330,7 +410,7 @@ export default function VendorProfile() {
                     <span>Phone</span>
                     </p>
                   <a href={`tel:${vendorData.phone}`} className="text-green-600 font-medium hover:underline">
-                    {vendorData.phone}
+                    {vendorData.phone || 'N/A'}
                   </a>
                 </div>
                 <hr className='text-gray-300' />
@@ -340,7 +420,7 @@ export default function VendorProfile() {
                     <MapPin size={16} />
                     <span>Location</span>
                   </p>
-                  <p className="font-medium text-green-600">{vendorData.location}</p>
+                  <p className="font-medium text-green-600">{vendorData.location || 'N/A'}</p>
                 </div>
               </div>
             </div>
