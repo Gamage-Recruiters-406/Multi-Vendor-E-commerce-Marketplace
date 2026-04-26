@@ -450,10 +450,10 @@ export default function UserProfileAndAddressBook() {
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #f8fafb 0%, #eef2f5 100%)' }}>
       {/* Header */}
       <Header />
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200 bg-teal-600">
         <div className="max-w-6xl mx-auto px-6 py-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-          <p className="text-gray-600 mt-2">Manage your personal information, security settings, and delivery addresses.</p>
+          <h1 className="text-3xl font-bold text-white">My Profile</h1>
+          <p className="text-gray-300 mt-2">Manage your personal information, security settings, and delivery addresses.</p>
         </div>
       </div>
 

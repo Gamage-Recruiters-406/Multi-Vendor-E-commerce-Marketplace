@@ -1,122 +1,246 @@
-import { Star, MapPin, Phone, Mail, Trophy, Shield, CheckCircle, Users, Clock, TrendingUp, ChevronRight, PhoneCall, MailCheck, ReceiptPoundSterling, Activity, ListStartIcon } from 'lucide-react';
+import { Star, MapPin, Phone, Mail, Shield, CheckCircle, Users, Clock, ChevronRight, PhoneCall, Flag, ShoppingBag, Store, Calendar, Package, Trophy, Award, ExternalLink, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../../components/Layouts/Header';
 import Footer from '../../components/Layouts/Footer';
 import { 
-  getVendorProfile, 
-  getToken,
+  getMyVendorProfile,
+  getVendorProfileById,
+  getVendorProducts,
   followVendor,
   unfollowVendor,
   checkFollowStatus,
+  reportVendor,
+  isAuthenticated,
+  getCurrentUser,
 } from '../../services/profileServices';
 
-
 export default function VendorProfile() {
+  const { vendorId } = useParams();
+  const navigate = useNavigate();
+  
   const [vendorData, setVendorData] = useState(null);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [checkingFollowStatus, setCheckingFollowStatus] = useState(false);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportDescription, setReportDescription] = useState('');
+  const [isReporting, setIsReporting] = useState(false);
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
+
+  // MOCK DATA for parts without backend routes
+  const mockData = {
+    rating: 4.5,
+    totalReviews: 1234,
+    ratingBreakdown: {
+      5: 845,
+      4: 267,
+      3: 89,
+      2: 23,
+      1: 10
+    },
+    satisfactionRate: 98,
+    totalOrders: 2345,
+    journey: [
+      {
+        date: "JANUARY 2022",
+        title: "Store Launch",
+        description: "Joined the platform and launched first product catalogue with 12 carefully selected items across the audio and accessories categories."
+      },
+      {
+        date: "MARCH 2022",
+        title: "First 100 Orders Milestone",
+        description: "Reached 100 completed orders with a 97% customer satisfaction rating within just 60 days of launch."
+      },
+      {
+        date: "DECEMBER 2022",
+        title: "Premium Vendor Status Awarded",
+        description: "Earned the Premium Vendor badge after exceeding all platform performance benchmarks including delivery speed, satisfaction, and return rates."
+      },
+      {
+        date: "JUNE 2023",
+        title: "1,000 Orders Completed",
+        description: "Crossed 1,000 fulfilled orders with a consistently low return rate of under 0.5%, well below the platform average."
+      },
+      {
+        date: "OCTOBER 2024",
+        title: "Top Rated Vendor of the Quarter",
+        description: "Named top-rated vendor for Q3 2024 with 156 active products, 2,345 total orders, and a 98% satisfaction rate."
+      }
+    ],
+    verificationBadges: [
+      { title: "Identity Verified", description: "Business registered & verified" },
+      { title: "Top Rated", description: "Consistently above 4.5★" }
+    ],
+    website: "techgadgetspro.com"
+  };
 
   useEffect(() => {
-    const fetchVendorProfile = async () => {
+    const fetchVendorData = async () => {
       try {
         setLoading(true);
         setError(null);
         
-        // Check if user is authenticated
-        const token = getToken();
-        if (!token) {
-          throw new Error('You must be logged in as a vendor to view this profile');
+        let vendorResponse;
+        let currentUserId = null;
+        
+        // Get current logged-in user
+        const currentUser = getCurrentUser();
+        if (currentUser) {
+          currentUserId = currentUser._id || currentUser.id;
         }
         
-        console.log('📝 Token found, fetching vendor profile...');
-        
-        const response = await getVendorProfile();
-        
-        // Log response for debugging
-        console.log('Vendor Profile Response:', response);
-        
-        // Extract vendor/user data from response
-        const vendorDataFetched = response.user || response.vendor || response.data || response;
-        
-        if (!vendorDataFetched) {
-          throw new Error('No vendor data received from server. Please ensure you are logged in as a vendor.');
+        // Determine if viewing own profile or another vendor's profile
+        if (!vendorId) {
+          // No vendorId in URL - show own profile
+          console.log('Fetching own vendor profile...');
+          vendorResponse = await getMyVendorProfile();
+          setIsOwnProfile(true);
+        } else {
+          // VendorId in URL - check if it's the logged-in vendor's ID
+          if (currentUserId && currentUserId === vendorId) {
+            setIsOwnProfile(true);
+            vendorResponse = await getMyVendorProfile();
+          } else {
+            setIsOwnProfile(false);
+            vendorResponse = await getVendorProfileById(vendorId);
+          }
         }
         
-        // Check if user has vendor role
-        if (vendorDataFetched.role && vendorDataFetched.role !== 'Vendor') {
-          throw new Error(`This profile is only accessible to vendors. Your role: ${vendorDataFetched.role}`);
+        if (!vendorResponse.success || !vendorResponse.data) {
+          throw new Error(vendorResponse.message || 'Vendor not found');
         }
         
-        setVendorData(vendorDataFetched);
-
-        // Check follow status if we have a vendor ID
-        if (vendorDataFetched._id) {
-          await checkFollowStatusHandler(vendorDataFetched._id);
+        const vendor = vendorResponse.data;
+        const actualVendorId = vendor._id || vendor.id || vendorId;
+        
+        if (!actualVendorId) {
+          throw new Error('Vendor ID not found in response');
         }
+        
+        // Fetch products (connected to backend)
+        const productsResponse = await getVendorProducts(actualVendorId);
+        const productsList = productsResponse.success ? (productsResponse.data || []) : [];
+        
+        setVendorData(vendor);
+        setProducts(productsList);
+        
+        // Check follow status if user is authenticated and not viewing own profile
+        if (isAuthenticated() && !isOwnProfile) {
+          try {
+            const followStatus = await checkFollowStatus(actualVendorId);
+            setIsFollowing(followStatus.isFollowing || false);
+          } catch (err) {
+            console.error('Error checking follow status:', err);
+          }
+        }
+        
       } catch (err) {
-        console.error('Error fetching vendor profile:', err);
-        setError(err.message);
+        console.error('Error fetching vendor data:', err);
+        setError(err.message || 'Failed to load vendor profile');
       } finally {
         setLoading(false);
       }
     };
+    
+    fetchVendorData();
+  }, [vendorId]);
 
-    fetchVendorProfile();
-  }, []);
-
-  // Check if current user is following this vendor
-  const checkFollowStatusHandler = async (vendorId) => {
-    try {
-      setCheckingFollowStatus(true);
-      const response = await checkFollowStatus(vendorId);
-      setIsFollowing(response.isFollowing || response.following || false);
-    } catch (err) {
-      console.error('Error checking follow status:', err);
-      // Silently fail - don't block UI
-    } finally {
-      setCheckingFollowStatus(false);
+  const handleFollowToggle = async () => {
+    if (!isAuthenticated()) {
+      navigate('/login', { state: { returnUrl: `/vendor/${vendorData?._id || vendorId}` } });
+      return;
     }
-  };
-
-  // Handle follow vendor
-  const handleFollowVendor = async () => {
-    if (!vendorData?._id) return;
-
+    
+    const targetVendorId = vendorData?._id || vendorData?.id || vendorId;
+    
     try {
       setIsFollowLoading(true);
-      await followVendor(vendorData._id);
-      setIsFollowing(true);
+      if (isFollowing) {
+        const response = await unfollowVendor(targetVendorId);
+        if (response.success) {
+          setIsFollowing(false);
+        } else {
+          alert(response.message || 'Failed to unfollow');
+        }
+      } else {
+        const response = await followVendor(targetVendorId);
+        if (response.success) {
+          setIsFollowing(true);
+        } else {
+          alert(response.message || 'Failed to follow');
+        }
+      }
     } catch (err) {
-      console.error('Error following vendor:', err);
-      alert(err.message || 'Failed to follow vendor');
+      console.error('Error toggling follow:', err);
+      alert(err.message || 'Failed to update follow status');
     } finally {
       setIsFollowLoading(false);
     }
   };
 
-  // Handle unfollow vendor
-  const handleUnfollowVendor = async () => {
-    if (!vendorData?._id) return;
-
+  const handleReport = async () => {
+    if (!reportReason.trim()) {
+      alert('Please provide a reason for reporting');
+      return;
+    }
+    
+    const targetVendorId = vendorData?._id || vendorData?.id || vendorId;
+    
     try {
-      setIsFollowLoading(true);
-      await unfollowVendor(vendorData._id);
-      setIsFollowing(false);
+      setIsReporting(true);
+      const response = await reportVendor(targetVendorId, { 
+        reason: reportReason,
+        description: reportDescription 
+      });
+      
+      if (response.success) {
+        alert('Thank you for your report. We will review it shortly.');
+        setShowReportModal(false);
+        setReportReason('');
+        setReportDescription('');
+      } else {
+        alert(response.message || 'Failed to submit report');
+      }
     } catch (err) {
-      console.error('Error unfollowing vendor:', err);
-      alert(err.message || 'Failed to unfollow vendor');
+      console.error('Error reporting vendor:', err);
+      alert(err.message || 'Failed to submit report');
     } finally {
-      setIsFollowLoading(false);
+      setIsReporting(false);
     }
   };
+
+  const handleVisitStore = () => {
+    const targetVendorId = vendorData?._id || vendorData?.id || vendorId;
+    navigate(`/vendor/${targetVendorId}/products`);
+  };
+
+  const handleBrowseProducts = () => {
+    const targetVendorId = vendorData?._id || vendorData?.id || vendorId;
+    navigate(`/vendor/${targetVendorId}/products`);
+  };
+
+  const handleEditProfile = () => {
+    navigate('/vendor/edit-profile');
+  };
+
+  const handleWebsiteClick = () => {
+    const website = vendorData?.website || mockData.website;
+    if (website) {
+      window.open(`https://${website}`, '_blank');
+    }
+  };
+
+  // Get percentage for rating breakdown
+  const getPercentage = (count) => (count / mockData.totalReviews) * 100;
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Header userRole="Vendor" />
+        <Header />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
@@ -128,21 +252,15 @@ export default function VendorProfile() {
     );
   }
 
-  if (error && !vendorData) {
+  if (error || !vendorData) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Header userRole="Vendor" />
+        <Header />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center max-w-md">
             <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
-              <p className="text-red-700 font-semibold mb-2">⚠️ Unable to Load Profile</p>
-              <p className="text-red-600 text-sm mb-4">{error}</p>
-              <div className="bg-red-100 rounded p-3 text-sm text-red-700 mb-4 font-mono break-words">
-                {error}
-              </div>
-              <p className="text-gray-600 text-xs mb-4">
-                Check your browser console for more details (press F12)
-              </p>
+              <p className="text-red-700 font-semibold mb-2">Unable to Load Profile</p>
+              <p className="text-red-600 text-sm mb-4">{error || 'Vendor not found'}</p>
             </div>
             <button
               onClick={() => window.location.reload()}
@@ -157,388 +275,390 @@ export default function VendorProfile() {
     );
   }
 
-  if (!vendorData) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Header userRole="Vendor" />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-gray-600">No vendor data available</p>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
+  // Get vendor name
+  const vendorName = vendorData.name || vendorData.fullName || vendorData.username || vendorData.storeName || 'Vendor';
+  
+  // Get badges
+  const badges = vendorData.badges || [];
+  const hasTopRatedBadge = badges.includes('Top Rated') || badges.includes('top-rated') || true; // Mock for demo
+  const hasFastShipperBadge = badges.includes('Fast Shipper') || badges.includes('fast-shipper') || true; // Mock for demo
 
-  const performanceMetrics = [
-    {
-      label: 'Followers',
-      value: vendorData.followers ?? 0,
-      icon: Users,
-      color: 'bg-blue-50'
-    },
-    {
-      label: 'Rating',
-      value: vendorData.rating ?? 0,
-      unit: '/ 5',
-      icon: Star,
-      color: 'bg-yellow-50'
-    },
-    {
-      label: 'Products',
-      value: (vendorData.products ?? 0).toLocaleString(),
-      icon: TrendingUp,
-      color: 'bg-green-50'
-    },
-    {
-      label: 'Satisfaction Rate',
-      value: (vendorData.satisfactionRate ?? 0) + '%',
-      icon: CheckCircle,
-      color: 'bg-emerald-50'
-    }
-  ];
-
-  const verificationBadges = (vendorData.badges && Array.isArray(vendorData.badges)) 
-    ? vendorData.badges.map(badge => ({
-        title: typeof badge === 'string' ? badge : badge.title || 'Badge',
-        date: badge.date || 'Verified'
-      }))
-    : [];
+  // Format date
+  const joinedDate = vendorData.createdAt || vendorData.joinedDate || vendorData.memberSince;
+  const formattedJoinDate = joinedDate ? new Date(joinedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : 'January 2022';
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header userRole="Vendor" />
+      <Header />
       
-      {/* Header with Vendor Info Card */}
-      <div className="bg-teal-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ">
-          <div className="flex items-start justify-between gap-8 ">
-            {/* Left Side - Vendor Info */}
-            <div className="flex items-start space-x-4 flex-1  mt-9">
-              {/* Vendor Logo */}
-              <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center shrink-0 mt-6">
-                {vendorData.profilePicture ? (
-                  <img 
-                    src={vendorData.profilePicture} 
-                    alt={vendorData.name}
-                    className="w-full h-full object-cover rounded-2xl"
-                  />
-                ) : (
-                  <span className="text-3xl font-bold text-teal-600">🛒</span>
-                )}
+      {/* Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Report Vendor</h3>
+              <button onClick={() => setShowReportModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reason *</label>
+                <select 
+                  value={reportReason} 
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="">Select a reason</option>
+                  <option value="spam">Spam or Misleading</option>
+                  <option value="fraud">Fraudulent Activity</option>
+                  <option value="counterfeit">Counterfeit Products</option>
+                  <option value="harassment">Harassment or Abuse</option>
+                  <option value="other">Other</option>
+                </select>
               </div>
-              
-              {/* Vendor Info */}
-              <div className="flex-1 pt-2">
-                <div className="flex items-center space-x-3 mb-1">
-                  <h1 className="text-3xl font-bold">{vendorData.name}</h1>
-                </div>
-                
-                <div className="flex items-center space-x-2 text-sm mb-3">
-                  <span>@{vendorData.name?.toLowerCase().replace(/\s+/g, '')} • {vendorData.location?.split(',')[0]} •</span>
-                  {vendorData.isVerified && (
-                    <span className="inline-flex items-center space-x-1 bg-white/20 px-2 py-0.5 rounded-full text-xs">
-                      <span>✓ Verified Vendor</span>
-                    </span>
-                  )}
-                </div>
-
-                {/* Rating */}
-                <div className="flex items-center space-x-2 mt-6 mb-4">
-                  <div className="flex space-x-0.5">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} size={14} fill="currentColor" className="text-yellow-300" />
-                    ))}
-                  </div>
-                  <span className="text-sm font-semibold">{vendorData.rating ?? 0} out of 5 • {(vendorData.reviews ?? 0).toLocaleString()} reviews</span>
-                </div>
-
-                {/* Quick Stats Badges */}
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <span className="bg-white/20 px-3 py-1 rounded-full">🏪 {(vendorData.products ?? 0).toLocaleString()} Products</span>
-                  {vendorData.memberSince && (
-                    <span className="bg-white/20 px-3 py-1 rounded-full">📅 Member since {new Date(vendorData.memberSince).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
-                  )}
-                  {vendorData.badges && vendorData.badges.length > 0 && (
-                    <span className="bg-white/20 px-3 py-1 rounded-full">⭐ {vendorData.badges[0]}</span>
-                  )}
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+                <textarea 
+                  value={reportDescription} 
+                  onChange={(e) => setReportDescription(e.target.value)}
+                  rows="4"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  placeholder="Please provide additional details..."
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setShowReportModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReport}
+                  disabled={isReporting || !reportReason}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isReporting ? 'Submitting...' : 'Submit Report'}
+                </button>
               </div>
             </div>
-
-            {/* Right Side - Stats Card & Buttons */}
-            <div className="w-64 h-56 shrink-0">
-              {/* Stats Card */}
-              <div className="bg-teal-600 rounded-3xl p-4 mb-1">
-                <div className="space-y-4">
-                  {/* Total Products */}
-                  <div>
-                    <p className="text-[30px] font-bold text-yellow-300">{(vendorData.products ?? 0).toLocaleString()}</p>
-                    <p className="text-xs font-semibold text-white uppercase tracking-wider">Total Products</p>
-                  </div>
-                  
-                  {/* Satisfaction Rate */}
-                  {vendorData.satisfactionRate !== undefined && (
-                    <div>
-                      <p className="text-[30px] font-bold text-yellow-300">{vendorData.satisfactionRate}%</p>
-                      <p className="text-xs font-semibold text-white uppercase tracking-wider">Satisfaction Rate</p>
-                    </div>
-                  )}
-                  
-                  {/* Response Time */}
-                  {vendorData.responseTime && (
-                    <div>
-                      <p className="text-[30px] font-bold text-yellow-300">{vendorData.responseTime}</p>
-                      <p className="text-xs font-semibold text-white uppercase tracking-wider">Avg. Response Time</p>
-                    </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Vendor Header Section */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+            {/* Left Section - Vendor Info */}
+            <div className="flex-1">
+              <div className="flex items-start gap-4">
+                {/* Vendor Profile Picture */}
+                <div className="w-24 h-24 bg-gradient-to-br from-teal-100 to-teal-200 rounded-2xl flex items-center justify-center overflow-hidden shadow-sm">
+                  {vendorData.profilePicture ? (
+                    <img 
+                      src={vendorData.profilePicture} 
+                      alt={vendorName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-5xl">🛒</span>
                   )}
                 </div>
+                
+                <div className="flex-1 pt-1">
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                    <h1 className="text-3xl font-bold text-gray-900">
+                      {vendorName}
+                    </h1>
+                    {vendorData.isVerified && (
+                      <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                        <CheckCircle size={12} />
+                        Verified Vendor
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
+                    <span>@{vendorData.username || vendorName.toLowerCase().replace(/\s+/g, '')}</span>
+                    <span>•</span>
+                    <span>{vendorData.location || vendorData.address || 'San Francisco, CA'}</span>
+                  </div>
+                  
+                  {/* Rating - Using mock data */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <Star size={16} className="fill-yellow-400 text-yellow-400" />
+                      <span className="font-semibold text-gray-900">{mockData.rating}</span>
+                    </div>
+                    <span className="text-gray-400">•</span>
+                    <span className="text-sm text-gray-500">{mockData.totalReviews.toLocaleString()} reviews</span>
+                  </div>
+                </div>
               </div>
+              
+              {/* Stats Badges */}
+              <div className="flex flex-wrap gap-2 mt-6">
+                <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full text-sm">
+                  <Package size={14} />
+                  {products.length.toLocaleString()} Products
+                </span>
+                <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full text-sm">
+                  <Calendar size={14} />
+                  Member since {formattedJoinDate}
+                </span>
+                {hasTopRatedBadge && (
+                  <span className="inline-flex items-center gap-1.5 bg-yellow-50 text-yellow-700 px-3 py-1.5 rounded-full text-sm">
+                    <Trophy size={14} />
+                    Top Rated Q3 2024
+                  </span>
+                )}
+                {hasFastShipperBadge && (
+                  <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-sm">
+                    <Shield size={14} />
+                    Fast Shipper
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              {isOwnProfile ? (
+                <button
+                  onClick={handleEditProfile}
+                  className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium text-sm"
+                >
+                  Edit Profile
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setShowReportModal(true)}
+                    className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium text-sm"
+                  >
+                    <Flag size={16} />
+                    Report
+                  </button>
+                  
+                  <button
+                    onClick={handleFollowToggle}
+                    disabled={isFollowLoading}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition font-medium text-sm ${
+                      isFollowing
+                        ? 'border border-teal-500 text-teal-700 bg-teal-50 hover:bg-teal-100'
+                        : 'bg-teal-600 text-white hover:bg-teal-700'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    <Users size={16} />
+                    {isFollowLoading ? 'Loading...' : isFollowing ? 'Following' : 'Follow'}
+                  </button>
+                </>
+              )}
+              
+              <button
+                onClick={handleVisitStore}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition font-medium text-sm"
+              >
+                <ShoppingBag size={16} />
+                Visit Store
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex gap-2 p-5 ml-269 ">
-        <button className="flex px-3 py-2.5 border-2 border-gray-500 text-gray-800 rounded-full hover:bg-teal-500 transition font-semibold text-sm">
-          Get Report
-        </button>
-        
-        <button
-          onClick={isFollowing ? handleUnfollowVendor : handleFollowVendor}
-          disabled={isFollowLoading || checkingFollowStatus}
-          className={`flex px-3 py-2.5 border-2 rounded-full transition font-semibold text-sm ${
-            isFollowing
-              ? 'border-teal-500 text-teal-700 hover:bg-teal-100'
-              : 'border-gray-500 text-gray-800 hover:bg-teal-500'
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
-        >
-          {isFollowLoading ? 'Loading...' : isFollowing ? 'Following' : 'Follow'}
-        </button>
-
-        <button className="flex px-3 py-2.5 bg-teal-600 text-white rounded-full hover:bg-teal-500 transition font-semibold text-sm">
-          Visit Store
-        </button>
-      </div>
-
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Contact & Performance */}
+          {/* LEFT COLUMN */}
           <div className="lg:col-span-1 space-y-6">
             
-            {/* Performance Metrics */}
-            <div className="bg-white rounded-lg shadow-sm p-6 ">
-              
-              
-              <div className="bg-white rounded-lg shadow-sm p-6  ">
-                <h2 className="text-lg font-bold mb-6 flex items-center space-x-2">
-                  <Activity size={20} className="text-teal-600" />
-                  <span className='text-black'>Performance</span>
-                </h2>
-                <hr className='text-gray-300 mb-6' />
-                <div className='grid grid-cols-2 grid-rows-2 gap-4'>
-                {performanceMetrics.map((metric, index) => {
-                  const Icon = metric.icon;
-                  return (
-                    <div key={index} className={`${metric.color} rounded-lg p-4`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm text-gray-600">{metric.label}</p>
-                        <Icon size={20} className="text-gray-600" />
-                      </div>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {metric.value}
-                        {metric.unit && <span className="text-lg text-gray-600">{metric.unit}</span>}
-                      </p>
-                    </div>
-                  );
-                })}
+            {/* Performance Card - Mix of real and mock data */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Performance</h2>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="text-gray-600">Products</span>
+                  <span className="font-semibold text-gray-900">{products.length.toLocaleString()}</span>
                 </div>
-              </div>
-            
-            {/* Contact Information Card */}
-            <div className="bg-white rounded-lg shadow-sm p-6 mt-5">
-              <h2 className="text-lg font-bold mb-4 flex items-center space-x-2">
-                <Mail size={20} className="text-teal-600" />
-                <span className='text-black'>Contact Information</span>
-              </h2>
-              <hr className='text-gray-300 mb-6' />
-              
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1 flex items-center space-x-1 gap-1">
-                    <Clock size={16} />
-                    <span>Member Since</span>
-                    </p>
-                  <p className="font-medium text-green-600">
-                    {vendorData.memberSince 
-                      ? new Date(vendorData.memberSince).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-                      : 'N/A'
-                    }
-                  </p>
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="text-gray-600">Avg Rating</span>
+                  <span className="font-semibold text-gray-900">{mockData.rating} / 5</span>
                 </div>
-                <hr className='text-gray-300' />
-                
-                <div>
-                  <p className="text-sm text-gray-600 mb-1 flex items-center space-x-1 gap-1">
-                    <Mail size={16} />
-                    <span>Email</span>
-                    </p>
-                  <a href={`mailto:${vendorData.email}`} className="text-green-600 font-medium hover:underline">
-                    {vendorData.email || 'N/A'}
-                  </a>
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="text-gray-600">Total Orders</span>
+                  <span className="font-semibold text-gray-900">{mockData.totalOrders.toLocaleString()}</span>
                 </div>
-                <hr className='text-gray-300' />
-                
-                <div>
-                  <p className="text-sm text-gray-600 mb-1 flex items-center space-x-1 gap-1">
-                    <MailCheck size={16} />
-                    <span>Business Email</span>
-                    </p>
-                  <a href={`mailto:${vendorData.businessEmail}`} className="text-green-600 font-medium hover:underline">
-                    {vendorData.businessEmail || 'N/A'}
-                  </a>
-                </div>
-                <hr className='text-gray-300' />
-                
-                <div>
-                  
-                  <p className="text-sm text-gray-600 mb-1 flex items-center space-x-1 gap-1">
-                    <PhoneCall size={16}/>
-                    <span>Phone</span>
-                    </p>
-                  <a href={`tel:${vendorData.phone}`} className="text-green-600 font-medium hover:underline">
-                    {vendorData.phone || 'N/A'}
-                  </a>
-                </div>
-                <hr className='text-gray-300' />
-                
-                <div>
-                  <p className="text-sm text-gray-600 mb-1 flex items-center space-x-1 gap-1">
-                    <MapPin size={16} />
-                    <span>Location</span>
-                  </p>
-                  <p className="font-medium text-green-600">{vendorData.location || 'N/A'}</p>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-600">Satisfaction Rate</span>
+                  <span className="font-semibold text-green-600">{mockData.satisfactionRate}%</span>
                 </div>
               </div>
             </div>
 
-            
-
-              {/* Rating Breakdown */}
-              <div className="bg-white rounded-lg shadow-sm p-6 mt-5">
-                <h2 className="text-lg font-bold mb-4 flex items-center space-x-2">
-                  <ListStartIcon size={20} className="text-teal-600" />
-                  <span className='text-black'>Rating Breakdown</span>
-                </h2>
-                <hr className='text-gray-300 mb-6' />
-
-                <div className="space-y-2">
-                  {vendorData.rating_breakdown && Array.isArray(vendorData.rating_breakdown) && vendorData.rating_breakdown.length > 0 ? (
-                    vendorData.rating_breakdown.map((item, index) => {
-                      const totalReviews = vendorData.reviews || 1;
-                      const percentage = (item.count / totalReviews) * 100;
-                      return (
-                        <div key={index} className="flex items-center space-x-3">
-                          <span className="text-sm font-medium text-gray-700 w-8">{item.stars}★</span>
-                          <div className="flex-1 bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-yellow-400 h-2 rounded-full" 
-                              style={{ width: `${percentage}%` }}
-                            />
-                          </div>
-                          <span className="text-sm text-gray-600 w-12 text-right">{item.count}</span>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <p className="text-gray-500 text-sm">No rating data available</p>
-                  )}
+            {/* Contact Information Card - Real data from backend */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Contact Information</h2>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Member Since</p>
+                  <p className="text-gray-900 font-medium">{formattedJoinDate}</p>
                 </div>
+                <hr className="border-gray-100" />
+                
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Website</p>
+                  <button 
+                    onClick={handleWebsiteClick}
+                    className="text-teal-600 hover:text-teal-700 font-medium text-sm flex items-center gap-1"
+                  >
+                    {vendorData.website || mockData.website}
+                    <ExternalLink size={12} />
+                  </button>
+                </div>
+                <hr className="border-gray-100" />
+                
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Email</p>
+                  <a href={`mailto:${vendorData.email}`} className="text-teal-600 hover:text-teal-700 font-medium text-sm">
+                    {vendorData.email || 'contact@example.com'}
+                  </a>
+                </div>
+                <hr className="border-gray-100" />
+                
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Phone</p>
+                  <a href={`tel:${vendorData.phone}`} className="text-teal-600 hover:text-teal-700 font-medium text-sm">
+                    {vendorData.phone || '+1 (555) 123-4567'}
+                  </a>
+                </div>
+                <hr className="border-gray-100" />
+                
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Location</p>
+                  <p className="text-gray-700 text-sm">{vendorData.location || vendorData.address || 'San Francisco, CA'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Rating Breakdown Card - Mock data */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Rating Breakdown</h2>
+              
+              {/* Overall Rating */}
+              <div className="text-center mb-6">
+                <div className="text-4xl font-bold text-gray-900">{mockData.rating}</div>
+                <div className="flex items-center justify-center gap-1 mt-2">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} size={18} className={i < Math.floor(mockData.rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} />
+                  ))}
+                </div>
+                <p className="text-sm text-gray-500 mt-2">{mockData.totalReviews.toLocaleString()} total reviews</p>
+              </div>
+              
+              {/* Rating Bars */}
+              <div className="space-y-3">
+                {[5, 4, 3, 2, 1].map((star) => {
+                  const count = mockData.ratingBreakdown[star];
+                  const percentage = getPercentage(count);
+                  return (
+                    <div key={star} className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-gray-700 w-8">{star}★</span>
+                      <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div 
+                          className="bg-yellow-400 h-full rounded-full transition-all" 
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <span className="text-sm text-gray-500 w-12 text-right">{count}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
 
-          {/* Right Column - About & Verification */}
+          {/* RIGHT COLUMN */}
           <div className="lg:col-span-2 space-y-6">
-            {/* About Section */}
-            {vendorData.aboutUs && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-bold mb-4">About {vendorData.name}</h2>
-                <div className="text-gray-700 space-y-3 leading-relaxed">
-                  {typeof vendorData.aboutUs === 'string'
-                    ? vendorData.aboutUs.split('\n\n').map((paragraph, index) => (
-                        <p key={index}>{paragraph}</p>
-                      ))
-                    : <p>{vendorData.aboutUs}</p>
-                  }
+            
+            {/* About Section - Real data from backend */}
+            {(vendorData.about || vendorData.description || vendorData.bio) && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">About {vendorName}</h2>
+                <div className="text-gray-700 leading-relaxed whitespace-pre-line">
+                  {vendorData.about || vendorData.description || vendorData.bio}
                 </div>
               </div>
             )}
 
-            {/* Trust & Verification Section */}
-            {verificationBadges.length > 0 && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-bold mb-6">Trust & Verification</h2>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {verificationBadges.map((badge, index) => (
-                    <div key={index} className="border-l-4 border-green-500 pl-4 py-2">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{badge.title}</h3>
-                          <p className="text-sm text-gray-600 mt-1">{badge.date}</p>
-                        </div>
-                        <CheckCircle size={20} className="text-green-600 shrink-0" />
+            {/* Trust & Verification Section - Mock data */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Trust & Verification</h2>
+              <p className="text-sm text-gray-500 mb-6">Platform verified credentials</p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {mockData.verificationBadges.map((badge, index) => (
+                  <div key={index} className={`border-l-4 ${index === 0 ? 'border-green-500' : 'border-yellow-500'} pl-4 py-2`}>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{badge.title}</h3>
+                        <p className="text-sm text-gray-500 mt-1">{badge.description}</p>
                       </div>
+                      {index === 0 ? (
+                        <CheckCircle size={20} className="text-green-500 shrink-0" />
+                      ) : (
+                        <Trophy size={20} className="text-yellow-500 shrink-0" />
+                      )}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
 
-            {/* Vendor Journey Section */}
-            {vendorData.journey && Array.isArray(vendorData.journey) && vendorData.journey.length > 0 && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-bold mb-6">Vendor Journey</h2>
-                
-                <div className="space-y-6">
-                  {vendorData.journey.map((milestone, index) => (
-                    <div key={index} className="flex space-x-4">
-                      {/* Timeline indicator */}
-                      <div className="flex flex-col items-center">
-                        <div className="text-3xl">{milestone.icon || '📍'}</div>
-                        {index !== vendorData.journey.length - 1 && (
-                          <div className="w-1 h-12 bg-gray-200 mt-2" />
-                        )}
-                      </div>
-                      
-                      {/* Content */}
-                      <div className="pb-6">
-                        <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                          {milestone.date}
-                        </p>
-                        <h3 className="text-lg font-bold text-gray-900 mt-1">{milestone.title}</h3>
-                        <p className="text-gray-600 text-sm mt-2">{milestone.description}</p>
-                      </div>
+            {/* Vendor Journey Section - Mock data */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Vendor Journey</h2>
+              <p className="text-sm text-gray-500 mb-6">Key milestones since joining</p>
+              
+              <div className="space-y-8">
+                {mockData.journey.map((milestone, index) => (
+                  <div key={index} className="relative pl-8 pb-8 last:pb-0">
+                    {/* Timeline line */}
+                    {index !== mockData.journey.length - 1 && (
+                      <div className="absolute left-3 top-6 bottom-0 w-0.5 bg-gray-200" />
+                    )}
+                    {/* Timeline dot */}
+                    <div className="absolute left-0 top-1 w-6 h-6 bg-teal-100 rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 bg-teal-600 rounded-full" />
                     </div>
-                  ))}
-                </div>
+                    {/* Content */}
+                    <div>
+                      <p className="text-sm font-semibold text-teal-600 tracking-wide">
+                        {milestone.date}
+                      </p>
+                      <h3 className="text-lg font-bold text-gray-900 mt-1">{milestone.title}</h3>
+                      <p className="text-gray-600 text-sm mt-2 leading-relaxed">{milestone.description}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
 
             {/* Browse Products CTA */}
-            <div className="flex bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-8 text-center border border-green-200">
-              <div className='flex-col items-start'>
-                <h3 className="text-2xl font-semibold text-teal-600 mb-2">Ready to explore {vendorData.name}?</h3>
-                <p className="text-green-600">{(vendorData.products ?? 0).toLocaleString()} products available</p>
-              </div>
-              <div className='ml-auto'>
-                <button className="bg-teal-600 text-white px-5 py-3 rounded-lg font-medium hover:bg-teal-700 transition inline-flex items-center space-x-2">
+            <div className="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-xl p-8 border border-teal-100">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h3 className="text-2xl font-semibold text-teal-800 mb-1">Ready to explore {vendorName}?</h3>
+                  <p className="text-teal-600">{products.length.toLocaleString()} products available with fast shipping</p>
+                </div>
+                <button
+                  onClick={handleBrowseProducts}
+                  className="bg-teal-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-teal-700 transition inline-flex items-center gap-2 self-start sm:self-auto"
+                >
                   <span>Browse Products</span>
-                  <ChevronRight size={20} />
+                  <ChevronRight size={18} />
                 </button>
               </div>
             </div>
