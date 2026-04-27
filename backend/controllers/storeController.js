@@ -321,14 +321,43 @@ export const deleteStore = async (req, res) => {
 export const getMyStores = async (req, res) => {
     try {
         const vendorId = req.user._id;
-
+        
+        // Get stores
         const stores = await Store.find({ vendor: vendorId })
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
+
+        // Get product counts for each store
+        const productCounts = await Product.aggregate([
+            {
+                $match: {
+                    store: { $in: stores.map(s => s._id) }
+                }
+            },
+            {
+                $group: {
+                    _id: "$store",
+                    productCount: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Convert to map
+        const countMap = {};
+        productCounts.forEach(item => {
+            countMap[item._id.toString()] = item.productCount;
+        });
+
+        // Attach to stores
+        const result = stores.map(store => ({
+            ...store,
+            productCount: countMap[store._id.toString()] || 0
+        }));
 
         res.status(200).json({
             success: true,
-            count: stores.length,
-            data: stores
+            count: result.length,
+            data: result
         });
 
     } catch (error) {
