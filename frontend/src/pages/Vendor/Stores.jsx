@@ -11,26 +11,17 @@ import {
   MoreVertical,
   ChevronLeft,
   ChevronRight,
-  Shirt,
-  BookOpen,
-  ShoppingBag,
-  Laptop,
-  Dumbbell,
-  Home,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 
 
 
 const statusOptions = ["All Status", "active", "pending"];
-const categoryOptions = ["All Categories", "Electronics", "Fashion", "Home & Garden", "Sports", "Books", "Grocery"];
-const sortOptions = ["Sort by Date", "Newest First", "Oldest First", "Revenue High to Low", "Revenue Low to High"];
+const sortOptions = ["Sort by Date", "Newest First", "Oldest First"];
 
-function formatRevenue(value) {
-  return value === 0 ? "$0" : `$${value.toLocaleString()}`;
-}
 
 function StatCard({ icon: Icon, value, label, iconBg, iconColor }) {
   return (
@@ -44,14 +35,6 @@ function StatCard({ icon: Icon, value, label, iconBg, iconColor }) {
   );
 }
 
-// const categoryIconMap = {
-//   Electronics: { icon: Laptop, bg: "bg-emerald-600" },
-//   Fashion: { icon: Shirt, bg: "bg-pink-600" },
-//   "Home & Garden": { icon: Home, bg: "bg-orange-500" },
-//   Sports: { icon: Dumbbell, bg: "bg-blue-600" },
-//   Books: { icon: BookOpen, bg: "bg-violet-600" },
-//   Grocery: { icon: ShoppingBag, bg: "bg-teal-600" },
-// };
 
 const defaultIcon = {
   icon: Store,
@@ -62,10 +45,13 @@ export default function StoresPage() {
   const[storesData, setStoresData] = useState([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All Status");
-  const [category, setCategory] = useState("All Categories");
   const [sortBy, setSortBy] = useState("Sort by Date");
   const [page, setPage] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [menuPosition, setMenuPosition] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const pageSize = 5;
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
@@ -89,9 +75,6 @@ export default function StoresPage() {
       items = items.filter((store) => store.status?.toLowerCase() === status.toLowerCase());
     }
 
-    // if (category !== "All Categories") {
-    //   items = items.filter((store) => store.category === category);
-    // }
 
     switch (sortBy) {
       case "Newest First":
@@ -100,18 +83,12 @@ export default function StoresPage() {
       case "Oldest First":
         items.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
         break;
-      case "Revenue High to Low":
-        items.sort((a, b) => b.revenue - a.revenue);
-        break;
-      case "Revenue Low to High":
-        items.sort((a, b) => a.revenue - b.revenue);
-        break;
       default:
         break;
     }
 
     return items;
-  }, [debouncedSearch, status, category, sortBy, storesData]);
+  }, [debouncedSearch, status, sortBy, storesData]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -139,6 +116,9 @@ export default function StoresPage() {
 
   useEffect(()=> {
     fetchStoresData();
+    const handleClick = () => setOpenMenuId(null);
+    window.addEventListener("click", handleClick);
+    return () => window.removeEventListener("click", handleClick);
   },[]);
 
   const totalPages = Math.max(1, Math.ceil(filteredStores.length / pageSize));
@@ -148,7 +128,6 @@ export default function StoresPage() {
   const totalStores = storesData.length;
   const activeStores = storesData.filter((s) => s.status === "active").length;
   const pendingStores = storesData.filter((s) => s.status === "pending").length;
-  const totalRevenue = storesData.reduce((sum, s) => sum + (s.revenue || 0), 0);
   const navigate = useNavigate();
 
   const resetToFirstPage = (setter, value) => {
@@ -168,7 +147,7 @@ export default function StoresPage() {
           </div>
 
           <button 
-            onClick={() => navigate("//vendor/create-store")}
+            onClick={() => navigate("/vendor/create-store")}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1A9F73] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-700"
             >
             <Plus className="h-4 w-4" />
@@ -176,7 +155,7 @@ export default function StoresPage() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <StatCard
             icon={Store}
             value={totalStores}
@@ -198,13 +177,6 @@ export default function StoresPage() {
             iconBg="bg-amber-50"
             iconColor="text-amber-600"
           />
-          <StatCard
-            icon={DollarSign}
-            value={formatRevenue(totalRevenue)}
-            label="Total Revenue"
-            iconBg="bg-violet-50"
-            iconColor="text-violet-600"
-          />
         </div>
 
         <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
@@ -213,7 +185,7 @@ export default function StoresPage() {
             Filters
           </div>
 
-          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
@@ -240,18 +212,6 @@ export default function StoresPage() {
               <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             </div>
 
-            <div className="relative">
-              <select
-                value={category}
-                onChange={(e) => resetToFirstPage(setCategory, e.target.value)}
-                className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-10 text-sm outline-none transition focus:border-[#1A9F73] focus:ring-2 focus:ring-emerald-100"
-              >
-                {categoryOptions.map((option) => (
-                  <option key={option}>{option}</option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            </div>
 
             <div className="relative">
               <select
@@ -270,16 +230,12 @@ export default function StoresPage() {
 
         <div className="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
-            <table className="min-w-[980px] w-full text-left text-sm">
+            <table className="min-w-245 w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-4 py-4">Store</th>
-                  {/* <th className="px-4 py-4">Category</th>
-                  <th className="px-4 py-4">Location</th> */}
                   <th className="px-4 py-4">Status</th>
-                  {/* <th className="px-4 py-4">Products</th>
-                  <th className="px-4 py-4">Orders</th>
-                  <th className="px-4 py-4">Revenue</th> */}
+                  {/* <th className="px-4 py-4">Products</th> */}
                   <th className="px-4 py-4">Created</th>
                   <th className="px-4 py-4">Actions</th>
                 </tr>
@@ -288,15 +244,14 @@ export default function StoresPage() {
               <tbody className="divide-y divide-slate-200">
                 {paginatedStores.length ? (
                   paginatedStores.map((store) => {
-                    // const { icon: Icon, bg } =
-                    //     categoryIconMap[store.category] || defaultIcon;
+                    const isActive = store.status?.toLowerCase() === "active";
                     return (
                       <tr key={store._id}
                           onClick={() => navigate(`/vendor/store/${store._id}`)}
-                          className="hover:bg-slate-50/70 cursor-pointer">
+                          className="group hover:bg-slate-50/70 cursor-pointer ">
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-3">
-                            <div className={`flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 overflow-hidden`}>
+                            <div className={`flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 overflow-hidden transition-transform duration-200 group-hover:scale-110`}>
                               {store.logo ? (
                                     <img
                                     src={store.logo}
@@ -309,37 +264,43 @@ export default function StoresPage() {
                             </div>
                             <div>
                               <div className="font-semibold text-slate-900">{store.name}</div>
-                              {/* <div className="text-xs text-slate-400">{store.slug}</div> */}
                             </div>
                           </div>
                         </td>
-                        {/* <td className="px-4 py-4 text-slate-600">{store.category}</td>
-                        <td className="px-4 py-4 text-slate-600">{store.location}</td> */}
                         <td className="px-4 py-4">
                           <span
                             className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium ${
-                              store.status === "Active" || store.status === "active"
+                              isActive
                                 ? "bg-emerald-50 text-emerald-700"
                                 : "bg-amber-50 text-amber-700"
                             }`}
                           >
                             <span
                               className={`h-2 w-2 rounded-full ${
-                                store.status === "Active" || store.status === "active" ? "bg-emerald-500" : "bg-amber-500"
+                                isActive ? "bg-emerald-500" : "bg-amber-500"
                               }`}
                             />
                             {store.status}
                           </span>
                         </td>
-                        {/* <td className="px-4 py-4 font-medium text-slate-700">{store.products}</td>
-                        <td className="px-4 py-4 font-medium text-slate-700">{store.orders.toLocaleString()}</td>
-                        <td className="px-4 py-4 font-semibold text-slate-900">{formatRevenue(store.revenue)}</td> */}
+                        {/* <td className="px-4 py-4 font-medium text-slate-700">{store.products}</td> */}
                         <td className="px-4 py-4 text-slate-600">{new Date(store.createdAt).toLocaleDateString()}</td>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-4 relative">
                           <button 
                             onClick={(e) => {
                                     e.stopPropagation();
-                                    // action
+                                    const rect = e.currentTarget.getBoundingClientRect();
+
+                                    if (openMenuId === store._id) {
+                                      setOpenMenuId(null);
+                                      setMenuPosition(null);
+                                    } else {
+                                      setOpenMenuId(store._id);
+                                      setMenuPosition({
+                                        top: rect.bottom + 6,
+                                        left: rect.right - 150, // align right
+                                      });
+                                    }
                                 }}
                             className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
                             <MoreVertical className="h-4 w-4" />
@@ -402,6 +363,95 @@ export default function StoresPage() {
           </div>
         </div>
       </div>
+      {openMenuId && menuPosition &&
+      createPortal(
+        <div
+          style={{
+            position: "fixed",
+            top: menuPosition.top,
+            left: menuPosition.left,
+          }}
+          className="z-50 w-36 rounded-xl border border-slate-200 bg-white shadow-lg"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50"
+            onClick={() => {
+              setOpenMenuId(null);
+            }}
+          >
+            Edit
+          </button>
+
+          <button
+            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+            onClick={() => {
+              const store = storesData.find(s => s._id === openMenuId);
+              setDeleteTarget(store);
+              setOpenMenuId(null);
+            }}
+          >
+            Delete
+          </button>
+        </div>,
+        document.body
+      )}
+      
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="text-lg font-semibold text-slate-900">
+              Delete Store
+            </h2>
+
+            <p className="mt-2 text-sm text-slate-600">
+              Are you sure you want to delete{" "}
+              <span className="font-medium">{deleteTarget.name}</span>? This action cannot be undone.
+            </p>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={async () => {
+                  try {
+                    setIsDeleting(true);
+
+                    await axios.delete(`${API_BASE_URL}${API_VERSION}/store/${deleteTarget._id}`,
+                      {withCredentials: true }
+                    );
+
+                    toast.success("Store deleted successfully");
+
+                    // remove from UI
+                    setStoresData((prev) =>
+                      prev.filter((s) => s._id !== deleteTarget._id)
+                    );
+
+                    setDeleteTarget(null);
+                  } catch (err) {
+                    console.error(err);
+                    toast.error(
+                      err?.response?.data?.message || "Failed to delete store"
+                    );
+                  } finally {
+                    setIsDeleting(false);
+                  }
+                }}
+                disabled={isDeleting}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
