@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 import ProductCreate from './pages/product _create/ProductCreate';
+import ProductUpdate from './pages/Product_update/ProductUpdate';
 import { Toaster } from 'react-hot-toast';
 import SigninPage from "./pages/login/SigninPage";
 import SignupPage from "./pages/login/SignupPage";
@@ -48,12 +49,12 @@ function App() {
           <Route path="/vendor/product_management" element={<VendorProductManagemnt />} />
           <Route path="/vendor/products" element={<Products />} />
           <Route path="/vendor/product_create" element={<ProductCreate />} />
+          <Route path="/vendor/product_update/:id" element={<ProductUpdate />} />
           <Route path="/vendor/create-store" element={<CreateStore />} />
           <Route path="/vendor/store/:id" element={<ViewStore />} />
           <Route path="/vendor/profile" element={<VendorProfile />} />
           <Route path="/vendor/store" element={<StoresPage />} />
-      
-        frontend
+
             
           {/* Admin Module */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
