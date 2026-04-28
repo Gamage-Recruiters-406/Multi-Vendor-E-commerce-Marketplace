@@ -10,8 +10,7 @@ import {
 	X,
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import Header from '../../components/Layouts/Header';
-import Footer from '../../components/Layouts/Footer';
+import Layout from '../../components/Layouts/Layout';
 
 const defaultAttributes = {
 	isPremium: false,
@@ -221,8 +220,8 @@ const ProductUpdate = () => {
 	};
 
 	return (
-		<div className="min-h-screen bg-[#f8fafc] text-slate-800 pb-24 font-sans">
-			<Header userRole="Vendor" />
+		<Layout>
+			<div className="min-h-screen bg-[#f8fafc] text-slate-800 pb-24 font-sans">
 
 			<header className="max-w-6xl mx-auto px-6 pt-10 pb-6">
 				<div className="flex justify-between items-start mb-6">
@@ -680,8 +679,8 @@ const ProductUpdate = () => {
 				</div>
 			</div>
 
-			<Footer />
-		</div>
+			</div>
+		</Layout>
 	);
 };
 
