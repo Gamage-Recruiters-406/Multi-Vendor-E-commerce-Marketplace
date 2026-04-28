@@ -229,7 +229,7 @@ const ProductUpdate = () => {
 					<div>
 						<div className="flex items-center text-sm text-slate-500 font-medium mb-4">
 							<span className="hover:text-slate-800 cursor-pointer transition-colors">Products</span>
-							<span className="mx-2">â€º</span>
+							<span className="mx-2">›</span>
 							<span className="text-slate-800">Update Product</span>
 						</div>
 						<h1 className="text-4xl font-bold text-slate-900 tracking-tight">Update Product</h1>
