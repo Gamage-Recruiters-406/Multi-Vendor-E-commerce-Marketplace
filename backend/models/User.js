@@ -59,6 +59,16 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    addresses: [
+  {
+    street: { type: String, required: true },
+    city: { type: String, required: true },
+    district: { type: String, required: true },
+    postalCode: { type: String },
+    country: { type: String, default: "Sri Lanka" },
+  }
+],
     
   },
   { timestamps: true }
