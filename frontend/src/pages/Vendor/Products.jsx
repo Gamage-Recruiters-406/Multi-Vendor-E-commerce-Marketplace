@@ -367,7 +367,10 @@ export default function Products() {
 																	type="button"
 																	className="transition hover:text-emerald-600"
 																	aria-label={`Edit ${product?.name || "product"}`}
-																	onClick={(event) => event.stopPropagation()}
+																	onClick={(event) => {
+																		event.stopPropagation();
+																		window.location.href = `/vendor/product_update/${product?._id}`;
+																	}}
 																>
 																	<PencilLine size={16} />
 																</button>
