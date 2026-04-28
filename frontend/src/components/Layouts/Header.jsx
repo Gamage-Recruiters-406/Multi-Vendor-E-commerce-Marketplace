@@ -230,7 +230,7 @@ export default function Header({ userRole, userName }) {
 
 	return (
 		<header
-			className={`w-full rounded-lg px-4 py-2 md:px-5 md:py-2.5 ${ui.shell} font-sans`}
+			className={`sticky top-0 z-50 w-full rounded-lg px-4 py-2 md:px-5 md:py-2.5 ${ui.shell} font-sans backdrop-blur-md`}
 		>
 			<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
 				<div className="flex min-w-0 flex-1 items-center gap-4 md:gap-5">

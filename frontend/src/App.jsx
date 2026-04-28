@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 import ProductCreate from './pages/product _create/ProductCreate';
+import ProductUpdate from './pages/Product_update/ProductUpdate';
 import { Toaster } from 'react-hot-toast';
 import SigninPage from "./pages/login/SigninPage";
 import SignupPage from "./pages/login/SignupPage";
@@ -18,6 +19,7 @@ import CheckoutPage from "./pages/CheckoutPage";
 import UserProfileAndAddressBook from "./pages/Profiles/userProfile&AddressBook";
 import "./App.css";
 import StoresPage from "./pages/Vendor/Stores";
+import EditStore from "./pages/Vendor/EditStore";
 import SalesAnalytics from "./pages/Vendor/SalesAnalytics";
 
 
@@ -49,10 +51,12 @@ function App() {
           <Route path="/vendor/product_management" element={<VendorProductManagemnt />} />
           <Route path="/vendor/products" element={<Products />} />
           <Route path="/vendor/product_create" element={<ProductCreate />} />
+          <Route path="/vendor/product_update/:id" element={<ProductUpdate />} />
           <Route path="/vendor/create-store" element={<CreateStore />} />
           <Route path="/vendor/store/:id" element={<ViewStore />} />
           <Route path="/vendor/profile" element={<VendorProfile />} />
           <Route path="/vendor/store" element={<StoresPage />} />
+          <Route path="/vendor/edit-store/:id" element={<EditStore />} />
           <Route path="/vendor/sales-analytics" element={<SalesAnalytics />} />
       
         frontend
