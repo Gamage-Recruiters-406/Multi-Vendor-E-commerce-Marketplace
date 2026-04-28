@@ -18,6 +18,7 @@ import CheckoutPage from "./pages/CheckoutPage";
 import UserProfileAndAddressBook from "./pages/Profiles/userProfile&AddressBook";
 import "./App.css";
 import StoresPage from "./pages/Vendor/Stores";
+import EditStore from "./pages/Vendor/EditStore";
 
 
 
@@ -52,6 +53,7 @@ function App() {
           <Route path="/vendor/store/:id" element={<ViewStore />} />
           <Route path="/vendor/profile" element={<VendorProfile />} />
           <Route path="/vendor/store" element={<StoresPage />} />
+          <Route path="/vendor/edit-store/:id" element={<EditStore />} />
       
         frontend
             
