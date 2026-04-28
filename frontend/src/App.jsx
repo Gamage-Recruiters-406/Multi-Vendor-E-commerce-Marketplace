@@ -15,10 +15,11 @@ import { AdminDashboard } from "./pages/AdminDashboard/AdminDashboard";
 import VendorProfile from "./pages/Profiles/vendorProfile";
 import Home from "./pages/Home";
 import CheckoutPage from "./pages/CheckoutPage";
+import UserProfileAndAddressBook from "./pages/Profiles/userProfile&AddressBook";
+import "./App.css";
+import StoresPage from "./pages/Vendor/Stores";
 import VendorDashboard from "./pages/VendorDashboard";
 import BuyerProductDetailsPage from "./pages/Buyer/BuyerProductDetailsPage";
-
-import "./App.css";
 
 function App() {
   return (
@@ -28,35 +29,24 @@ function App() {
         <Routes>
           {/* Home Page */}
           <Route path="/" element={<Home />} />
-
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
-
           <Route path="/signup" element={<SignupPage />} />
-
           {/* Layout 
           <Route path="/" element={<Footer />} />*/}
-
           <Route path="/register" element={<SignupPage />} />
-
-          {/* Vendor Module (REQ4 & REQ5) */}
-          <Route
-            path="/vendor/product_management"
-            element={<VendorProductManagemnt />}
-          />
-          <Route path="/vendor/products" element={<Products />} />
-          <Route path="/vendor/create-store" element={<CreateStore />} />
-          <Route path="/vendor/store/:id" element={<ViewStore />} />
-          <Route path="/vendor/profile" element={<VendorProfile />} />
-
-          {/* Vendor Routes */}
+          {/* Vendor Module */}
           <Route
             path="/vendor/product_management"
             element={<VendorProductManagemnt />}
           />
           <Route path="/vendor/products" element={<Products />} />
           <Route path="/vendor/product_create" element={<ProductCreate />} />
-
+          <Route path="/vendor/create-store" element={<CreateStore />} />
+          <Route path="/vendor/store/:id" element={<ViewStore />} />
+          <Route path="/vendor/profile" element={<VendorProfile />} />
+          <Route path="/vendor/store" element={<StoresPage />} />
+          frontend
           {/* Admin Module */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/announcements" element={<Announcements />} />
@@ -73,9 +63,9 @@ function App() {
             path="/buyer/productdetails/:id"
             element={<BuyerProductDetailsPage />}
           />
-
           {/* Checkout */}
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/addressbook" element={<UserProfileAndAddressBook />} />
         </Routes>
       </Router>
     </>
