@@ -235,7 +235,7 @@ export default function StoresPage() {
                 <tr>
                   <th className="px-4 py-4">Store</th>
                   <th className="px-4 py-4">Status</th>
-                  {/* <th className="px-4 py-4">Products</th> */}
+                  <th className="px-4 py-4">Products</th>
                   <th className="px-4 py-4">Created</th>
                   <th className="px-4 py-4">Actions</th>
                 </tr>
@@ -248,7 +248,7 @@ export default function StoresPage() {
                     return (
                       <tr key={store._id}
                           onClick={() => navigate(`/vendor/store/${store._id}`)}
-                          className="group hover:bg-slate-50/70 cursor-pointer ">
+                          className="group hover:bg-slate-50/70 cursor-pointer focus-within:bg-slate-100">
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-3">
                             <div className={`flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 overflow-hidden transition-transform duration-200 group-hover:scale-110`}>
@@ -280,11 +280,11 @@ export default function StoresPage() {
                                 isActive ? "bg-emerald-500" : "bg-amber-500"
                               }`}
                             />
-                            {store.status}
+                            {store.status?.toUpperCase() || "UNKNOWN"}
                           </span>
                         </td>
-                        {/* <td className="px-4 py-4 font-medium text-slate-700">{store.products}</td> */}
-                        <td className="px-4 py-4 text-slate-600">{new Date(store.createdAt).toLocaleDateString()}</td>
+                        <td className="px-4 py-4 font-medium text-slate-700">{store.productCount ?? 0}</td>
+                        <td className="px-4 py-4 text-slate-600">{store.createdAt ? new Date(store.createdAt).toLocaleDateString() : "-"}</td>
                         <td className="px-4 py-4 relative">
                           <button 
                             onClick={(e) => {
@@ -298,7 +298,7 @@ export default function StoresPage() {
                                       setOpenMenuId(store._id);
                                       setMenuPosition({
                                         top: rect.bottom + 6,
-                                        left: rect.right - 150, // align right
+                                        left: Math.min(rect.right - 150, window.innerWidth - 160)
                                       });
                                     }
                                 }}
@@ -311,7 +311,7 @@ export default function StoresPage() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={4} className="px-4 py-10 text-center text-slate-500">
+                    <td colSpan={5} className="px-4 py-10 text-center text-slate-500">
                       No stores match your filters.
                     </td>
                   </tr>
