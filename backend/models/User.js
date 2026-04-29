@@ -69,6 +69,11 @@ const userSchema = new mongoose.Schema(
     country: { type: String, default: "Sri Lanka" },
   }
 ],
+
+    isSuspended: {
+    type: Boolean,
+    default: false,
+    },
     
   },
   { timestamps: true }
