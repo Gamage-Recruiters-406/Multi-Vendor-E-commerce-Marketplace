@@ -78,6 +78,14 @@ export const login = async (req, res) => {
       });
     }
 
+    // Check if user is suspended
+    if (user.isSuspended) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account has been suspended. Contact support.",
+      });
+    }
+
     // Check password
     const isPasswordValid = await user.matchPassword(password);
     if (!isPasswordValid) {
@@ -476,6 +484,82 @@ export const deleteAddress = async (req, res) => {
       success: false,
       message: "Error deleting address",
       error: error.message
+    });
+  }
+};
+
+// Suspend user (admin)
+export const suspendUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (user.isSuspended) {
+      return res.status(400).json({
+        success: false,
+        message: "User is already suspended",
+      });
+    }
+
+    user.isSuspended = true;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "User suspended successfully",
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error suspending user",
+      error: error.message,
+    });
+  }
+};
+
+// Unsuspend user (admin)
+export const unsuspendUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (!user.isSuspended) {
+      return res.status(400).json({
+        success: false,
+        message: "User is not suspended",
+      });
+    }
+
+    user.isSuspended = false;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "User unsuspended successfully",
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error unsuspending user",
+      error: error.message,
     });
   }
 };
