@@ -23,6 +23,7 @@ import EditStore from "./pages/Vendor/EditStore";
 import SalesAnalytics from "./pages/Vendor/SalesAnalytics";
 import VendorDashboard from "./pages/VendorDashboard";
 import BuyerProductDetailsPage from "./pages/Buyer/BuyerProductDetailsPage";
+import ShoppingCartPage from "./pages/ShoppingCart/ShoppingCartPage";
 
 function App() {
   return (
@@ -73,6 +74,7 @@ function App() {
             path="/buyer/productdetails/:id"
             element={<BuyerProductDetailsPage />}
           />
+          <Route path="/cart" element={<ShoppingCartPage />} />
           {/* Checkout */}
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/addressbook" element={<UserProfileAndAddressBook />} />
