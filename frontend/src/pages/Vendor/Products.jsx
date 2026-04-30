@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Filter, PencilLine, Plus, Search, Trash2, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Layout from "../../components/Layouts/Layout";
 
 const stockStyles = {
@@ -53,6 +53,7 @@ const getAuthToken = () => {
 };
 
 export default function Products() {
+	const navigate = useNavigate();
 	const [products, setProducts] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
@@ -367,7 +368,10 @@ export default function Products() {
 																	type="button"
 																	className="transition hover:text-emerald-600"
 																	aria-label={`Edit ${product?.name || "product"}`}
-																	onClick={(event) => event.stopPropagation()}
+																	onClick={(event) => {
+																		event.stopPropagation();
+																		navigate(`/vendor/product_edit/${product?._id}`);
+																	}}
 																>
 																	<PencilLine size={16} />
 																</button>

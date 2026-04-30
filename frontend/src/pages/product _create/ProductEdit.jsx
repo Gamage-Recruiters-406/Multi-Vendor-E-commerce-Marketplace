@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, CheckCircle2, ShieldAlert, Image as ImageIcon, 
   Send, Star, Upload, X, Check
@@ -6,7 +7,10 @@ import {
 import Header from '../../components/Layouts/Header';
 import Footer from '../../components/Layouts/Footer';
 
-const ProductCreate = () => {
+const ProductEdit = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -14,6 +18,7 @@ const ProductCreate = () => {
     stock: '',
     category: '',
     images: [],
+    existingImages: [],
     attributes: {
       isPremium: false,
       sendEmail: false,
@@ -22,17 +27,16 @@ const ProductCreate = () => {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [categories, setCategories] = useState([]);
   const [isLoadingCats, setIsLoadingCats] = useState(true);
+  const [isLoadingProduct, setIsLoadingProduct] = useState(true);
 
-
+  // Fetch Categories
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
         const response = await fetch(`${baseUrl}/api/v1/category`);
-        // console.log("Category response:", response);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const text = await response.text();
         try {
@@ -45,9 +49,51 @@ const ProductCreate = () => {
         setIsLoadingCats(false);
       }
     };
-
     fetchCategories();
   }, []);
+
+  // Fetch Product details for Edit
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+        const response = await fetch(`${baseUrl}/api/v1/product/${id}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const text = await response.text();
+        const result = JSON.parse(text);
+        
+        const p = result.data?.data || result.data; // Safely access product object
+        
+        // Ensure attributes exist
+        let parsedAttributes = { isPremium: false, sendEmail: false, showOnBanner: false };
+        if (typeof p.attributes === 'string') {
+          try { parsedAttributes = JSON.parse(p.attributes); } catch(e){}
+        } else if (p.attributes) {
+          parsedAttributes = { ...parsedAttributes, ...p.attributes };
+        }
+
+        setFormData({
+          title: p.name || '',
+          description: p.description || '',
+          price: p.price || '',
+          stock: p.stock || '',
+          category: p.category?._id || p.category || '',
+          images: [], // New images
+          existingImages: p.images || [], // Existing images from server
+          attributes: parsedAttributes
+        });
+
+      } catch (error) {
+        console.error("Failed to fetch product", error);
+      } finally {
+        setIsLoadingProduct(false);
+      }
+    };
+
+    if (id) {
+      fetchProduct();
+    }
+  }, [id]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -72,16 +118,22 @@ const ProductCreate = () => {
     }));
   };
 
-  const removeImage = (index) => {
+  const removeNewImage = (index) => {
     setFormData(prev => ({
       ...prev,
       images: prev.images.filter((_, i) => i !== index)
     }));
   };
 
+  const removeExistingImage = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      existingImages: prev.existingImages.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Validate required fields
     if (!formData.title || !formData.price || !formData.category) {
       alert("Title, Price, and Category are required.");
       return;
@@ -97,30 +149,34 @@ const ProductCreate = () => {
       data.append('stock', formData.stock);
       data.append('attributes', JSON.stringify(formData.attributes));
       
+      // Append new files
       formData.images.forEach(file => data.append('images', file));
+      
+      // Send existing image URLs so backend knows which to keep
+      // Check backend logic if this is supported, usually appending them to a specific field or back as 'existingImages'
+      formData.existingImages.forEach(imgUrl => data.append('existingImages', imgUrl));
 
-      // Typically auth tokens are placed in localStorage
-      const token = localStorage.getItem('token'); 
+      const token = localStorage.getItem('token') || (localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user'))?.token : null);
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/product`, {
-        method: 'POST',
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/v1/product/${id}`, {
+        method: 'PUT', // or PATCH
         headers: {
           ...(token && { 'Authorization': `Bearer ${token}` })
         },
-        body: data // let the browser automatically set the correct boundary for multipart/form-data
+        body: data
       });
 
       const result = await response.json();
 
       if (response.ok && result.success) {
-        alert("Listing published successfully!");
-        console.log("Success result:", result.data);
+        alert("Product updated successfully!");
+        navigate('/vendor/products'); // Redirect to products list
       } else {
-        alert(`Failed to publish: ${result.message || 'Unknown error'}`);
+        alert(`Failed to update: ${result.message || 'Unknown error'}`);
       }
     } catch (error) {
        console.error("Submission error:", error);
-       alert("An error occurred while publishing the listing.");
+       alert("An error occurred while updating the product.");
     } finally {
        setIsSubmitting(false);
     }
@@ -134,6 +190,10 @@ const ProductCreate = () => {
     }
   };
 
+  if (isLoadingProduct) {
+    return <div className="min-h-screen flex items-center justify-center text-slate-500">Loading product data...</div>;
+  }
+
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-800 font-sans">
       <Header userRole="Vendor" />
@@ -143,14 +203,14 @@ const ProductCreate = () => {
         <div className="flex justify-between items-start mb-6">
           <div>
             <div className="flex items-center text-sm text-slate-500 font-medium mb-4">
-              <span className="hover:text-slate-800 cursor-pointer transition-colors">Products</span>
+              <span onClick={() => navigate('/vendor/products')} className="hover:text-slate-800 cursor-pointer transition-colors">Products</span>
               <span className="mx-2">›</span>
-              <span className="text-slate-800">Add New Product</span>
+              <span className="text-slate-800">Edit Product</span>
             </div>
-            <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Add New Product</h1>
-            <p className="text-slate-500 mt-2 text-sm">Fill in the details below to publish your product to the marketplace.</p>
+            <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Edit Product</h1>
+            <p className="text-slate-500 mt-2 text-sm">Update the details below to save changes to your product.</p>
           </div>
-          <button className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-full hover:bg-slate-50 transition-colors shadow-sm font-medium">
+          <button onClick={() => navigate('/vendor/products')} className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-full hover:bg-slate-50 transition-colors shadow-sm font-medium">
             <ArrowLeft className="w-4 h-4" />
             <span>Back to List</span>
           </button>
@@ -275,7 +335,7 @@ const ProductCreate = () => {
             </div>
             
             <div className="p-8 space-y-8">
-              {/* Product Images (Replacing URL with slick File Upload area) */}
+              {/* Product Images */}
               <div>
                 <label className="block text-sm font-semibold text-slate-900 mb-2">Product Images</label>
                 <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 hover:bg-slate-50 transition-colors flex flex-col items-center justify-center relative cursor-pointer group">
@@ -289,21 +349,35 @@ const ProductCreate = () => {
                   <div className="bg-white p-4 rounded-full shadow-sm mb-4 group-hover:scale-105 transition-transform">
                     <Upload className="w-6 h-6 text-emerald-500" />
                   </div>
-                  <p className="text-sm font-semibold text-slate-700">Click to upload or drag & drop</p>
+                  <p className="text-sm font-semibold text-slate-700">Click to upload or drag & drop new images</p>
                   <p className="text-xs text-slate-500 mt-1">SVG, PNG, JPG or GIF (max. 5MB)</p>
                 </div>
 
-                {formData.images.length > 0 && (
+                {/* Display Existing and New Images */}
+                {(formData.existingImages.length > 0 || formData.images.length > 0) && (
                   <div className="mt-4 flex flex-wrap gap-4">
-                    {formData.images.map((file, i) => (
-                      <div key={i} className="relative group w-24 h-24 rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                        <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-full object-cover" />
+                    {formData.existingImages.map((url, i) => (
+                      <div key={`ext-${i}`} className="relative group w-24 h-24 rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                        <img src={url} alt="existing preview" className="w-full h-full object-cover" />
                         <button 
-                          onClick={() => removeImage(i)}
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => { e.preventDefault(); removeExistingImage(i); }}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20"
                         >
                           <X className="w-3 h-3" />
                         </button>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] text-center py-0.5">Existing</div>
+                      </div>
+                    ))}
+                    {formData.images.map((file, i) => (
+                      <div key={`new-${i}`} className="relative group w-24 h-24 rounded-xl border-2 border-emerald-400 overflow-hidden shadow-sm">
+                        <img src={URL.createObjectURL(file)} alt="new preview" className="w-full h-full object-cover" />
+                        <button 
+                          onClick={(e) => { e.preventDefault(); removeNewImage(i); }}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                        <div className="absolute bottom-0 left-0 right-0 bg-emerald-500 text-white text-[10px] font-bold text-center py-0.5">New</div>
                       </div>
                     ))}
                   </div>
@@ -573,12 +647,12 @@ const ProductCreate = () => {
               className={`flex items-center justify-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white px-10 py-4 rounded-xl font-bold shadow-lg shadow-emerald-500/20 transition-all active:scale-95 w-full sm:w-auto ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               <Send className={`w-4 h-4 ${isSubmitting ? 'animate-pulse' : ''}`} />
-              <span>{isSubmitting ? 'Publishing...' : 'Publish Now'}</span>
+              <span>{isSubmitting ? 'Updating...' : 'Save Changes'}</span>
             </button>
 
-            <button className="flex items-center justify-center space-x-2 bg-white hover:bg-slate-50 text-slate-600 px-10 py-4 rounded-xl font-bold transition-all border border-slate-200 hover:border-slate-300 w-full sm:w-auto">
+            <button onClick={() => navigate('/vendor/products')} className="flex items-center justify-center space-x-2 bg-white hover:bg-slate-50 text-slate-600 px-10 py-4 rounded-xl font-bold transition-all border border-slate-200 hover:border-slate-300 w-full sm:w-auto">
               <X className="w-4 h-4" />
-              <span>Discard</span>
+              <span>Cancel</span>
             </button>
         </div>
       </div>
@@ -588,4 +662,4 @@ const ProductCreate = () => {
   );
 };
 
-export default ProductCreate;
+export default ProductEdit;
