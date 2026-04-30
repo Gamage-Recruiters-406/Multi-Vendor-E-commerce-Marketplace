@@ -366,6 +366,13 @@ export const createOrder = async (req, res) => {
           orderId: order._id,
           orderNumber: order.orderNumber,
           totalAmount: order.priceSummary.totalAmount,
+          paymentStatus: order.payment?.status || 'Pending',
+          // Customer fields (for email template)
+          customerName: order.buyer.fullname,
+    
+          // Payment fields (standardized)
+          amount: order.priceSummary.totalAmount,
+          paymentDate: order.createdAt,
         },
         sendEmail: true,
       });
@@ -401,22 +408,26 @@ export const createOrder = async (req, res) => {
           })
         );
 
-      // 3. Send notification to ADMINS (optional)
+      // 3. Send notification to ADMINS (parallel - faster)
       const admins = await User.find({ role: 'admin' });
-      for (const admin of admins) {
-        await notificationService.sendToUser(admin._id, {
-          type: 'order_placed',
-          title: 'New Order Received',
-          message: `Order #${order.orderNumber} placed by ${order.buyer.fullname}`,
-          data: {
-            orderId: order._id,
-            orderNumber: order.orderNumber,
-            customerName: order.buyer.fullname,
-            totalAmount: order.priceSummary.totalAmount,
-          },
-          sendEmail: false,
-        });
-      }
+      if (admins.length > 0) {
+  await Promise.all(
+    admins.map(admin =>
+      notificationService.sendToUser(admin._id, {
+        type: 'order_placed',
+        title: 'New Order Received',
+        message: `Order #${order.orderNumber} placed by ${order.buyer.fullname}`,
+        data: {
+          orderId: order._id,
+          orderNumber: order.orderNumber,
+          customerName: order.buyer.fullname,
+          totalAmount: order.priceSummary.totalAmount,
+        },
+        sendEmail: false,
+      })
+    )
+  );
+    }
     } catch (notifError) {
       console.error('Notification sending error:', notifError);
       // Don't block order creation if notification fails
@@ -716,6 +727,7 @@ export const updateVendorOrderStatus = async (req, res) => {
       });
     }
 
+    // ✅ FIX 3: Prevent duplicate notifications
     if (vendorSegment.status === status) {
       return res.status(400).json({
         success: false,
@@ -744,29 +756,37 @@ export const updateVendorOrderStatus = async (req, res) => {
 
     await order.save();
 
-    //notification sending part
-    await order.populate("buyer", "fullname email");
+    // ✅ FIX 2 & 3: Notification with try/catch and duplicate prevention already done
+    try {
+      await order.populate("buyer", "fullname email");
 
-    const statusToNotificationType = {
-      Placed: "order_placed",
-      Confirmed: "order_confirmed",
-      Shipped: "order_shipped",
-      Delivered: "order_delivered",
-      Cancelled: "order_cancelled",
-    };
+      const statusToNotificationType = {
+        Placed: "order_placed",
+        Confirmed: "order_confirmed",
+        Shipped: "order_shipped",
+        Delivered: "order_delivered",
+        Cancelled: "order_cancelled",
+      };
 
-    await notificationService.sendToUser(order.buyer._id, {
-      type: statusToNotificationType[status],
-      title: `Order ${status}`,
-      message: `Your order #${order.orderNumber} status has been updated to ${status}.`,
-      data: {
-        orderId: order._id,
-        orderNumber: order.orderNumber,
-        customerName: order.buyer.fullname,
-        estimatedDelivery: vendorSegment.estimatedDelivery,
-      },
-      sendEmail: true,
-    });
+      await notificationService.sendToUser(order.buyer._id, {
+        type: statusToNotificationType[status],
+        title: `Order ${status}`,
+        message: `Your order #${order.orderNumber} status has been updated to ${status}.`,
+        data: {
+          orderId: order._id,
+          orderNumber: order.orderNumber,
+          status: status,
+          customerName: order.buyer.fullname,
+          estimatedDelivery: vendorSegment.estimatedDelivery,
+          amount: order.priceSummary.totalAmount,
+          paymentDate: order.updatedAt,
+        },
+        sendEmail: true,
+      });
+    } catch (notifError) {
+      console.error("Notification error in updateVendorOrderStatus:", notifError);
+      // Don't block API response
+    }
 
     return res.status(200).json({
       success: true,
@@ -877,6 +897,18 @@ export const updatePaymentStatus = async (req, res) => {
       });
     }
 
+    const oldPaymentStatus = order.payment.status;
+
+    // ✅ FIX 1: Prevent duplicate notifications (no change)
+    if (oldPaymentStatus === paymentStatus) {
+      return res.status(200).json({
+        success: true,
+        message: "Payment status unchanged",
+        order,
+      });
+    }
+
+    // Update payment status
     order.payment.status = paymentStatus;
     if (transactionId) {
       order.payment.transactionId = String(transactionId).trim();
@@ -890,12 +922,131 @@ export const updatePaymentStatus = async (req, res) => {
 
     await order.save();
 
+    // Populate buyer and vendor details for notifications
+    await order.populate([
+      { path: "buyer", select: "fullname email" },
+      { path: "vendorOrders.vendor", select: "fullname email" },
+    ]);
+
+    // ✅ FIX 4: Wrap notifications in try/catch to prevent API failure
+    try {
+      // ─────────────────────────────────────────────
+      // 🔔 SEND NOTIFICATIONS FOR PAYMENT STATUS CHANGE
+      // ─────────────────────────────────────────────
+
+      // 1. Send notification to BUYER
+      if (order.buyer) {
+        let notificationType, title, message;
+
+        switch (paymentStatus) {
+          case "Paid":
+            notificationType = "payment_succeeded";
+            title = "Payment Successful! ✅";
+            message = `Your payment of $${order.priceSummary.totalAmount} for order #${order.orderNumber} has been successfully processed.`;
+            break;
+          case "Failed":
+            notificationType = "payment_failed";
+            title = "Payment Failed ❌";
+            message = `Your payment of $${order.priceSummary.totalAmount} for order #${order.orderNumber} failed. Please try again.`;
+            break;
+          case "Pending":
+            notificationType = "payment_initiated";
+            title = "Payment Pending ⏳";
+            message = `Your payment for order #${order.orderNumber} is pending.`;
+            break;
+          case "Refunded":
+            notificationType = "payment_refunded";
+            title = "Payment Refunded 💰";
+            message = `Your payment of $${order.priceSummary.totalAmount} for order #${order.orderNumber} has been refunded.`;
+            break;
+          default:
+            notificationType = "payment_updated";
+            title = "Payment Updated";
+            message = `Your payment status for order #${order.orderNumber} has been updated to ${paymentStatus}.`;
+        }
+
+        await notificationService.sendToUser(order.buyer._id, {
+          type: notificationType,
+          title: title,
+          message: message,
+          data: {
+            orderId: order._id,
+            orderNumber: order.orderNumber,
+            paymentStatus: paymentStatus,
+            oldPaymentStatus: oldPaymentStatus,
+            amount: order.priceSummary.totalAmount,
+            transactionId: transactionId,
+            customerName: order.buyer.fullname,  // ✅ ADD THIS
+            paymentDate: order.payment.paidAt || order.updatedAt,  // ✅ ADD THIS
+
+          },
+          sendEmail: true,
+        });
+      }
+
+      // ✅ FIX 3: Send to VENDORS in PARALLEL (not sequential)
+      if (paymentStatus === "Paid" && order.vendorOrders && order.vendorOrders.length > 0) {
+        const vendorPromises = order.vendorOrders.map(async (vendorOrder) => {
+          if (vendorOrder.vendor) {
+            const itemCount = vendorOrder.items.reduce((sum, item) => sum + item.quantity, 0);
+
+            return notificationService.sendToUser(vendorOrder.vendor._id, {
+              type: "payment_received",
+              title: "Payment Received! 💰",
+              message: `You have received a payment of $${vendorOrder.totalAmount} for order #${order.orderNumber} (${itemCount} item(s)).`,
+              data: {
+                orderId: order._id,
+                orderNumber: order.orderNumber,
+                vendorOrderId: vendorOrder._id,
+                amount: vendorOrder.totalAmount,
+                itemCount: itemCount,
+                buyerName: order.buyer?.fullname || 'Customer',
+                paymentDate: order.payment.paidAt || new Date(),
+              },
+              sendEmail: true,
+            });
+          }
+          return null;
+        }).filter(Boolean);
+
+        await Promise.all(vendorPromises); // ✅ Parallel execution
+      }
+
+      // Send notification for REFUND to vendors (also in parallel)
+      if (paymentStatus === "Refunded" && order.vendorOrders && order.vendorOrders.length > 0) {
+        const refundPromises = order.vendorOrders.map(async (vendorOrder) => {
+          if (vendorOrder.vendor) {
+            return notificationService.sendToUser(vendorOrder.vendor._id, {
+              type: "payment_refunded",
+              title: "Payment Refunded",
+              message: `A payment of $${vendorOrder.totalAmount} for order #${order.orderNumber} has been refunded.`,
+              data: {
+                orderId: order._id,
+                orderNumber: order.orderNumber,
+                amount: vendorOrder.totalAmount,
+                buyerName: order.buyer?.fullname || 'Customer',
+              },
+              sendEmail: true,
+            });
+          }
+          return null;
+        }).filter(Boolean);
+
+        await Promise.all(refundPromises); // ✅ Parallel execution
+      }
+
+    } catch (notifError) {
+      // ✅ FIX 4: Don't block API response if notification fails
+      console.error("Payment notification error:", notifError);
+    }
+
     return res.status(200).json({
       success: true,
       message: "Payment status updated successfully",
       order,
     });
   } catch (error) {
+    console.error("updatePaymentStatus error:", error);
     return res.status(500).json({
       success: false,
       message: "Error updating payment status",
@@ -945,6 +1096,7 @@ export const adminUpdateVendorOrderStatus = async (req, res) => {
       });
     }
 
+    // ✅ FIX 3: Prevent duplicate notifications
     if (vendorSegment.status === status) {
       return res.status(400).json({
         success: false,
@@ -962,29 +1114,34 @@ export const adminUpdateVendorOrderStatus = async (req, res) => {
 
     await order.save();
 
-    //notification sending part
-    await order.populate("buyer", "fullname email");
+    // ✅ FIX 2: Notification with try/catch
+    try {
+      await order.populate("buyer", "fullname email");
 
-    const statusToNotificationType = {
-      Placed: "order_placed",
-      Confirmed: "order_confirmed",
-      Shipped: "order_shipped",
-      Delivered: "order_delivered",
-      Cancelled: "order_cancelled",
-    };
+      const statusToNotificationType = {
+        Placed: "order_placed",
+        Confirmed: "order_confirmed",
+        Shipped: "order_shipped",
+        Delivered: "order_delivered",
+        Cancelled: "order_cancelled",
+      };
 
-    await notificationService.sendToUser(order.buyer._id, {
-      type: statusToNotificationType[status],
-      title: `Order ${status}`,
-      message: `Your order #${order.orderNumber} status has been updated to ${status}.`,
-      data: {
-        orderId: order._id,
-        orderNumber: order.orderNumber,
-        customerName: order.buyer.fullname,
-        estimatedDelivery: vendorSegment.estimatedDelivery,
-      },
-      sendEmail: true,
-    });
+      await notificationService.sendToUser(order.buyer._id, {
+        type: statusToNotificationType[status],
+        title: `Order ${status}`,
+        message: `Your order #${order.orderNumber} status has been updated to ${status}.`,
+        data: {
+          orderId: order._id,
+          orderNumber: order.orderNumber,
+          customerName: order.buyer.fullname,
+          estimatedDelivery: vendorSegment.estimatedDelivery,
+        },
+        sendEmail: true,
+      });
+    } catch (notifError) {
+      console.error("Notification error in adminUpdateVendorOrderStatus:", notifError);
+      // Don't block API response
+    }
 
     return res.status(200).json({
       success: true,

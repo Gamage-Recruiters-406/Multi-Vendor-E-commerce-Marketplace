@@ -321,7 +321,91 @@ const getEmailTemplate = (type, data) => {
         </div>
         <p style="margin-top: 20px; font-size: 14px; color: #666;">*Terms and conditions apply. Offer valid for a limited time only.</p>
       `
-    }
+    },
+    // Add these payment templates to your getEmailTemplate function
+
+    payment_initiated: {
+      subject: `💳 Payment Initiated - Complete Your Purchase`,
+      content: `
+        <h2 style="color: #333; margin-bottom: 20px;">Hello ${data.customerName},</h2>
+        <p style="font-size: 16px;">You have initiated a payment of <strong>$${data.amount}</strong>.</p>
+        <p>Please complete the payment to confirm your order.</p>
+        
+        <div class="order-details">
+          <p><strong>Amount:</strong> $${data.amount}</p>
+          <p><strong>Platform Fee:</strong> $${data.platformFee || 0}</p>
+          <p><strong>Total:</strong> $${data.totalAmount || data.amount}</p>
+          <p><strong>Items:</strong> ${data.itemCount || 0}</p>
+        </div>
+        
+        <div style="text-align: center;">
+          <a href="${process.env.FRONTEND_URL}/checkout" class="button">Complete Payment</a>
+        </div>
+        
+        <p style="margin-top: 20px; font-size: 14px; color: #666;">The payment link will expire in 24 hours.</p>
+      `
+    },
+
+    payment_succeeded: {
+      subject: `✅ Payment Successful - Order Confirmed`,
+      content: `
+        <h2 style="color: #333; margin-bottom: 20px;">Dear ${data.customerName},</h2>
+        <p style="font-size: 16px;">Your payment of <strong>$${data.amount}</strong> has been successfully processed.</p>
+        <p>Your order is now confirmed and will be processed soon.</p>
+        
+        <div class="order-details">
+          <p><strong>Amount Paid:</strong> $${data.amount}</p>
+          <p><strong>Payment Date:</strong> ${new Date(data.paymentDate).toLocaleString()}</p>
+          <p><strong>Transaction ID:</strong> ${data.paymentId || 'Processing'}</p>
+        </div>
+        
+        <div style="text-align: center;">
+          <a href="${process.env.FRONTEND_URL}/orders" class="button">View Orders</a>
+        </div>
+        
+        <p style="margin-top: 20px;">Thank you for shopping with us!</p>
+      `
+    },
+
+    payment_received: {
+      subject: `💰 Payment Received - New Order`,
+      content: `
+        <h2 style="color: #333; margin-bottom: 20px;">Dear ${data.customerName || data.vendorName || 'Vendor'},</h2>
+        <p style="font-size: 16px;">You have received a payment of <strong>$${data.amount}</strong> from <strong>${data.buyerName || 'Customer'}</strong>.</p>
+        
+        <div class="order-details">
+          <p><strong>Buyer:</strong> ${data.buyerName || 'Customer'}</p>
+          <p><strong>Amount:</strong> $${data.amount}</p>
+          <p><strong>Payment Date:</strong> ${new Date(data.paymentDate).toLocaleString()}</p>
+        </div>
+        
+        <div style="text-align: center;">
+          <a href="${process.env.FRONTEND_URL}/vendor/orders" class="button">View Orders</a>
+        </div>
+        
+        <p style="margin-top: 20px;">Process this order as soon as possible.</p>
+      `
+    },
+
+    payment_failed: {
+      subject: `❌ Payment Failed - Please Retry`,
+      content: `
+        <h2 style="color: #333; margin-bottom: 20px;">Dear ${data.customerName},</h2>
+        <p style="font-size: 16px;">Your payment of <strong>$${data.amount}</strong> has failed.</p>
+        <p>Please try again or use a different payment method.</p>
+        
+        <div class="order-details">
+          <p><strong>Amount:</strong> $${data.amount}</p>
+          <p><strong>Status:</strong> Failed</p>
+        </div>
+        
+        <div style="text-align: center;">
+          <a href="${process.env.FRONTEND_URL}/checkout" class="button">Retry Payment</a>
+        </div>
+        
+        <p style="margin-top: 20px;">If the issue persists, please contact your bank or card provider.</p>
+      `
+    },
   };
 
   const selectedTemplate = templates[type] || templates.announcement;

@@ -1,5 +1,7 @@
 import Store from '../models/Store.js';
+import Product from '../models/Product.js';
 import { uploadImage } from '../middlewares/imageUploader.js';
+import { v2 as cloudinary } from 'cloudinary';
 
 // Capitalize each word
 function formatName(name) {
@@ -65,7 +67,7 @@ export const createStore = async (req, res) => {
             message: error.message 
         });
     }
-};
+}
 
 
 
@@ -119,6 +121,247 @@ export const getRecentStores = async (req, res) => {
 
     } catch (error) {
         console.error('Error in getRecentStores:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Server error"
+        });
+    }
+}
+
+
+
+// Update Store
+export const updateStore = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, description, status } = req.body;
+
+        const store = await Store.findById(id);
+
+        if (!store) {
+            return res.status(404).json({
+                success: false,
+                message: "Store not found"
+            });
+        }
+
+        // 🔐 Ownership check
+        if (String(store.vendor) !== String(req.user._id)) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not authorized to update this store"
+            });
+        }
+
+        // 🔤 Name formatting + uniqueness
+        let finalName = store.name;
+
+        if (name && name.trim()) {
+            finalName = formatName(name);
+
+            const existingStore = await Store.findOne({
+                _id: { $ne: id },
+                name: { $regex: `^${finalName}$`, $options: "i" }
+            });
+
+            if (existingStore) {
+                return res.status(409).json({
+                    success: false,
+                    message: "Store already exists"
+                });
+            }
+        }
+
+        // 🖼️ Handle logo update
+        let logoUrl = store.logo;
+
+        if (req.file) {
+            // 🔥 DELETE OLD IMAGE (CORRECT WAY)
+            if (store.logo) {
+                try {
+                    const url = store.logo;
+
+                    // Extract public_id safely
+                    const afterUpload = url.split("/upload/")[1];
+                    const parts = afterUpload.split("/");
+                    const publicPath = parts.slice(1).join("/"); // remove version
+                    const publicId = publicPath.split(".")[0];
+
+                    // Delete with cache invalidation
+                    await cloudinary.uploader.destroy(publicId, {
+                        invalidate: true
+                    });
+
+                    console.log("Deleted old image:", publicId);
+
+                } catch (err) {
+                    console.error("Error deleting old logo:", err.message);
+                }
+            }
+
+            // 🔥 Upload new image (same as createStore)
+            logoUrl = await uploadImage(req.file.buffer, "marketplace/stores");
+        }
+
+        // 🔥 Update fields safely
+        store.name = finalName;
+        store.description = description ?? store.description;
+        store.status = status ?? store.status;
+        store.logo = logoUrl;
+
+        await store.save();
+
+        res.status(200).json({
+            success: true,
+            data: store
+        });
+
+    } catch (error) {
+        console.error("UPDATE STORE ERROR:", error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Server error"
+        });
+    }
+};
+
+
+
+// Delete Store
+export const deleteStore = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const store = await Store.findById(id);
+
+        if (!store) {
+            return res.status(404).json({
+                success: false,
+                message: "Store not found"
+            });
+        }
+
+        // 🔐 Ownership chec
+        if (String(store.vendor) !== String(req.user._id)) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not authorized to delete this store"
+            });
+        }
+
+        // 1. Delete store logo
+        if (store.logo) {
+            try {
+                const afterUpload = store.logo.split("/upload/")[1];
+                const parts = afterUpload.split("/");
+                const publicPath = parts.slice(1).join("/");
+                const publicId = publicPath.split(".")[0];
+
+                await cloudinary.uploader.destroy(publicId, {
+                    invalidate: true
+                });
+
+                console.log("Deleted store logo:", publicId);
+
+            } catch (err) {
+                console.error("Error deleting store logo:", err.message);
+            }
+        }
+
+        // 2. Get all products
+        const products = await Product.find({ store: id });
+
+        // 3. Delete product images
+        for (const product of products) {
+            if (product.images && product.images.length > 0) {
+                await Promise.all(
+                    product.images.map(async (url) => {
+                        try {
+                            const afterUpload = url.split("/upload/")[1];
+                            const parts = afterUpload.split("/");
+                            const publicPath = parts.slice(1).join("/");
+                            const publicId = publicPath.split(".")[0];
+
+                            await cloudinary.uploader.destroy(publicId, {
+                                invalidate: true
+                            });
+
+                            console.log("Deleted product image:", publicId);
+
+                        } catch (err) {
+                            console.error("Error deleting product image:", err.message);
+                        }
+                    })
+                );
+            }
+        }
+
+        // 4. Delete products
+        await Product.deleteMany({ store: id });
+
+        // 5. Delete store
+        await store.deleteOne();
+
+        res.status(200).json({
+            success: true,
+            message: "Store and associated products deleted successfully"
+        });
+    } catch (error) {
+        console.error("DELETE STORE ERROR:", error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Server error"
+        });
+    }
+}
+
+
+
+// Get Vendor's Stores
+export const getMyStores = async (req, res) => {
+    try {
+        const vendorId = req.user._id;
+        
+        // Get stores
+        const stores = await Store.find({ vendor: vendorId })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        // Get product counts for each store
+        const productCounts = await Product.aggregate([
+            {
+                $match: {
+                    store: { $in: stores.map(s => s._id) }
+                }
+            },
+            {
+                $group: {
+                    _id: "$store",
+                    productCount: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Convert to map
+        const countMap = {};
+        productCounts.forEach(item => {
+            countMap[item._id.toString()] = item.productCount;
+        });
+
+        // Attach to stores
+        const result = stores.map(store => ({
+            ...store,
+            productCount: countMap[store._id.toString()] || 0
+        }));
+
+        res.status(200).json({
+            success: true,
+            count: result.length,
+            data: result
+        });
+
+    } catch (error) {
+        console.error("GET MY STORES ERROR:", error);
         res.status(500).json({
             success: false,
             message: error.message || "Server error"
