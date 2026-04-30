@@ -16,10 +16,11 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
+import Layout from "../../components/Layouts/Layout";
 
 
 
-const statusOptions = ["All Status", "active", "pending"];
+const statusOptions = ["All Status", "active", "inactive"];
 const sortOptions = ["Sort by Date", "Newest First", "Oldest First"];
 
 
@@ -127,7 +128,7 @@ export default function StoresPage() {
 
   const totalStores = storesData.length;
   const activeStores = storesData.filter((s) => s.status === "active").length;
-  const pendingStores = storesData.filter((s) => s.status === "pending").length;
+  const inactiveStores = storesData.filter((s) => s.status === "inactive").length;
   const navigate = useNavigate();
 
   const resetToFirstPage = (setter, value) => {
@@ -136,6 +137,7 @@ export default function StoresPage() {
   };
 
   return (
+    <Layout>
     <div className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -172,8 +174,8 @@ export default function StoresPage() {
           />
           <StatCard
             icon={Clock3}
-            value={pendingStores}
-            label="Pending Stores"
+            value={inactiveStores}
+            label="Inactive Stores"
             iconBg="bg-amber-50"
             iconColor="text-amber-600"
           />
@@ -377,6 +379,7 @@ export default function StoresPage() {
           <button
             className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50"
             onClick={() => {
+              navigate(`/vendor/edit-store/${openMenuId}`);
               setOpenMenuId(null);
             }}
           >
@@ -453,5 +456,6 @@ export default function StoresPage() {
         </div>
       )}
     </div>
+    </Layout>
   );
 }
