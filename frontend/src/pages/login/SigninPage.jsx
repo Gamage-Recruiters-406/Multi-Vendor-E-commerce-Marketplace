@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader } from 'lucide-react';
 import * as authService from '../../services/authService';
+import toast from 'react-hot-toast';
 
 
 // Form validation functions
@@ -83,18 +84,18 @@ export default function SigninPage() {
       }
 
       // Get user role from response
-      const userRole = response.user?.role || 'buyer';
-      console.log('👤 User role:', userRole);
+      {/*const userRole = response.user?.role || 'buyer';
+      console.log('👤 User role:', userRole);*/}
+
+      toast.success(response.message || 'Signed in successfully');
 
       // Redirect based on user role
+      const userRole = String(response.user.role || '').toLowerCase();
       if (userRole === 'vendor') {
-        console.log('📍 Redirecting to vendor dashboard');
         navigate('/vendor/dashboard');
       } else if (userRole === 'admin') {
-        console.log('📍 Redirecting to admin dashboard');
         navigate('/admin/dashboard');
       } else {
-        console.log('📍 Redirecting to buyer dashboard');
         navigate('/dashboard');
       }
     } catch (err) {

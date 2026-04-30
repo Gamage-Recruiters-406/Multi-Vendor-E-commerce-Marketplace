@@ -1,13 +1,33 @@
-const express = require("express");
+import express from "express";
+import {
+    addReview,
+    updateReview,
+    deleteReview,
+    getProductReviews,
+    getAverageRating,
+    getMyReviews
+} from "../controllers/reviewController.js";
+
+import { requiredSignIn } from "../middlewares/authMiddleware.js";
+
 const router = express.Router();
-const reviewController = require("../controllers/reviewController");
-const auth = require("../middleware/auth");
 
-router.post("/", auth, reviewController.addReview);
-router.put("/:id", auth, reviewController.updateReview);
-router.delete("/:id", auth, reviewController.deleteReview);
+// Add review
+router.post("/", requiredSignIn, addReview);
 
-router.get("/product/:product_id", reviewController.getProductReviews);
-router.get("/average/:product_id", reviewController.getAverageRating);
+// Update review
+router.put("/:id", requiredSignIn, updateReview);
 
-module.exports = router;
+// Delete review
+router.delete("/:id", requiredSignIn, deleteReview);
+
+// Get reviews by product
+router.get("/product/:product_id", getProductReviews);
+
+// Get average rating
+router.get("/average/:product_id", getAverageRating);
+
+// Get my reviews for user
+router.get("/my", requiredSignIn, getMyReviews);
+
+export default router;

@@ -10,7 +10,12 @@ import {
   getUsersByRole,
   uploadProfilePicture,     
   removeProfilePicture,      
-  getProfilePicture        
+  getProfilePicture,
+  addAddress,
+  updateAddress,
+  deleteAddress,
+  suspendUser,
+  unsuspendUser
 } from "../controllers/userController.js";
 import { requiredSignIn,isAdmin } from "../middlewares/authMiddleware.js";
 import { upload } from '../middlewares/imageUploader.js';
@@ -45,4 +50,12 @@ router.get("/users", requiredSignIn, isAdmin, getAllUsers);
 
 // get users by role (Buyer / Vendor)
 router.get("/users/:role", requiredSignIn, isAdmin, getUsersByRole);
+
+router.post("/address", requiredSignIn, addAddress);
+router.put("/address/:addressId", requiredSignIn, updateAddress);
+router.delete("/address/:addressId", requiredSignIn, deleteAddress);
+
+router.put("/suspend/:userId", requiredSignIn, isAdmin, suspendUser);
+router.put("/unsuspend/:userId", requiredSignIn, isAdmin, unsuspendUser);
+
 export default router;

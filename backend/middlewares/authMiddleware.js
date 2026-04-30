@@ -27,6 +27,13 @@ export const requiredSignIn = async (req, res, next) => {
       });
     }
 
+    // NEW: Block suspended users
+    if (user.isSuspended) {
+      return res.status(403).json({
+        message: "Your account is suspended",
+      });
+    }
+
     // Attach user to request
     req.user = user;
 

@@ -35,6 +35,8 @@ class NotificationService {
       if (sendEmail && user.email) {
         const template = emailService.getEmailTemplate(type, {
           customerName: user.fullname,
+          title: title,
+          message: message,
           ...data
         });
 

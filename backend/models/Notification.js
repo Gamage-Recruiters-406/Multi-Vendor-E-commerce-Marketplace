@@ -18,7 +18,15 @@ const notificationSchema = new mongoose.Schema(
         "order_delivered",
         "order_cancelled",
         "announcement",
-        "promotion"
+        "promotion",
+
+        //  PAYMENT TYPES
+        "payment_initiated",    // When payment is created
+        "payment_succeeded",    // When payment succeeds
+        "payment_received",     // When vendor receives payment
+        "payment_failed",       // When payment fails
+        "payment_refunded",     // When payment is refunded
+        "payment_updated"       // When payment status changes
       ],
       required: true,
     },
