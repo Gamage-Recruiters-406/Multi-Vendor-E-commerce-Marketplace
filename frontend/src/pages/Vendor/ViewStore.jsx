@@ -2,8 +2,6 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useParams, Link } from 'react-router-dom';
 import { MapPin, ShoppingBag, PlusCircle, Mail, Phone, Globe, Store, Star } from 'lucide-react';
-
-// IMPORT SHARED COMPONENTS
 import Header from "../../components/Layouts/Header";
 import Footer from "../../components/Layouts/Footer";
 
