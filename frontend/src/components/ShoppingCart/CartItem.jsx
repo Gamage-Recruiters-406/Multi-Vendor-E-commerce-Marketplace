@@ -1,7 +1,73 @@
 import { Trash2, Plus, Minus } from 'lucide-react';
-export default function CartItem({ image, title, store, color, size, stockStatus, unitPrice, quantity, subtotal }) {
+import { useState } from 'react';
+import { removeFromCart, updateCartItemQuantity } from '../../services/cartService';
+
+export default function CartItem({ 
+  product_id, 
+  image, 
+  title, 
+  store, 
+  color = 'N/A', 
+  size = 'One Size', 
+  stockStatus = 'in_stock', 
+  price, 
+  quantity,
+  onQuantityChange,
+  onRemove
+}) {
+  const [isLoading, setIsLoading] = useState(false);
+  const subtotal = (price * quantity).toFixed(2);
+
+  const handleIncreaseQuantity = async () => {
+    try {
+      setIsLoading(true);
+      const newQuantity = quantity + 1;
+      await updateCartItemQuantity(product_id, newQuantity);
+      if (onQuantityChange) {
+        onQuantityChange(product_id, newQuantity);
+      }
+    } catch (error) {
+      console.error('Error increasing quantity:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDecreaseQuantity = async () => {
+    if (quantity <= 1) {
+      handleRemove();
+      return;
+    }
+    try {
+      setIsLoading(true);
+      const newQuantity = quantity - 1;
+      await updateCartItemQuantity(product_id, newQuantity);
+      if (onQuantityChange) {
+        onQuantityChange(product_id, newQuantity);
+      }
+    } catch (error) {
+      console.error('Error decreasing quantity:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    try {
+      setIsLoading(true);
+      await removeFromCart(product_id);
+      if (onRemove) {
+        onRemove(product_id);
+      }
+    } catch (error) {
+      console.error('Error removing item:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="flex gap-6 py-6 border-b border-gray-100 last:border-0">
+    <div className="flex gap-6 py-6 border-b border-gray-100 last:border-0 opacity-100 transition-opacity" style={isLoading ? { opacity: 0.5 } : {}}>
       {/* Image */}
       <div className="w-28 h-28 bg-gray-50 rounded-xl flex-shrink-0 overflow-hidden border border-gray-100">
         <img src={image} alt={title} className="w-full h-full object-cover mix-blend-multiply p-2" />
@@ -34,11 +100,15 @@ export default function CartItem({ image, title, store, color, size, stockStatus
         <div className="flex flex-col items-end justify-between min-w-[100px]">
           <div className="text-right">
             <p className="text-[11px] text-gray-400 mb-0.5 font-medium">Unit Price</p>
-            <p className="font-bold text-gray-900">${unitPrice.toFixed(2)}</p>
+            <p className="font-bold text-gray-900">${price.toFixed(2)}</p>
           </div>
           
           <div className="flex items-center border border-gray-200 rounded-md my-2">
-            <button className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-l-md transition-colors">
+            <button 
+              onClick={handleDecreaseQuantity}
+              disabled={isLoading}
+              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-l-md transition-colors disabled:opacity-50"
+            >
               <Minus className="w-3.5 h-3.5" />
             </button>
             <input 
@@ -47,16 +117,24 @@ export default function CartItem({ image, title, store, color, size, stockStatus
               readOnly
               className="w-8 text-center text-sm font-semibold border-x border-gray-200 py-1 outline-none text-gray-700"
             />
-            <button className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-r-md transition-colors">
+            <button 
+              onClick={handleIncreaseQuantity}
+              disabled={isLoading}
+              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-r-md transition-colors disabled:opacity-50"
+            >
               <Plus className="w-3.5 h-3.5" />
             </button>
           </div>
           <div className="text-right flex flex-col items-end gap-2">
             <div>
               <p className="text-[11px] text-gray-400 mb-0.5 font-medium">Subtotal</p>
-              <p className="font-bold text-gray-900">${subtotal.toFixed(2)}</p>
+              <p className="font-bold text-gray-900">${subtotal}</p>
             </div>
-            <button className="text-red-400 hover:text-red-600 transition-colors mt-1">
+            <button 
+              onClick={handleRemove}
+              disabled={isLoading}
+              className="text-red-400 hover:text-red-600 transition-colors mt-1 disabled:opacity-50"
+            >
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
