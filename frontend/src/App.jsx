@@ -53,10 +53,11 @@ function App() {
           <Route path="/vendor/create-store" element={<CreateStore />} />
           <Route path="/vendor/store/:id" element={<ViewStore />} />
           <Route path="/vendor/profile" element={<VendorProfile />} />
-          <Route path="/vendor/store" element={<StoresPage />} />
+          <Route path="/vendor/stores" element={<StoresPage />} />
           <Route path="/vendor/edit-store/:id" element={<EditStore />} />
           <Route path="/vendor/sales-analytics" element={<SalesAnalytics />} />
           <Route path="/vendor/dashboard" element={<VendorDashboard />} />
+          frontend
           {/* Admin Module */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/announcements" element={<Announcements />} />
