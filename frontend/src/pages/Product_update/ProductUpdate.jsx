@@ -38,6 +38,7 @@ const ProductUpdate = () => {
 	const [productLoadError, setProductLoadError] = useState('');
 	const [categories, setCategories] = useState([]);
 	const [isLoadingCats, setIsLoadingCats] = useState(true);
+	const [activeStep, setActiveStep] = useState(1);
 
 	const parseAttributesToToggles = (rawAttributes) => {
 		if (!Array.isArray(rawAttributes)) {
@@ -214,10 +215,41 @@ const ProductUpdate = () => {
 	const scrollToSection = (sectionId) => {
 		const el = document.getElementById(sectionId);
 		if (el) {
-			const y = el.getBoundingClientRect().top + window.scrollY - 160;
-			window.scrollTo({ top: y, behavior: 'smooth' });
+			el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 		}
 	};
+
+	useEffect(() => {
+		const sections = [
+			{ id: 'section-basic-details', step: 1 },
+			{ id: 'section-media-pricing', step: 2 },
+			{ id: 'section-organization', step: 3 },
+			{ id: 'section-priority', step: 4 },
+		];
+
+		const updateActiveStep = () => {
+			const scrollPosition = window.scrollY + 220;
+			let currentStep = 1;
+
+			sections.forEach(({ id, step }) => {
+				const section = document.getElementById(id);
+				if (section && scrollPosition >= section.offsetTop) {
+					currentStep = step;
+				}
+			});
+
+			setActiveStep(currentStep);
+		};
+
+		updateActiveStep();
+		window.addEventListener('scroll', updateActiveStep, { passive: true });
+		window.addEventListener('resize', updateActiveStep);
+
+		return () => {
+			window.removeEventListener('scroll', updateActiveStep);
+			window.removeEventListener('resize', updateActiveStep);
+		};
+	}, []);
 
 	return (
 		<Layout>
@@ -250,56 +282,72 @@ const ProductUpdate = () => {
 				)}
 			</header>
 
-			<div className="sticky top-0 z-40 bg-[#f8fafc]/95 backdrop-blur-md pt-4 pb-6 mb-8 border-b border-[#f8fafc]">
+			<div className="sticky top-14 z-40 bg-[#f8fafc]/95 backdrop-blur-md pt-4 pb-6 mb-8 border-b border-[#f8fafc]">
 				<div className="max-w-6xl mx-auto px-6">
 					<div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex items-center justify-between relative overflow-hidden">
 						<div className="flex items-center space-x-4 z-10 w-full justify-between">
-							<div
-								onClick={() => scrollToSection('section-basic-details')}
+							<button
+								type="button"
+								onClick={() => {
+									setActiveStep(1);
+									scrollToSection('section-basic-details');
+								}}
 								className="flex items-center space-x-3 w-1/4 cursor-pointer group"
 							>
-								<div className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold shadow-md group-hover:scale-105 transition-transform">1</div>
+								<div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-md group-hover:scale-105 transition-transform ${activeStep === 1 ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500'}`}>1</div>
 								<div>
-									<p className="font-semibold text-slate-900 group-hover:text-emerald-600 transition-colors">Basic Details</p>
+									<p className={`font-semibold transition-colors ${activeStep === 1 ? 'text-slate-900' : 'text-slate-700 group-hover:text-emerald-600'}`}>Basic Details</p>
 									<p className="text-xs text-slate-500">Title & description</p>
 								</div>
-							</div>
+							</button>
 							<div className="w-12 h-px bg-slate-200 mx-2 hidden md:block grow"></div>
 
-							<div
-								onClick={() => scrollToSection('section-media-pricing')}
+							<button
+								type="button"
+								onClick={() => {
+									setActiveStep(2);
+									scrollToSection('section-media-pricing');
+								}}
 								className="flex items-center space-x-3 w-1/4 cursor-pointer group"
 							>
-								<div className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold group-hover:bg-slate-200 transition-colors">2</div>
+								<div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-colors ${activeStep === 2 ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200'}`}>2</div>
 								<div>
-									<p className="font-semibold text-slate-900 group-hover:text-emerald-600 transition-colors">Media & Pricing</p>
+									<p className={`font-semibold transition-colors ${activeStep === 2 ? 'text-slate-900' : 'text-slate-700 group-hover:text-emerald-600'}`}>Media & Pricing</p>
 									<p className="text-xs text-slate-500">Images & cost</p>
 								</div>
-							</div>
+							</button>
 							<div className="w-12 h-px bg-slate-200 mx-2 hidden md:block grow"></div>
 
-							<div
-								onClick={() => scrollToSection('section-organization')}
+							<button
+								type="button"
+								onClick={() => {
+									setActiveStep(3);
+									scrollToSection('section-organization');
+								}}
 								className="flex items-center space-x-3 w-1/4 cursor-pointer group"
 							>
-								<div className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold group-hover:bg-slate-200 transition-colors">3</div>
+								<div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-colors ${activeStep === 3 ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200'}`}>3</div>
 								<div>
-									<p className="font-semibold text-slate-900 group-hover:text-emerald-600 transition-colors">Organization</p>
+									<p className={`font-semibold transition-colors ${activeStep === 3 ? 'text-slate-900' : 'text-slate-700 group-hover:text-emerald-600'}`}>Organization</p>
 									<p className="text-xs text-slate-500">Category & tags</p>
 								</div>
-							</div>
+							</button>
 							<div className="w-12 h-px bg-slate-200 mx-2 hidden md:block grow"></div>
 
-							<div
-								onClick={() => scrollToSection('section-priority')}
+							<button
+								type="button"
+								onClick={() => {
+									setActiveStep(4);
+									scrollToSection('section-priority');
+								}}
 								className="flex items-center space-x-3 w-1/4 cursor-pointer group"
 							>
-								<div className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold group-hover:bg-slate-200 transition-colors">4</div>
+								<div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-colors ${activeStep === 4 ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200'}`}>4</div>
 								<div>
-									<p className="font-semibold text-slate-900 group-hover:text-emerald-600 transition-colors">Priority & Visibility</p>
+									<p className={`font-semibold transition-colors ${activeStep === 4 ? 'text-slate-900' : 'text-slate-700 group-hover:text-emerald-600'}`}>Priority & Visibility</p>
 									<p className="text-xs text-slate-500">Placement settings</p>
 								</div>
-							</div>
+							</button>
 						</div>
 					</div>
 				</div>
@@ -307,7 +355,7 @@ const ProductUpdate = () => {
 
 			<main className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
 				<div className="lg:col-span-2 space-y-8">
-					<div id="section-basic-details" className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+					<div id="section-basic-details" className="scroll-mt-45 md:scroll-mt-50 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
 						<div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
 							<div>
 								<h2 className="text-lg font-bold text-slate-900">Product Details</h2>
@@ -354,7 +402,7 @@ const ProductUpdate = () => {
 						</div>
 					</div>
 
-					<div id="section-media-pricing" className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+					<div id="section-media-pricing" className="scroll-mt-45 md:scroll-mt-50 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
 						<div className="px-8 py-6 border-b border-slate-50 bg-slate-50/50">
 							<h2 className="text-lg font-bold text-slate-900">Media & Pricing</h2>
 							<p className="text-sm text-slate-500 mt-1">Add images and set your price and inventory</p>
@@ -418,9 +466,12 @@ const ProductUpdate = () => {
 										</div>
 										<input
 											type="number"
+											step="0.01"
+											inputMode="decimal"
 											name="price"
 											value={formData.price}
 											onChange={handleInputChange}
+											onWheel={(e) => e.currentTarget.blur()}
 											className="w-full pl-8 pr-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm placeholder:text-slate-300"
 											placeholder="0.00"
 										/>
@@ -442,7 +493,7 @@ const ProductUpdate = () => {
 						</div>
 					</div>
 
-					<div id="section-organization" className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+					<div id="section-organization" className="scroll-mt-45 md:scroll-mt-50 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
 						<div className="px-8 py-6 border-b border-slate-50 bg-slate-50/50">
 							<h2 className="text-lg font-bold text-slate-900">Organization</h2>
 							<p className="text-sm text-slate-500 mt-1">Categorize your product for better discoverability</p>
@@ -504,7 +555,7 @@ const ProductUpdate = () => {
 						</div>
 					</div>
 
-					<div id="section-priority" className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+					<div id="section-priority" className="scroll-mt-45 md:scroll-mt-50 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
 						<div className="px-8 py-6 border-b border-slate-50 bg-slate-50/50">
 							<h2 className="text-lg font-bold text-slate-900">Priority & Visibility</h2>
 							<p className="text-sm text-slate-500 mt-1">Control how prominently this product is displayed</p>
@@ -587,6 +638,29 @@ const ProductUpdate = () => {
 							</div>
 						</div>
 					</div>
+
+					<div className="rounded-2xl border border-slate-200 bg-white/95 px-6 py-4 shadow-sm shadow-slate-200/60 backdrop-blur-md">
+						<div className="flex items-center justify-between gap-4">
+							<button
+								onClick={() => navigate('/vendor/products')}
+								className="flex items-center justify-center space-x-2 bg-white hover:bg-rose-50 text-rose-500 px-8 py-3.5 rounded-xl font-bold transition-all border border-transparent hover:border-rose-100 w-full sm:w-auto"
+							>
+								<X className="w-4 h-4" />
+								<span>Discard</span>
+							</button>
+
+							<button
+								onClick={handleSubmit}
+								disabled={isSubmitting || isLoadingProduct || Boolean(productLoadError)}
+								className={`flex items-center justify-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-emerald-500/20 transition-all active:scale-95 w-full sm:w-auto ${(isSubmitting || isLoadingProduct || Boolean(productLoadError)) ? 'opacity-70 cursor-not-allowed' : ''}`}
+							>
+								<Send className={`w-4 h-4 ${isSubmitting ? 'animate-pulse' : ''}`} />
+								<span>
+									{isLoadingProduct ? 'Loading...' : isSubmitting ? 'Updating...' : 'Save Changes'}
+								</span>
+							</button>
+						</div>
+					</div>
 				</div>
 
 				<div className="space-y-6">
@@ -655,29 +729,6 @@ const ProductUpdate = () => {
 					</div>
 				</div>
 			</main>
-
-			<div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-slate-200 z-50">
-				<div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center sm:justify-start sm:space-x-4 sm:flex-row-reverse mb-safe pb-safe">
-					<button
-						onClick={handleSubmit}
-						disabled={isSubmitting || isLoadingProduct || Boolean(productLoadError)}
-						className={`flex items-center justify-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-emerald-500/20 transition-all active:scale-95 w-full sm:w-auto ${(isSubmitting || isLoadingProduct || Boolean(productLoadError)) ? 'opacity-70 cursor-not-allowed' : ''}`}
-					>
-						<Send className={`w-4 h-4 ${isSubmitting ? 'animate-pulse' : ''}`} />
-						<span>
-							{isLoadingProduct ? 'Loading...' : isSubmitting ? 'Updating...' : 'Save Changes'}
-						</span>
-					</button>
-
-					<button
-						onClick={() => navigate('/vendor/products')}
-						className="flex items-center justify-center space-x-2 bg-white hover:bg-rose-50 text-rose-500 px-8 py-3.5 rounded-xl font-bold transition-all border border-transparent hover:border-rose-100 w-full sm:w-auto mt-0 sm:mr-4"
-					>
-						<X className="w-4 h-4" />
-						<span>Discard</span>
-					</button>
-				</div>
-			</div>
 
 			</div>
 		</Layout>
