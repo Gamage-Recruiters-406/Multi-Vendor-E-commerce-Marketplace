@@ -106,7 +106,7 @@ export const getAnnouncementsFeed = async () => {
 };
 
 export const getProfilePicture = async () => {
-  const res = await fetch(`${BASE_URL}/users/get-profile-picture`, {
+  const res = await fetch(`${BASE_URL}/user/get-profile-picture`, {
     headers: getAuthHeaders(),
   });
   return handleResponse(res);
@@ -143,8 +143,29 @@ export const getVendorSalesAnalytics = async (period = "daily") => {
 export const getVendorProducts = async (storeId) => {
   if (!storeId) return [];
 
-  const res = await fetch(`${BASE_URL}/products/store/${storeId}`, {
+  const res = await fetch(`${BASE_URL}/product/store/${storeId}`, {
     headers: getAuthHeaders(),
   });
   return handleResponse(res);
 };
+
+export const getMyStores = async () => {
+  const res = await fetch(`${BASE_URL}/store/my-stores`, {
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+};
+
+export const getVendorProductsByStore = async (storeId) => {
+  const res = await fetch(`${BASE_URL}/product/store/${storeId}`, {
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+};
+
+//export const getPaidPaymentsForOwner = async () => {
+//const res = await fetch(`${BASE_URL}/payments/get-paid-payments-for-owner`, {
+//headers: getAuthHeaders(),
+//});
+//return handleResponse(res);
+//};
