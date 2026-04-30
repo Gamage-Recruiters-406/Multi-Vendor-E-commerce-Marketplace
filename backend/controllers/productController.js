@@ -223,15 +223,19 @@ export const deleteProduct = async (req, res) => {
             await Promise.all(
                 product.images.map(async (url) => {
                     try {
-                        const parts = url.split("/");
-                        const fileName = parts.pop().split(".")[0];
-                        const folder = parts.slice(parts.indexOf("upload") + 1).join("/");
+                        const afterUpload = url.split("/upload/")[1];
+                        const parts = afterUpload.split("/");
+                        const publicPath = parts.slice(1).join("/");
+                        const publicId = publicPath.split(".")[0];
 
-                        const publicId = `${folder}/${fileName}`;
+                        await cloudinary.uploader.destroy(publicId, {
+                            invalidate: true
+                        });
 
-                        await cloudinary.uploader.destroy(publicId);
-                    } catch (error) {
-                        console.error("Error deleting image from Cloudinary:", error);
+                        console.log("Deleted:", publicId);
+
+                    } catch (err) {
+                        console.error("Error deleting image:", err.message);
                     }
                 })
             );
@@ -396,6 +400,31 @@ export const updateProduct = async (req, res) => {
         let imageUrls = product.images;
 
         if (req.files && req.files.length > 0) {
+
+            // 🔥 DELETE OLD IMAGES FIRST
+            if (product.images && product.images.length > 0) {
+                await Promise.all(
+                    product.images.map(async (url) => {
+                        try {
+                            const afterUpload = url.split("/upload/")[1];
+                            const parts = afterUpload.split("/");
+                            const publicPath = parts.slice(1).join("/");
+                            const publicId = publicPath.split(".")[0];
+
+                            await cloudinary.uploader.destroy(publicId, {
+                                invalidate: true
+                            });
+
+                            console.log("Deleted:", publicId);
+
+                        } catch (err) {
+                            console.error("Error deleting image:", err.message);
+                        }
+                    })
+                );
+            }
+
+            // 🔥 Upload new images
             imageUrls = await Promise.all(
                 req.files.map(file =>
                     uploadImage(file.buffer, "marketplace/products")
