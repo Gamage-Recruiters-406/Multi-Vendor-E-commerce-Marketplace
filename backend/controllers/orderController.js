@@ -2,6 +2,8 @@ import mongoose from "mongoose";
 import Order, { ORDER_STATUSES, PAYMENT_STATUSES } from "../models/Order.js";
 import Coupon from "../models/Coupon.js";
 import User from "../models/User.js";
+import Cart from "../models/Cart.js";
+import Payment from "../models/paymentModel.js";
 import {
   evaluateCoupon,
   normalizeCouponCode,
@@ -22,6 +24,32 @@ const toIdString = (value) => {
   if (typeof value === "string") return value;
   if (value?._id) return String(value._id);
   return String(value);
+};
+
+const enrichCartItemsWithStoreId = async (cartItems) => {
+  const enrichedItems = [];
+  
+  for (const item of cartItems) {
+    if (!item.store_id) {
+      if (item.product_id && item.product_id.store) {
+        item.store_id = item.product_id.store;
+        console.log(`✅ Enriched item ${item.product_id._id} with store_id: ${item.product_id.store}`);
+      } else {
+        const Product = (await import('../models/Product.js')).default;
+        const product = await Product.findById(item.product_id).select('store');
+        
+        if (product && product.store) {
+          item.store_id = product.store;
+          console.log(`✅ Enriched item ${item.product_id} with store_id: ${product.store}`);
+        } else {
+          console.warn(`⚠️ Product ${item.product_id} missing store field`);
+        }
+      }
+    }
+    enrichedItems.push(item);
+  }
+  
+  return enrichedItems;
 };
 
 const canAccessOrder = (order, user) => {
@@ -235,7 +263,7 @@ const validateOrderPayload = async (payload) => {
   return null;
 };
 
-const formatOrderPayload = (payload, buyerId, orderNumber, appliedCoupon) => {
+const formatOrderPayload = (payload, buyerId, orderNumber, appliedCoupon, paymentRecord) => {
   const baseVendorOrders = payload.vendorOrders.map((segment) => ({
     vendor: segment.vendor,
     status: "Placed",
@@ -283,12 +311,10 @@ const formatOrderPayload = (payload, buyerId, orderNumber, appliedCoupon) => {
     },
     couponCode: appliedCoupon?.coupon?.code || normalizeCouponCode(payload.couponCode),
     payment: {
-      method: payload.payment?.method || "Card",
-      status: PAYMENT_STATUSES.includes(payload.payment?.status)
-        ? payload.payment.status
-        : "Pending",
-      transactionId: payload.payment?.transactionId || "",
-      paidAt: payload.payment?.paidAt,
+      method: paymentRecord.amount?.paymentMethod || "Card",
+      status: paymentRecord.status === "paid" ? "Paid" : "Pending",
+      transactionId: paymentRecord.stripePaymentIntentId || "",
+      paidAt: paymentRecord.paymentDate,
     },
     vendorOrders,
   };
@@ -303,6 +329,50 @@ export const createOrder = async (req, res) => {
         message: validationMessage,
       });
     }
+
+    // Get payment ID from request body
+    const { paymentId } = req.body;
+    if (!paymentId || !mongoose.Types.ObjectId.isValid(paymentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid payment ID is required",
+      });
+    }
+
+    // Fetch payment record from database
+    const payment = await Payment.findById(paymentId);
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: "Payment record not found",
+      });
+    }
+
+    // Verify payment belongs to the current user
+    if (String(payment.customerId) !== String(req.user._id)) {
+      return res.status(403).json({
+        success: false,
+        message: "This payment does not belong to you",
+      });
+    }
+
+    // Check if payment status is 'paid' before placing order
+    if (payment.status !== "paid") {
+      return res.status(400).json({
+        success: false,
+        message: "Order can only be placed when payment status is 'paid'",
+      });
+    }
+
+    if (!payment.storePayments || payment.storePayments.length === 0) {
+      console.error("❌ Payment missing storePayments:", payment._id);
+      return res.status(400).json({
+        success: false,
+        message: "Payment missing store information. Please check your cart items.",
+      });
+    }
+
+    console.log(`✅ Payment validated. Store Payments count: ${payment.storePayments.length}`);
 
     const couponCode = normalizeCouponCode(req.body.couponCode);
     let appliedCoupon = null;
@@ -334,7 +404,8 @@ export const createOrder = async (req, res) => {
       req.body,
       req.user._id,
       orderNumber,
-      appliedCoupon
+      appliedCoupon,
+      payment
     );
 
     const order = await Order.create(orderPayload);
@@ -1153,6 +1224,76 @@ export const adminUpdateVendorOrderStatus = async (req, res) => {
       success: false,
       message: "Error updating vendor status by admin",
       error: error.message,
+    });
+  }
+};
+
+// ─────────────────────────────────────────────
+// ENRICH CART WITH STORE ID (FIX FOR PAYMENT)
+// ─────────────────────────────────────────────
+export const enrichCartWithStoreId = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    // Get user's cart with populated product data
+    const cart = await Cart.findOne({ user_id: userId }).populate("items.product_id");
+    
+    if (!cart) {
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found"
+      });
+    }
+
+    if (cart.items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cart is empty"
+      });
+    }
+
+    console.log("\n🔧 === Enriching Cart with Store ID ===");
+    console.log(`Cart ID: ${cart._id}, Items: ${cart.items.length}`);
+
+    // Enrich items with store_id from populated product.store
+    let updated = false;
+    for (const item of cart.items) {
+      if (!item.store_id && item.product_id?.store) {
+        item.store_id = item.product_id.store;
+        updated = true;
+        console.log(`  ✅ Set store_id for product ${item.product_id._id}: ${item.product_id.store}`);
+      } else if (item.store_id) {
+        console.log(`  ℹ️  Item already has store_id: ${item.store_id}`);
+      } else {
+        console.warn(`  ⚠️  Item ${item.product_id._id} has no store info`);
+      }
+    }
+
+    // Save enriched cart
+    if (updated) {
+      await cart.save();
+      console.log("  💾 Cart saved with enriched store_id values");
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Cart enriched successfully with store information",
+      updated,
+      cartId: cart._id,
+      items: cart.items.map(item => ({
+        product_id: item.product_id._id,
+        store_id: item.store_id,
+        quantity: item.quantity,
+        price: item.price
+      }))
+    });
+
+  } catch (error) {
+    console.error("enrichCartWithStoreId error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error enriching cart",
+      error: error.message
     });
   }
 };
