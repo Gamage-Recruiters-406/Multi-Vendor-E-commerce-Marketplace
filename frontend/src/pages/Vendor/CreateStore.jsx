@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { CloudUpload, Save, Store } from 'lucide-react';
+import { CloudUpload, Store, Info, Type } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
 const CreateStore = () => {
@@ -9,6 +9,7 @@ const CreateStore = () => {
     const [preview, setPreview] = useState(null);
     const [loading, setLoading] = useState(false);
     
+    // Manual URL building to match project environment variables
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
     const apiVersion = import.meta.env.VITE_API_VERSION || '/api/v1';
     const API_URL = `${baseUrl.replace(/\/+$/, '')}/${apiVersion.replace(/^\/+/, '')}`;
@@ -24,6 +25,7 @@ const CreateStore = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
+        // Ensure user is a Vendor based on database role string
         const currentUser = JSON.parse(localStorage.getItem('user'));
         if (!currentUser || currentUser.role !== 'Vendor') {
             toast.error("Only Vendors can create stores.");
@@ -59,53 +61,110 @@ const CreateStore = () => {
     };
 
     return (
-        <div className="bg-gray-50 min-h-screen p-6 font-sans">
+        <div 
+            className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-cover bg-center bg-no-repeat relative"
+            style={{ 
+                backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.65)), url('https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070')` 
+            }}
+        >
             <Toaster position="top-right" />
-            <div className="max-w-4xl mx-auto bg-white rounded-xl border shadow-sm p-10">
-                <header className="text-center mb-10">
-                    <h1 className="text-3xl font-bold text-gray-900 uppercase tracking-tight">Create Store</h1>
-                </header>
+            
+            {/* Glassmorphism Container */}
+            <div className="w-full max-w-2xl bg-white/95 backdrop-blur-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/20">
+                <div className="p-8 sm:p-12">
+                    <header className="text-center mb-10">
+                        <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-2xl mb-4">
+                            <Store className="text-emerald-600 w-8 h-8" />
+                        </div>
+                        <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-3 uppercase">
+                            Create Your Store
+                        </h1>
+                        <p className="text-gray-500 text-lg font-medium max-w-md mx-auto leading-relaxed">
+                            Set up your vendor store and start selling to millions of customers
+                        </p>
+                    </header>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2 uppercase">Store Name *</label>
-                        <input 
-                            type="text" 
-                            className="w-full border-2 p-3 rounded-xl focus:border-emerald-500 outline-none transition" 
-                            value={formData.name}
-                            required
-                            onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2 uppercase">Description</label>
-                        <textarea 
-                            className="w-full border-2 p-3 rounded-xl h-32 focus:border-emerald-500 outline-none transition" 
-                            value={formData.description}
-                            onChange={(e) => setFormData({...formData, description: e.target.value})} 
-                        />
-                    </div>
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Store Name */}
+                        <div>
+                            <label className="flex items-center text-xs font-black text-emerald-800 mb-2 uppercase tracking-widest">
+                                <Type className="w-4 h-4 mr-2" />
+                                Store Name <span className="text-red-500 ml-1">*</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                placeholder="Enter your store name"
+                                className="w-full bg-gray-50 border-2 border-gray-100 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all shadow-sm" 
+                                value={formData.name}
+                                required
+                                onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                            />
+                        </div>
 
-                    <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center bg-gray-50 relative">
-                        <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleLogoChange} />
-                        {preview ? (
-                            <img src={preview} alt="Preview" className="w-24 h-24 rounded-full mx-auto object-cover border-4 border-white shadow-lg" />
-                        ) : (
-                            <div className="text-gray-400">
-                                <CloudUpload className="mx-auto mb-2" size={40} />
-                                <p className="font-bold text-sm">UPLOAD STORE LOGO</p>
+                        {/* Description */}
+                        <div>
+                            <label className="flex items-center text-xs font-black text-emerald-800 mb-2 uppercase tracking-widest">
+                                <Info className="w-4 h-4 mr-2" />
+                                Store Description
+                            </label>
+                            <textarea 
+                                placeholder="Describe your store..."
+                                className="w-full bg-gray-50 border-2 border-gray-100 p-4 rounded-2xl h-32 focus:border-emerald-500 focus:bg-white outline-none transition-all shadow-sm resize-none" 
+                                value={formData.description}
+                                onChange={(e) => setFormData({...formData, description: e.target.value})} 
+                            />
+                        </div>
+
+                        {/* Logo Upload - FIXED TO ROUND */}
+                        <div>
+                            <label className="flex items-center text-xs font-black text-emerald-800 mb-2 uppercase tracking-widest">
+                                <CloudUpload className="w-4 h-4 mr-2" />
+                                Branding & Logo
+                            </label>
+                            <div className="group relative border-2 border-dashed border-gray-200 rounded-[2rem] p-8 text-center bg-gray-50 hover:bg-emerald-50/50 hover:border-emerald-400 transition-all cursor-pointer">
+                                <input 
+                                    type="file" 
+                                    className="absolute inset-0 opacity-0 cursor-pointer z-10" 
+                                    accept="image/*" 
+                                    onChange={handleLogoChange} 
+                                />
+                                {preview ? (
+                                    <div className="relative inline-block">
+                                        <img 
+                                            src={preview} 
+                                            alt="Preview" 
+                                            className="w-32 h-32 rounded-full mx-auto object-cover border-4 border-white shadow-2xl transition-transform group-hover:scale-105" 
+                                        />
+                                        <div className="mt-4 text-emerald-600 font-black text-xs uppercase tracking-tighter">Click to change logo</div>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center py-4">
+                                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-md mb-4 group-hover:scale-110 transition-transform">
+                                            <CloudUpload className="text-emerald-500" size={32} />
+                                        </div>
+                                        <p className="font-black text-gray-400 text-xs uppercase tracking-widest">Upload Store Logo</p>
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
+                        </div>
 
-                    <button 
-                        type="submit" 
-                        disabled={loading}
-                        className="w-full bg-emerald-600 text-white font-black py-4 rounded-2xl hover:bg-emerald-700 shadow-xl shadow-emerald-100 disabled:bg-gray-300 transition"
-                    >
-                        {loading ? "CREATING..." : "CREATE STORE"}
-                    </button>
-                </form>
+                        {/* Submit Button */}
+                        <button 
+                            type="submit" 
+                            disabled={loading}
+                            className="w-full bg-emerald-600 text-white font-black text-lg py-5 rounded-[1.5rem] hover:bg-emerald-700 active:scale-[0.98] shadow-2xl shadow-emerald-200 disabled:bg-gray-300 transition-all flex items-center justify-center gap-3 uppercase tracking-widest"
+                        >
+                            {loading ? (
+                                <span className="animate-pulse">CREATING STORE...</span>
+                            ) : (
+                                <>
+                                    <Store size={22} />
+                                    <span>Launch My Store</span>
+                                </>
+                            )}
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     );
