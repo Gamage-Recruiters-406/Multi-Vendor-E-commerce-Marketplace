@@ -13,6 +13,14 @@ export default function ShoppingCartPage() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  const getProductId = (product) => {
+    if (!product) {
+      return '';
+    }
+
+    return String(product._id || product);
+  };
+
   // Fetch cart data from backend
   const fetchCartData = async () => {
     try {
@@ -30,7 +38,13 @@ export default function ShoppingCartPage() {
       const groupedByStore = {};
       
       cart.items.forEach((item) => {
-        const product = item.product_id;
+        const product = item?.product_id;
+        const productId = getProductId(product);
+
+        if (!productId) {
+          return;
+        }
+
         const storeName = product?.store?.name || 'Unknown Store';
         
         if (!groupedByStore[storeName]) {
@@ -42,7 +56,7 @@ export default function ShoppingCartPage() {
           : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&auto=format&fit=crop';
 
         groupedByStore[storeName].push({
-          product_id: product._id,
+          product_id: productId,
           image: imageUrl,
           title: product?.name || 'Unknown Product',
           store: storeName,
@@ -83,7 +97,7 @@ export default function ShoppingCartPage() {
     // Update state to reflect quantity change
     setCartItems(prevItems =>
       prevItems.map(item =>
-        item.product_id._id === product_id ? { ...item, quantity: newQuantity } : item
+        getProductId(item.product_id) === String(product_id) ? { ...item, quantity: newQuantity } : item
       )
     );
 
@@ -92,7 +106,7 @@ export default function ShoppingCartPage() {
       prevStores.map(store => ({
         ...store,
         items: store.items.map(item =>
-          item.product_id === product_id ? { ...item, quantity: newQuantity } : item
+          String(item.product_id) === String(product_id) ? { ...item, quantity: newQuantity } : item
         ),
       }))
     );
@@ -101,7 +115,7 @@ export default function ShoppingCartPage() {
   const handleRemoveItem = (product_id) => {
     // Remove item from cart
     setCartItems(prevItems =>
-      prevItems.filter(item => item.product_id._id !== product_id)
+      prevItems.filter(item => getProductId(item.product_id) !== String(product_id))
     );
 
     // Update grouped store items
@@ -109,7 +123,7 @@ export default function ShoppingCartPage() {
       prevStores
         .map(store => ({
           ...store,
-          items: store.items.filter(item => item.product_id !== product_id),
+          items: store.items.filter(item => String(item.product_id) !== String(product_id)),
         }))
         .filter(store => store.items.length > 0)
     );
