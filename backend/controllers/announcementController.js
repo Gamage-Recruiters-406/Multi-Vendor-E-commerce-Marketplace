@@ -210,7 +210,7 @@ export const createAnnouncement = async (req, res) => {
 
     await announcement.populate("createdBy", "fullname email role");
 
-     // ADD THIS - Send notifications if published immediately (publishNow: true)
+    // ADD THIS - Send notifications if published immediately (publishNow: true)
     if (status === "Published" && announcement.priorityVisibility.sendEmailNotification) {
       try {
         const notificationType = announcement.type === "Offer / Promotion"

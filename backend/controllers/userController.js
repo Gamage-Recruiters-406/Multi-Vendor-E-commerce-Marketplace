@@ -78,6 +78,14 @@ export const login = async (req, res) => {
       });
     }
 
+    // Check if user is suspended
+    if (user.isSuspended) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account has been suspended. Contact support.",
+      });
+    }
+
     // Check password
     const isPasswordValid = await user.matchPassword(password);
     if (!isPasswordValid) {
@@ -389,6 +397,168 @@ export const getProfilePicture = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error fetching profile picture",
+      error: error.message,
+    });
+  }
+};
+
+// Add address
+export const addAddress = async (req, res) => {
+  try {
+    const { street, city, district, postalCode, country } = req.body;
+
+    const user = await User.findById(req.user._id);
+
+    user.addresses.push({ street, city, district, postalCode, country });
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Address added successfully",
+      addresses: user.addresses
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error adding address",
+      error: error.message
+    });
+  }
+};
+
+//update address
+export const updateAddress = async (req, res) => {
+  try {
+    const { addressId } = req.params;
+    const updatedData = req.body;
+
+    const user = await User.findById(req.user._id);
+
+    const address = user.addresses.id(addressId);
+    if (!address) {
+      return res.status(404).json({ message: "Address not found" });
+    }
+
+    Object.assign(address, updatedData);
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Address updated",
+      addresses: user.addresses
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error updating address",
+      error: error.message
+    });
+  }
+};
+
+//delete address
+export const deleteAddress = async (req, res) => {
+  try {
+    const { addressId } = req.params;
+
+    const user = await User.findById(req.user._id);
+
+    user.addresses = user.addresses.filter(
+      (addr) => addr._id.toString() !== addressId
+    );
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Address deleted",
+      addresses: user.addresses
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error deleting address",
+      error: error.message
+    });
+  }
+};
+
+// Suspend user (admin)
+export const suspendUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (user.isSuspended) {
+      return res.status(400).json({
+        success: false,
+        message: "User is already suspended",
+      });
+    }
+
+    user.isSuspended = true;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "User suspended successfully",
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error suspending user",
+      error: error.message,
+    });
+  }
+};
+
+// Unsuspend user (admin)
+export const unsuspendUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (!user.isSuspended) {
+      return res.status(400).json({
+        success: false,
+        message: "User is not suspended",
+      });
+    }
+
+    user.isSuspended = false;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "User unsuspended successfully",
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error unsuspending user",
       error: error.message,
     });
   }

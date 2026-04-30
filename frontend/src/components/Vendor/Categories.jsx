@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import axios from "axios";
-import { showToast } from "../../utils/toast";
+import toast from "react-hot-toast";
 
 function Categories() {
   const [categories, setCategories] = useState([]);
@@ -42,12 +42,12 @@ function Categories() {
             {cat.name}
           </span>
 
-          <button
+          {/* <button
             onClick={() => openDeleteModal(cat._id, cat.name)}
             className="text-gray-400 hover:text-red-500 transition"
           >
             <X size={14} />
-          </button>
+          </button> */}
         </div>
 
         {/* Render children recursively */}
@@ -65,7 +65,6 @@ function Categories() {
       );
 
       console.log("Response : ", res.data);
-      // const flat = flattenCategories(res.data.data);
       setCategories(res.data.data);
       
     } catch (err) {
@@ -97,16 +96,16 @@ function Categories() {
       setParentCategory(""); // reset dropdown
       await fetchCategories(); // keep data consistent
 
-      showToast("success", "Category created");
+      toast.success("Category created");
 
     } catch (err) {
       console.error("Error adding category:", err);
 
       if (err.response?.status === 409) {
-        showToast("error", "This category already exists");
+        toast.error("This category already exists");
     
       } else {
-        showToast("error", "Something went wrong. Please try again");
+        toast.error("Something went wrong. Please try again");
   
       }
     }
@@ -128,16 +127,16 @@ function Categories() {
       setDeleting(false);
       await fetchCategories();
 
-      showToast("success", "Category has been deleted.");
+      toast.success("Category has been deleted.");
 
 
     } catch (err) {
       if (err.response?.status === 400) {
-        showToast("error", "Cannot delete category with subcategories");
+        toast.error("Cannot delete category with subcategories");
         
       } else {
         console.error(err);
-        showToast("error", "Failed to delete category.");
+        toast.error("Failed to delete category.");
         
       }
     } finally {
