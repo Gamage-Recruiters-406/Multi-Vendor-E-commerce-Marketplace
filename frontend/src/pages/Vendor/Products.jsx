@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Filter, PencilLine, Plus, Search, Trash2, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import Layout from "../../components/Layouts/Layout";
 
 const stockStyles = {
@@ -53,6 +53,8 @@ const getAuthToken = () => {
 };
 
 export default function Products() {
+	const [searchParams] = useSearchParams();
+	const storeId = searchParams.get("storeId");
 	const [products, setProducts] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
@@ -86,7 +88,10 @@ export default function Products() {
 			setLoading(true);
 			setError("");
 
-			const response = await fetch(`${getApiBaseUrl()}/product`);
+			const productsUrl = storeId
+				? `${getApiBaseUrl()}/product/store/${storeId}`
+				: `${getApiBaseUrl()}/product`;
+			const response = await fetch(productsUrl);
 			const payload = await parseResponse(response);
 
 			if (!response.ok) {
@@ -106,7 +111,7 @@ export default function Products() {
 
 	useEffect(() => {
 		fetchProducts();
-	}, []);
+	}, [storeId]);
 
 	useEffect(() => {
 		if (!selectedProduct) return;
