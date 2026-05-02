@@ -9,6 +9,16 @@ import {
   getVendorProductsByStore,
 } from "../api/vendorDashboard";
 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+
 import Layout from "../components/Layouts/Layout";
 
 const STATUS_STYLES = {
@@ -20,73 +30,31 @@ const STATUS_STYLES = {
 };
 
 function SalesChart({ data, labels }) {
-  if (!data || data.length === 0) return null;
+  if (!data || !labels || data.length === 0) return null;
 
-  const max = Math.max(...data);
-  const W = 500;
-  const H = 130;
-  const PAD = 10;
-
-  const pts = data.map((v, i) => {
-    const x = PAD + (i / (data.length - 1)) * (W - PAD * 2);
-    const y = H - PAD - (v / max) * (H - PAD * 2);
-    return [x, y];
-  });
-
-  const pointStr = pts.map(([x, y]) => `${x},${y}`).join(" ");
-  const areaPath = `M ${pointStr} L ${W - PAD},${H - PAD} L ${PAD},${H - PAD} Z`;
+  const chartRows = labels.map((label, index) => ({
+    label,
+    sales: data[index] || 0,
+  }));
 
   return (
-    <div className="w-full">
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="w-full"
-        style={{ height: 150 }}
-        preserveAspectRatio="none"
-      >
-        {[0, 1, 2, 3].map((i) => (
-          <line
-            key={i}
-            x1={PAD}
-            y1={PAD + i * 28}
-            x2={W - PAD}
-            y2={PAD + i * 28}
-            stroke="#F3F4F6"
-            strokeWidth="1"
-          />
-        ))}
-
-        <path d={areaPath} fill="#1A9F7318" />
-
-        <polyline
-          points={pointStr}
-          fill="none"
-          stroke="#1A9F73"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {pts.map(([x, y], i) => (
-          <circle
-            key={i}
-            cx={x}
-            cy={y}
-            r="4"
-            fill="white"
+    <div className="h-[180px] w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={chartRows}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+          <YAxis tick={{ fontSize: 10 }} />
+          <Tooltip />
+          <Line
+            type="monotone"
+            dataKey="sales"
             stroke="#1A9F73"
-            strokeWidth="2"
+            strokeWidth={3}
+            dot={{ r: 4 }}
+            activeDot={{ r: 6 }}
           />
-        ))}
-      </svg>
-
-      <div className="flex justify-between mt-1 px-1">
-        {labels.map((l) => (
-          <span key={l} className="text-[10px] text-gray-400">
-            {l}
-          </span>
-        ))}
-      </div>
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }
@@ -106,13 +74,12 @@ export default function VendorDashboard() {
   useEffect(() => {
     const loadDashboard = async () => {
       try {
-        const [profileRes, ordersRes, announcementsRes, storesRes, chartRes] =
+        const [profileRes, ordersRes, announcementsRes, storesRes] =
           await Promise.allSettled([
             getVendorProfile(),
             getVendorOrders(),
             getAnnouncementsFeed(),
             getMyStores(),
-            getVendorSalesAnalytics(chartPeriod),
           ]);
 
         if (profileRes.status === "fulfilled") {
@@ -134,10 +101,6 @@ export default function VendorDashboard() {
               announcementsRes.value ||
               [],
           );
-        }
-
-        if (chartRes.status === "fulfilled") {
-          setChartData(chartRes.value);
         }
 
         if (storesRes.status === "fulfilled") {
@@ -172,9 +135,39 @@ export default function VendorDashboard() {
     loadDashboard();
   }, []);
 
+  const generateChartData = (orders, period) => {
+    const grouped = {};
+
+    orders.forEach((order) => {
+      const date = new Date(order.createdAt);
+
+      let key;
+
+      if (period === "daily") {
+        key = date.toLocaleDateString("en-US", { weekday: "short" });
+      } else if (period === "weekly") {
+        key = `Week ${Math.ceil(date.getDate() / 7)}`;
+      } else {
+        key = date.toLocaleDateString("en-US", { month: "short" });
+      }
+
+      const amount = Number(order.vendorOrder?.totalAmount || 0);
+
+      grouped[key] = (grouped[key] || 0) + amount;
+    });
+
+    return {
+      labels: Object.keys(grouped),
+      data: Object.values(grouped),
+    };
+  };
+
   useEffect(() => {
-    getVendorSalesAnalytics(chartPeriod).then(setChartData);
-  }, [chartPeriod]);
+    if (orders.length > 0) {
+      const chart = generateChartData(orders, chartPeriod);
+      setChartData(chart);
+    }
+  }, [orders, chartPeriod]);
 
   const totalOrders = orders.length;
 
@@ -303,7 +296,26 @@ export default function VendorDashboard() {
         ? "⚠️"
         : "⭐";
 
-  const topProducts = allProducts.slice(0, 5);
+  const topProducts = Object.values(
+    orders.reduce((acc, order) => {
+      const items = order.vendorOrder?.items || [];
+
+      items.forEach((item) => {
+        if (!acc[item.productId]) {
+          acc[item.productId] = {
+            ...item,
+            sold: 0,
+          };
+        }
+
+        acc[item.productId].sold += item.quantity;
+      });
+
+      return acc;
+    }, {}),
+  )
+    .sort((a, b) => b.sold - a.sold)
+    .slice(0, 5);
 
   if (loading) {
     return (
@@ -558,21 +570,26 @@ export default function VendorDashboard() {
                 {topProducts.length > 0 ? (
                   topProducts.map((product) => (
                     <div
-                      key={product._id}
+                      key={product.productId}
                       className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0"
                     >
-                      <img
-                        src={product.images?.[0]}
-                        alt={product.name}
-                        className="w-9 h-9 rounded-lg object-cover bg-green-50"
-                      />
-
+                      {product.imageUrl ? (
+                        <img
+                          src={product.imageUrl || ""}
+                          alt={product.productName}
+                          className="w-9 h-9 rounded-lg object-cover bg-green-50"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-400">
+                          N/A
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-gray-800 truncate">
-                          {product.name}
+                          {product.productName}
                         </p>
                         <p className="text-[10px] text-gray-400">
-                          Stock: {product.stock}
+                          Sold: {product.sold}
                         </p>
                       </div>
 
@@ -580,7 +597,7 @@ export default function VendorDashboard() {
                         className="text-xs font-bold flex-shrink-0"
                         style={{ color: "#1A9F73" }}
                       >
-                        Rs. {Number(product.price || 0).toLocaleString()}
+                        Rs. {Number(product.unitPrice || 0).toLocaleString()}
                       </span>
                     </div>
                   ))
