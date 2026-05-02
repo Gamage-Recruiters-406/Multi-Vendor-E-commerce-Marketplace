@@ -23,6 +23,7 @@ import EditStore from "./pages/Vendor/EditStore";
 import SalesAnalytics from "./pages/Vendor/SalesAnalytics";
 import VendorDashboard from "./pages/VendorDashboard";
 import BuyerProductDetailsPage from "./pages/Buyer/BuyerProductDetailsPage";
+import ShoppingCartPage from "./pages/ShoppingCart/ShoppingCartPage";
 
 function App() {
   return (
@@ -52,7 +53,7 @@ function App() {
           <Route path="/vendor/create-store" element={<CreateStore />} />
           <Route path="/vendor/store/:id" element={<ViewStore />} />
           <Route path="/vendor/profile" element={<VendorProfile />} />
-          <Route path="/vendor/store" element={<StoresPage />} />
+          <Route path="/vendor/stores" element={<StoresPage />} />
           <Route path="/vendor/edit-store/:id" element={<EditStore />} />
           <Route path="/vendor/sales-analytics" element={<SalesAnalytics />} />
           <Route path="/vendor/dashboard" element={<VendorDashboard />} />
@@ -73,6 +74,7 @@ function App() {
             path="/buyer/productdetails/:id"
             element={<BuyerProductDetailsPage />}
           />
+          <Route path="/cart" element={<ShoppingCartPage />} />
           {/* Checkout */}
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/addressbook" element={<UserProfileAndAddressBook />} />

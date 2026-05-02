@@ -1,6 +1,11 @@
 import { Store, ArrowRight } from 'lucide-react';
 import CartItem from './CartItem';
-export default function CartSection({ storeName, items }) {
+
+export default function CartSection({ storeName, items, onQuantityChange, onRemove }) {
+  if (!items || items.length === 0) {
+    return null;
+  }
+
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-6 shadow-sm">
       {/* Store Header */}
@@ -18,8 +23,13 @@ export default function CartSection({ storeName, items }) {
       
       {/* Items */}
       <div className="px-6">
-        {items.map((item, index) => (
-          <CartItem key={index} {...item} />
+        {items.map((item) => (
+          <CartItem 
+            key={item.product_id} 
+            {...item}
+            onQuantityChange={onQuantityChange}
+            onRemove={onRemove}
+          />
         ))}
       </div>
     </div>
