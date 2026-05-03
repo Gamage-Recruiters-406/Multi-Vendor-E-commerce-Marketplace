@@ -163,6 +163,9 @@ export const stripeWebhook = async (req, res) => {
                 existingPayment.status = "paid";
                 await existingPayment.save();
 
+                // ✅ CLEAR CART HERE
+                await Cart.findOneAndDelete({ user_id: existingPayment.customerId });
+
                 // Notify buyer
                 try {
                     const buyer = await User.findById(existingPayment.customerId);
