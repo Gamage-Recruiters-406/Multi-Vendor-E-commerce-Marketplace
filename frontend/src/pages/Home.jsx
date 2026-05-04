@@ -11,7 +11,8 @@ import {
 import Hero from '../components/home/Hero';
 import Announcements from '../components/home/Announcements';
 import HomeService from '../services/HomeService';
-import { Link } from 'react-router-dom'; 
+import { Link } from 'react-router-dom';
+import Layout from '../components/Layouts/Layout'; // Import Layout
 
 const GREEN = '#1A9F73';
 const GREEN_DARK = '#158a62';
@@ -254,434 +255,436 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-white font-sans antialiased">
-      <Hero features={features} />
+    <Layout>
+      <div className="min-h-screen bg-white font-sans antialiased">
+        <Hero features={features} />
 
-      <Announcements
-        loadingAnnouncements={loadingAnnouncements}
-        announcements={announcements}
-        currentAnnouncementIndex={currentAnnouncementIndex}
-        handlePrevAnnouncement={handlePrevAnnouncement}
-        handleNextAnnouncement={handleNextAnnouncement}
-        handleAnnouncementIndicatorClick={handleAnnouncementIndicatorClick}
-        GREEN={GREEN}
-      />
-
-      {/* ── RECENT STORES WITH PAGINATION ────────────────────── */}
-      <section className="px-4 py-8 sm:px-6 sm:py-14 md:px-16 lg:px-24">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-4 sm:mb-8 flex items-center justify-between">
-            <h2
-              style={{ color: GREEN }}
-              className="text-xl sm:text-2xl font-bold italic"
-            >
-              Recent Stores
-            </h2>
-          </div>
-
-          {/* Loading State */}
-          {loadingStores && (
-            <div className="flex justify-center items-center py-8 sm:py-12">
-              <div
-                className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2"
-                style={{ borderColor: GREEN }}
-              ></div>
-            </div>
-          )}
-
-          {/* Error State */}
-          {storesError && !loadingStores && (
-            <div className="text-center py-8 sm:py-12">
-              <p className="text-red-500 mb-4 text-sm sm:text-base">
-                {storesError}
-              </p>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-white text-sm sm:text-base"
-                style={{ backgroundColor: GREEN }}
-              >
-                Try Again
-              </button>
-            </div>
-          )}
-
-          {/* Stores Grid with Navigation */}
-          {!loadingStores && !storesError && (
-            <>
-              <div className="flex items-center gap-2 sm:gap-4">
-                {totalStorePages > 1 && (
-                  <button
-                    onClick={handlePrevStorePage}
-                    className="flex-shrink-0 p-2 sm:p-3 rounded-full transition-all hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={{
-                      backgroundColor: GREEN + '20',
-                      color: GREEN,
-                      border: `1px solid ${GREEN}40`,
-                    }}
-                    aria-label="Previous stores"
-                    disabled={currentStorePage === 0}
-                  >
-                    <ChevronLeft size={20} className="sm:w-6 sm:h-6" />
-                  </button>
-                )}
-
-                <div className="flex-1 grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 transition-all duration-300">
-                  {currentStores.length > 0 ? (
-                    currentStores.map((store) => (
-                      <div
-                        key={store._id}
-                        className="group overflow-hidden rounded-xl sm:rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md hover:-translate-y-0.5"
-                      >
-                        <div className="h-40 sm:h-52 overflow-hidden bg-gray-100">
-                          {store.logo ? (
-                            <img
-                              src={store.logo}
-                              alt={store.name}
-                              className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                              onError={(e) => {
-                                e.target.src = FALLBACK_STORE_IMG;
-                              }}
-                            />
-                          ) : (
-                            <div
-                              className="h-full w-full flex items-center justify-center"
-                              style={{ backgroundColor: GREEN + '20' }}
-                            >
-                              <Store
-                                size={32}
-                                className="sm:w-12 sm:h-12"
-                                style={{ color: GREEN }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                        <div className="px-3 sm:px-4 pt-2 sm:pt-3 pb-1">
-                          <p className="font-bold text-gray-800 text-sm sm:text-base">
-                            {store.name}
-                          </p>
-                          <p className="text-[8px] sm:text-[10px] font-semibold tracking-widest text-gray-400 mt-0.5">
-                            {store.vendor?.name || 'Verified Vendor'}
-                          </p>
-                          {store.description && (
-                            <p className="text-[10px] sm:text-xs text-gray-500 mt-1 sm:mt-2 line-clamp-2">
-                              {store.description}
-                            </p>
-                          )}
-                        </div>
-                        <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-1 sm:pt-2">
-                          <button
-                            onClick={() => handleVisitStore(store._id)}
-                            style={{ backgroundColor: GREEN }}
-                            className="w-full rounded-lg py-1.5 sm:py-2.5 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-white transition hover:brightness-110 active:scale-95"
-                          >
-                            Visit Store
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="col-span-full text-center py-8 sm:py-12">
-                      <p className="text-gray-500 text-sm sm:text-base">
-                        No stores available yet.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {totalStorePages > 1 && (
-                  <button
-                    onClick={handleNextStorePage}
-                    className="flex-shrink-0 p-2 sm:p-3 rounded-full transition-all hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={{
-                      backgroundColor: GREEN + '20',
-                      color: GREEN,
-                      border: `1px solid ${GREEN}40`,
-                    }}
-                    aria-label="Next stores"
-                    disabled={currentStorePage === totalStorePages - 1}
-                  >
-                    <ChevronRight size={20} className="sm:w-6 sm:h-6" />
-                  </button>
-                )}
-              </div>
-
-              {totalStorePages > 1 && (
-                <div className="flex justify-center gap-1.5 sm:gap-2 mt-4 sm:mt-8">
-                  {Array.from({ length: totalStorePages }).map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleStorePageIndicatorClick(idx)}
-                      className={`transition-all duration-300 rounded-full ${
-                        currentStorePage === idx
-                          ? 'w-6 h-1.5 sm:w-8 sm:h-2'
-                          : 'w-1.5 h-1.5 sm:w-2 sm:h-2'
-                      }`}
-                      style={{
-                        backgroundColor:
-                          currentStorePage === idx ? GREEN : GREEN + '40',
-                      }}
-                      aria-label={`Go to page ${idx + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {totalStorePages > 1 && (
-                <div className="text-center mt-2 sm:mt-4">
-                  <p className="text-[10px] sm:text-xs text-gray-400">
-                    Page {currentStorePage + 1} of {totalStorePages}
-                  </p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </section>
-
-      {/* ── NEW ARRIVALS WITH PAGINATION ──────────────────────── */}
-      <section className="px-4 pb-12 sm:px-6 sm:pb-20 md:px-16 lg:px-24">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-4 sm:mb-8 flex items-center justify-between">
-            <h2
-              style={{ color: GREEN }}
-              className="text-xl sm:text-2xl font-bold italic"
-            >
-              New Arrivals
-            </h2>
-          </div>
-
-          {/* Loading State */}
-          {loadingProducts && (
-            <div className="flex justify-center items-center py-8 sm:py-12">
-              <div
-                className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2"
-                style={{ borderColor: GREEN }}
-              ></div>
-            </div>
-          )}
-
-          {/* Error State */}
-          {productsError && !loadingProducts && (
-            <div className="text-center py-8 sm:py-12">
-              <p className="text-red-500 mb-4 text-sm sm:text-base">
-                {productsError}
-              </p>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-white text-sm sm:text-base"
-                style={{ backgroundColor: GREEN }}
-              >
-                Try Again
-              </button>
-            </div>
-          )}
-
-          {/* Products Grid with Navigation */}
-          {!loadingProducts && !productsError && (
-            <>
-              <div className="flex items-center gap-2 sm:gap-4">
-                {totalProductPages > 1 && (
-                  <button
-                    onClick={handlePrevProductPage}
-                    className="flex-shrink-0 p-2 sm:p-3 rounded-full transition-all hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={{
-                      backgroundColor: GREEN + '20',
-                      color: GREEN,
-                      border: `1px solid ${GREEN}40`,
-                    }}
-                    aria-label="Previous products"
-                    disabled={currentProductPage === 0}
-                  >
-                    <ChevronLeft size={20} className="sm:w-6 sm:h-6" />
-                  </button>
-                )}
-
-                <div className="flex-1 grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 transition-all duration-300">
-                  {currentProducts.length > 0 ? (
-                    currentProducts.map((product, idx) => (
-                      <div
-                        key={product._id}
-                        className="group overflow-hidden rounded-xl sm:rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
-                        onClick={() => handleViewProduct(product._id)}
-                      >
-                        <div className="h-40 sm:h-52 overflow-hidden bg-gray-50 relative">
-                          {product.images && product.images[0] ? (
-                            <img
-                              src={product.images[0]}
-                              alt={product.name}
-                              className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                              onError={(e) => {
-                                e.target.src = FALLBACK_PRODUCT_IMG;
-                              }}
-                            />
-                          ) : (
-                            <div
-                              className="h-full w-full flex items-center justify-center"
-                              style={{ backgroundColor: GREEN + '10' }}
-                            >
-                              <ShoppingBag
-                                size={32}
-                                className="sm:w-12 sm:h-12"
-                                style={{ color: GREEN }}
-                              />
-                            </div>
-                          )}
-                          {/* Stock badge */}
-                          {product.stock > 0 ? (
-                            product.stock < 10 && (
-                              <span className="absolute top-2 right-2 bg-yellow-400 text-black text-[8px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full">
-                                Only {product.stock} left
-                              </span>
-                            )
-                          ) : (
-                            <span className="absolute top-2 right-2 bg-red-500 text-white text-[8px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full">
-                              Out of Stock
-                            </span>
-                          )}
-                        </div>
-                        <div className="px-3 sm:px-4 pt-2 sm:pt-3 pb-1">
-                          <p className="font-bold text-gray-800 text-sm sm:text-base line-clamp-1">
-                            {product.name}
-                          </p>
-                          <p className="text-[8px] sm:text-[10px] font-semibold tracking-widest text-gray-400 mt-0.5 uppercase">
-                            {getCategoryName(product)}
-                          </p>
-                          {product.description && (
-                            <p className="text-[10px] sm:text-xs text-gray-500 mt-1 sm:mt-2 line-clamp-2">
-                              {product.description}
-                            </p>
-                          )}
-                        </div>
-                        <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-1 sm:pt-2">
-                          <div className="flex items-center justify-between mb-2">
-                            <span
-                              style={{ color: GREEN }}
-                              className="text-base sm:text-lg font-bold"
-                            >
-                              {formatPrice(product.price)}
-                            </span>
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddToCart(idx);
-                            }}
-                            disabled={product.stock === 0}
-                            style={{
-                              backgroundColor:
-                                product.stock === 0 ? '#cccccc' : GREEN,
-                              cursor:
-                                product.stock === 0 ? 'not-allowed' : 'pointer',
-                            }}
-                            className="w-full rounded-lg py-1.5 sm:py-2.5 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-white transition hover:brightness-110 active:scale-95"
-                          >
-                            {addedIdx === idx
-                              ? '✓ Added!'
-                              : product.stock === 0
-                                ? 'Out of Stock'
-                                : 'Add to Cart'}
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="col-span-full text-center py-8 sm:py-12">
-                      <p className="text-gray-500 text-sm sm:text-base">
-                        No products available yet.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {totalProductPages > 1 && (
-                  <button
-                    onClick={handleNextProductPage}
-                    className="flex-shrink-0 p-2 sm:p-3 rounded-full transition-all hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={{
-                      backgroundColor: GREEN + '20',
-                      color: GREEN,
-                      border: `1px solid ${GREEN}40`,
-                    }}
-                    aria-label="Next products"
-                    disabled={currentProductPage === totalProductPages - 1}
-                  >
-                    <ChevronRight size={20} className="sm:w-6 sm:h-6" />
-                  </button>
-                )}
-              </div>
-
-              {/* Page Indicators for Products */}
-              {totalProductPages > 1 && (
-                <div className="flex justify-center gap-1.5 sm:gap-2 mt-4 sm:mt-8">
-                  {Array.from({ length: totalProductPages }).map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleProductPageIndicatorClick(idx)}
-                      className={`transition-all duration-300 rounded-full ${
-                        currentProductPage === idx
-                          ? 'w-6 h-1.5 sm:w-8 sm:h-2'
-                          : 'w-1.5 h-1.5 sm:w-2 sm:h-2'
-                      }`}
-                      style={{
-                        backgroundColor:
-                          currentProductPage === idx ? GREEN : GREEN + '40',
-                      }}
-                      aria-label={`Go to page ${idx + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* Page Info for Products */}
-              {totalProductPages > 1 && (
-                <div className="text-center mt-2 sm:mt-4">
-                  <p className="text-[10px] sm:text-xs text-gray-400">
-                    Page {currentProductPage + 1} of {totalProductPages}
-                  </p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </section>
-
-      {/* ── CTA FOOTER ────────────────────────────────────────── */}
-      <section
-        style={{ backgroundColor: GREEN_DARK }}
-        className="relative overflow-hidden px-4 py-10 sm:px-6 sm:py-16 md:px-16 lg:px-24"
-      >
-        <div
-          className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 sm:h-64 sm:w-64 rounded-full opacity-10"
-          style={{
-            background: 'radial-gradient(circle, #ffffff 0%, transparent 70%)',
-          }}
+        <Announcements
+          loadingAnnouncements={loadingAnnouncements}
+          announcements={announcements}
+          currentAnnouncementIndex={currentAnnouncementIndex}
+          handlePrevAnnouncement={handlePrevAnnouncement}
+          handleNextAnnouncement={handleNextAnnouncement}
+          handleAnnouncementIndicatorClick={handleAnnouncementIndicatorClick}
+          GREEN={GREEN}
         />
-        <div className="relative z-10 mx-auto max-w-6xl flex flex-col gap-6 sm:gap-8 md:flex-row md:items-center md:justify-between">
-          <div className="max-w-sm text-center md:text-left">
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-white leading-tight mb-2 sm:mb-3">
-              Ready to open your own store?
-            </h2>
-            <p className="text-xs sm:text-sm text-white/70 leading-relaxed">
-              Join our curated community of elite sellers and reach thousands of
-              discerning customers worldwide.
-            </p>
-          </div>
 
-          <Link
-            to="/register"
-            className="self-center md:self-auto shrink-0 inline-flex items-center gap-2 rounded-full px-6 sm:px-8 py-3 sm:py-4 text-xs sm:text-sm font-bold text-white transition hover:gap-3 active:scale-95"
+        {/* ── RECENT STORES WITH PAGINATION ────────────────────── */}
+        <section className="px-4 py-8 sm:px-6 sm:py-14 md:px-16 lg:px-24">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-4 sm:mb-8 flex items-center justify-between">
+              <h2
+                style={{ color: GREEN }}
+                className="text-xl sm:text-2xl font-bold italic"
+              >
+                Recent Stores
+              </h2>
+            </div>
+
+            {/* Loading State */}
+            {loadingStores && (
+              <div className="flex justify-center items-center py-8 sm:py-12">
+                <div
+                  className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2"
+                  style={{ borderColor: GREEN }}
+                ></div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {storesError && !loadingStores && (
+              <div className="text-center py-8 sm:py-12">
+                <p className="text-red-500 mb-4 text-sm sm:text-base">
+                  {storesError}
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-white text-sm sm:text-base"
+                  style={{ backgroundColor: GREEN }}
+                >
+                  Try Again
+                </button>
+              </div>
+            )}
+
+            {/* Stores Grid with Navigation */}
+            {!loadingStores && !storesError && (
+              <>
+                <div className="flex items-center gap-2 sm:gap-4">
+                  {totalStorePages > 1 && (
+                    <button
+                      onClick={handlePrevStorePage}
+                      className="flex-shrink-0 p-2 sm:p-3 rounded-full transition-all hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
+                      style={{
+                        backgroundColor: GREEN + '20',
+                        color: GREEN,
+                        border: `1px solid ${GREEN}40`,
+                      }}
+                      aria-label="Previous stores"
+                      disabled={currentStorePage === 0}
+                    >
+                      <ChevronLeft size={20} className="sm:w-6 sm:h-6" />
+                    </button>
+                  )}
+
+                  <div className="flex-1 grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 transition-all duration-300">
+                    {currentStores.length > 0 ? (
+                      currentStores.map((store) => (
+                        <div
+                          key={store._id}
+                          className="group overflow-hidden rounded-xl sm:rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md hover:-translate-y-0.5"
+                        >
+                          <div className="h-40 sm:h-52 overflow-hidden bg-gray-100">
+                            {store.logo ? (
+                              <img
+                                src={store.logo}
+                                alt={store.name}
+                                className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                                onError={(e) => {
+                                  e.target.src = FALLBACK_STORE_IMG;
+                                }}
+                              />
+                            ) : (
+                              <div
+                                className="h-full w-full flex items-center justify-center"
+                                style={{ backgroundColor: GREEN + '20' }}
+                              >
+                                <Store
+                                  size={32}
+                                  className="sm:w-12 sm:h-12"
+                                  style={{ color: GREEN }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                          <div className="px-3 sm:px-4 pt-2 sm:pt-3 pb-1">
+                            <p className="font-bold text-gray-800 text-sm sm:text-base">
+                              {store.name}
+                            </p>
+                            <p className="text-[8px] sm:text-[10px] font-semibold tracking-widest text-gray-400 mt-0.5">
+                              {store.vendor?.name || 'Verified Vendor'}
+                            </p>
+                            {store.description && (
+                              <p className="text-[10px] sm:text-xs text-gray-500 mt-1 sm:mt-2 line-clamp-2">
+                                {store.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-1 sm:pt-2">
+                            <button
+                              onClick={() => handleVisitStore(store._id)}
+                              style={{ backgroundColor: GREEN }}
+                              className="w-full rounded-lg py-1.5 sm:py-2.5 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-white transition hover:brightness-110 active:scale-95"
+                            >
+                              Visit Store
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-full text-center py-8 sm:py-12">
+                        <p className="text-gray-500 text-sm sm:text-base">
+                          No stores available yet.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {totalStorePages > 1 && (
+                    <button
+                      onClick={handleNextStorePage}
+                      className="flex-shrink-0 p-2 sm:p-3 rounded-full transition-all hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
+                      style={{
+                        backgroundColor: GREEN + '20',
+                        color: GREEN,
+                        border: `1px solid ${GREEN}40`,
+                      }}
+                      aria-label="Next stores"
+                      disabled={currentStorePage === totalStorePages - 1}
+                    >
+                      <ChevronRight size={20} className="sm:w-6 sm:h-6" />
+                    </button>
+                  )}
+                </div>
+
+                {totalStorePages > 1 && (
+                  <div className="flex justify-center gap-1.5 sm:gap-2 mt-4 sm:mt-8">
+                    {Array.from({ length: totalStorePages }).map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleStorePageIndicatorClick(idx)}
+                        className={`transition-all duration-300 rounded-full ${
+                          currentStorePage === idx
+                            ? 'w-6 h-1.5 sm:w-8 sm:h-2'
+                            : 'w-1.5 h-1.5 sm:w-2 sm:h-2'
+                        }`}
+                        style={{
+                          backgroundColor:
+                            currentStorePage === idx ? GREEN : GREEN + '40',
+                        }}
+                        aria-label={`Go to page ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {totalStorePages > 1 && (
+                  <div className="text-center mt-2 sm:mt-4">
+                    <p className="text-[10px] sm:text-xs text-gray-400">
+                      Page {currentStorePage + 1} of {totalStorePages}
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </section>
+
+        {/* ── NEW ARRIVALS WITH PAGINATION ──────────────────────── */}
+        <section className="px-4 pb-12 sm:px-6 sm:pb-20 md:px-16 lg:px-24">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-4 sm:mb-8 flex items-center justify-between">
+              <h2
+                style={{ color: GREEN }}
+                className="text-xl sm:text-2xl font-bold italic"
+              >
+                New Arrivals
+              </h2>
+            </div>
+
+            {/* Loading State */}
+            {loadingProducts && (
+              <div className="flex justify-center items-center py-8 sm:py-12">
+                <div
+                  className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2"
+                  style={{ borderColor: GREEN }}
+                ></div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {productsError && !loadingProducts && (
+              <div className="text-center py-8 sm:py-12">
+                <p className="text-red-500 mb-4 text-sm sm:text-base">
+                  {productsError}
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-white text-sm sm:text-base"
+                  style={{ backgroundColor: GREEN }}
+                >
+                  Try Again
+                </button>
+              </div>
+            )}
+
+            {/* Products Grid with Navigation */}
+            {!loadingProducts && !productsError && (
+              <>
+                <div className="flex items-center gap-2 sm:gap-4">
+                  {totalProductPages > 1 && (
+                    <button
+                      onClick={handlePrevProductPage}
+                      className="flex-shrink-0 p-2 sm:p-3 rounded-full transition-all hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
+                      style={{
+                        backgroundColor: GREEN + '20',
+                        color: GREEN,
+                        border: `1px solid ${GREEN}40`,
+                      }}
+                      aria-label="Previous products"
+                      disabled={currentProductPage === 0}
+                    >
+                      <ChevronLeft size={20} className="sm:w-6 sm:h-6" />
+                    </button>
+                  )}
+
+                  <div className="flex-1 grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 transition-all duration-300">
+                    {currentProducts.length > 0 ? (
+                      currentProducts.map((product, idx) => (
+                        <div
+                          key={product._id}
+                          className="group overflow-hidden rounded-xl sm:rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
+                          onClick={() => handleViewProduct(product._id)}
+                        >
+                          <div className="h-40 sm:h-52 overflow-hidden bg-gray-50 relative">
+                            {product.images && product.images[0] ? (
+                              <img
+                                src={product.images[0]}
+                                alt={product.name}
+                                className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                                onError={(e) => {
+                                  e.target.src = FALLBACK_PRODUCT_IMG;
+                                }}
+                              />
+                            ) : (
+                              <div
+                                className="h-full w-full flex items-center justify-center"
+                                style={{ backgroundColor: GREEN + '10' }}
+                              >
+                                <ShoppingBag
+                                  size={32}
+                                  className="sm:w-12 sm:h-12"
+                                  style={{ color: GREEN }}
+                                />
+                              </div>
+                            )}
+                            {/* Stock badge */}
+                            {product.stock > 0 ? (
+                              product.stock < 10 && (
+                                <span className="absolute top-2 right-2 bg-yellow-400 text-black text-[8px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full">
+                                  Only {product.stock} left
+                                </span>
+                              )
+                            ) : (
+                              <span className="absolute top-2 right-2 bg-red-500 text-white text-[8px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full">
+                                Out of Stock
+                              </span>
+                            )}
+                          </div>
+                          <div className="px-3 sm:px-4 pt-2 sm:pt-3 pb-1">
+                            <p className="font-bold text-gray-800 text-sm sm:text-base line-clamp-1">
+                              {product.name}
+                            </p>
+                            <p className="text-[8px] sm:text-[10px] font-semibold tracking-widest text-gray-400 mt-0.5 uppercase">
+                              {getCategoryName(product)}
+                            </p>
+                            {product.description && (
+                              <p className="text-[10px] sm:text-xs text-gray-500 mt-1 sm:mt-2 line-clamp-2">
+                                {product.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-1 sm:pt-2">
+                            <div className="flex items-center justify-between mb-2">
+                              <span
+                                style={{ color: GREEN }}
+                                className="text-base sm:text-lg font-bold"
+                              >
+                                {formatPrice(product.price)}
+                              </span>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddToCart(idx);
+                              }}
+                              disabled={product.stock === 0}
+                              style={{
+                                backgroundColor:
+                                  product.stock === 0 ? '#cccccc' : GREEN,
+                                cursor:
+                                  product.stock === 0 ? 'not-allowed' : 'pointer',
+                              }}
+                              className="w-full rounded-lg py-1.5 sm:py-2.5 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-white transition hover:brightness-110 active:scale-95"
+                            >
+                              {addedIdx === idx
+                                ? '✓ Added!'
+                                : product.stock === 0
+                                  ? 'Out of Stock'
+                                  : 'Add to Cart'}
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-full text-center py-8 sm:py-12">
+                        <p className="text-gray-500 text-sm sm:text-base">
+                          No products available yet.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {totalProductPages > 1 && (
+                    <button
+                      onClick={handleNextProductPage}
+                      className="flex-shrink-0 p-2 sm:p-3 rounded-full transition-all hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
+                      style={{
+                        backgroundColor: GREEN + '20',
+                        color: GREEN,
+                        border: `1px solid ${GREEN}40`,
+                      }}
+                      aria-label="Next products"
+                      disabled={currentProductPage === totalProductPages - 1}
+                    >
+                      <ChevronRight size={20} className="sm:w-6 sm:h-6" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Page Indicators for Products */}
+                {totalProductPages > 1 && (
+                  <div className="flex justify-center gap-1.5 sm:gap-2 mt-4 sm:mt-8">
+                    {Array.from({ length: totalProductPages }).map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleProductPageIndicatorClick(idx)}
+                        className={`transition-all duration-300 rounded-full ${
+                          currentProductPage === idx
+                            ? 'w-6 h-1.5 sm:w-8 sm:h-2'
+                            : 'w-1.5 h-1.5 sm:w-2 sm:h-2'
+                        }`}
+                        style={{
+                          backgroundColor:
+                            currentProductPage === idx ? GREEN : GREEN + '40',
+                        }}
+                        aria-label={`Go to page ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Page Info for Products */}
+                {totalProductPages > 1 && (
+                  <div className="text-center mt-2 sm:mt-4">
+                    <p className="text-[10px] sm:text-xs text-gray-400">
+                      Page {currentProductPage + 1} of {totalProductPages}
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </section>
+
+        {/* ── CTA FOOTER ────────────────────────────────────────── */}
+        <section
+          style={{ backgroundColor: GREEN_DARK }}
+          className="relative overflow-hidden px-4 py-10 sm:px-6 sm:py-16 md:px-16 lg:px-24"
+        >
+          <div
+            className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 sm:h-64 sm:w-64 rounded-full opacity-10"
             style={{
-              border: '2px solid rgba(255,255,255,0.35)',
-              background: 'rgba(255,255,255,0.12)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
+              background: 'radial-gradient(circle, #ffffff 0%, transparent 70%)',
             }}
-          >
-            Start Selling Today{' '}
-            <ArrowRight size={14} className="sm:w-4 sm:h-4" />
-          </Link>
-        </div>
-      </section>
-    </div>
+          />
+          <div className="relative z-10 mx-auto max-w-6xl flex flex-col gap-6 sm:gap-8 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-sm text-center md:text-left">
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-white leading-tight mb-2 sm:mb-3">
+                Ready to open your own store?
+              </h2>
+              <p className="text-xs sm:text-sm text-white/70 leading-relaxed">
+                Join our curated community of elite sellers and reach thousands of
+                discerning customers worldwide.
+              </p>
+            </div>
+
+            <Link
+              to="/register"
+              className="self-center md:self-auto shrink-0 inline-flex items-center gap-2 rounded-full px-6 sm:px-8 py-3 sm:py-4 text-xs sm:text-sm font-bold text-white transition hover:gap-3 active:scale-95"
+              style={{
+                border: '2px solid rgba(255,255,255,0.35)',
+                background: 'rgba(255,255,255,0.12)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+              }}
+            >
+              Start Selling Today{' '}
+              <ArrowRight size={14} className="sm:w-4 sm:h-4" />
+            </Link>
+          </div>
+        </section>
+      </div>
+    </Layout>
   );
 }
