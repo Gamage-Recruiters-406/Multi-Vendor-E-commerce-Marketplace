@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Filter, PencilLine, Plus, Search, Trash2, X } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Layout from "../../components/Layouts/Layout";
 
 const stockStyles = {
@@ -53,7 +53,6 @@ const getAuthToken = () => {
 };
 
 export default function Products() {
-	const navigate = useNavigate();
 	const [products, setProducts] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
@@ -370,7 +369,7 @@ export default function Products() {
 																	aria-label={`Edit ${product?.name || "product"}`}
 																	onClick={(event) => {
 																		event.stopPropagation();
-																		navigate(`/vendor/product_edit/${product?._id}`);
+																		window.location.href = `/vendor/product_update/${product?._id}`;
 																	}}
 																>
 																	<PencilLine size={16} />
