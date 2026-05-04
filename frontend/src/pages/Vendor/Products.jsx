@@ -302,10 +302,10 @@ export default function Products() {
 									<table className="min-w-full divide-y divide-slate-200 text-left">
 										<thead className="bg-slate-50 text-xs uppercase tracking-[0.12em] text-slate-500">
 											<tr>
-												<th className="px-4 py-4 font-medium">Product</th>
-												<th className="px-4 py-4 font-medium">Category</th>
-												<th className="px-4 py-4 font-medium">Price</th>
-												<th className="px-4 py-4 font-medium">Stock</th>
+												<th className="px-4 py-4 font-medium text-left">Product</th>
+												<th className="px-4 py-4 font-medium text-center">Category</th>
+												<th className="px-4 py-4 font-medium text-center">Price</th>
+												<th className="px-4 py-4 font-medium text-center">Stock</th>
 												<th className="px-4 py-4 font-medium text-right">Actions</th>
 											</tr>
 										</thead>
@@ -325,7 +325,7 @@ export default function Products() {
 														className="cursor-pointer hover:bg-slate-50/80"
 														onClick={() => openProductModal(product)}
 													>
-														<td className="px-4 py-4">
+														<td className="px-4 py-4 text-left">
 															<div className="flex items-center gap-3">
 																<div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-slate-100">
 																	{imageUrl ? (
@@ -342,22 +342,19 @@ export default function Products() {
 																</div>
 																<div>
 																	<p className="font-medium text-slate-900">{product?.name || "Unnamed product"}</p>
-																	{product?.description && (
-																		<p className="truncate text-xs text-slate-500">{product.description}</p>
-																	)}
 																</div>
 															</div>
 														</td>
-														<td className="px-4 py-4">
+														<td className="px-4 py-4 text-center">
 															<span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
 																{product?.category?.name || "N/A"}
 															</span>
 														</td>
-														<td className="px-4 py-4 text-sm font-medium text-slate-900">
+														<td className="px-4 py-4 text-center text-sm font-medium text-slate-900">
 															${displayPrice}
 														</td>
-														<td className="px-4 py-4">
-															<div className="inline-flex flex-col gap-1">
+														<td className="px-4 py-4 text-center">
+															<div className="flex flex-col items-center justify-center gap-1">
 																<span
 																	className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${stockStyles[stockStatus.tone]}`}
 																>
@@ -366,7 +363,7 @@ export default function Products() {
 																<span className="text-xs text-slate-400">{product?.stock || 0} units</span>
 															</div>
 														</td>
-														<td className="px-4 py-4">
+														<td className="px-4 py-4 text-right">
 															<div className="flex items-center justify-end gap-3 text-slate-400">
 																<button
 																	type="button"
