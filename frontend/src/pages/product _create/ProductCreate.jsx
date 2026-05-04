@@ -12,6 +12,7 @@ const ProductCreate = () => {
     description: '',
     price: '',
     stock: '',
+    store: '',
     category: '',
     images: [],
     attributes: {
@@ -82,8 +83,8 @@ const ProductCreate = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     // Validate required fields
-    if (!formData.title || !formData.price || !formData.category) {
-      alert("Title, Price, and Category are required.");
+    if (!formData.title || !formData.price || !formData.category || !storeId) {
+      alert("Name, Price, Category, and Store are required.");
       return;
     }
     
@@ -95,7 +96,8 @@ const ProductCreate = () => {
       data.append('price', formData.price);
       data.append('category', formData.category);
       data.append('stock', formData.stock);
-      data.append('attributes', JSON.stringify(formData.attributes));
+      data.append('store',);
+     // data.append('attributes', JSON.stringify(formData.attributes));
       
       formData.images.forEach(file => data.append('images', file));
 
@@ -223,6 +225,8 @@ const ProductCreate = () => {
           <div id="section-basic-details" className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
               <div>
+
+
                 <h2 className="text-lg font-bold text-slate-900">Product Details</h2>
                 <p className="text-sm text-slate-500 mt-1">Write a clear, informative description for your product</p>
               </div>
