@@ -163,6 +163,16 @@ export const getVendorProductsByStore = async (storeId) => {
   return handleResponse(res);
 };
 
+export const getPaidPaymentsByStore = async (storeId) => {
+  const res = await fetch(
+    `${BASE_URL}/payment/get-paid-payments-for-owner?store_id=${storeId}`,
+    {
+      headers: getAuthHeaders(),
+    },
+  );
+
+  return handleResponse(res);
+};
 //export const getPaidPaymentsForOwner = async () => {
 //const res = await fetch(`${BASE_URL}/payments/get-paid-payments-for-owner`, {
 //headers: getAuthHeaders(),
