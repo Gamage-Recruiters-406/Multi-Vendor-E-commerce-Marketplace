@@ -503,7 +503,7 @@ export default function Home() {
 
                   <div className="flex-1 grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 transition-all duration-300">
                     {currentProducts.length > 0 ? (
-                      currentProducts.map((product, idx) => (
+                      currentProducts.map((product) => (
                         <div
                           key={product._id}
                           className="group overflow-hidden rounded-xl sm:rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md hover:-translate-y-0.5 cursor-pointer flex flex-col h-full"
