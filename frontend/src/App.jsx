@@ -24,6 +24,8 @@ import SalesAnalytics from "./pages/Vendor/SalesAnalytics";
 import VendorDashboard from "./pages/VendorDashboard";
 import BuyerProductDetailsPage from "./pages/Buyer/BuyerProductDetailsPage";
 import ShoppingCartPage from "./pages/ShoppingCart/ShoppingCartPage";
+import UserManagement from './pages/admin/UserManagement'
+
 
 function App() {
   return (
@@ -69,6 +71,7 @@ function App() {
             path="/admin/announcements/edit/:id"
             element={<EditAnnouncement />}
           />
+           <Route path="/admin/users" element={<UserManagement />} />
           {/* Buyer */}
           <Route
             path="/buyer/productdetails/:id"
