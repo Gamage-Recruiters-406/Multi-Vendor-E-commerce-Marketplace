@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, ShoppingCart, Heart } from "lucide-react";
 
 const normalizeUrlPart = (value = "") => value.replace(/\/+$/, "");
 const ensureLeadingSlash = (value = "") => (value.startsWith("/") ? value : `/${value}`);
@@ -276,6 +276,35 @@ export default function Header({ userRole, userName }) {
 					<button type="button" className={ui.cta}>
 						{config.cta}
 					</button>
+				)}
+
+				{config.tone === "buyer" && (
+					<>
+						{/* Wishlist */}
+						<button
+						type="button"
+						aria-label="Wishlist"
+						className={`relative grid h-9 w-9 place-items-center rounded-full border border-transparent transition ${ui.notification}`}
+						onClick={() => (window.location.href = "/wishlist")}
+						>
+						<Heart size={16} />
+						</button>
+
+						{/* Cart */}
+						<button
+						type="button"
+						aria-label="Cart"
+						className={`relative grid h-9 w-9 place-items-center rounded-full border border-transparent transition ${ui.notification}`}
+						onClick={() => (window.location.href = "/cart")}
+						>
+						<ShoppingCart size={16} />
+						
+						{/* Optional badge */}
+						{/* <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 text-[10px] flex items-center justify-center rounded-full bg-emerald-600 text-white">
+							2
+						</span> */}
+						</button>
+					</>
 				)}
 
 				<button
