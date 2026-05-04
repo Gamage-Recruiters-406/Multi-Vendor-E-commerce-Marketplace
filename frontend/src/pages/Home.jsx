@@ -7,12 +7,13 @@ import {
   Store,
   ShieldCheck,
   MessageSquare,
+  Eye,
 } from 'lucide-react';
 import Hero from '../components/home/Hero';
 import Announcements from '../components/home/Announcements';
 import HomeService from '../services/HomeService';
-import { Link } from 'react-router-dom';
-import Layout from '../components/Layouts/Layout'; // Import Layout
+import { Link, useNavigate } from 'react-router-dom';
+import Layout from '../components/Layouts/Layout';
 
 const GREEN = '#1A9F73';
 const GREEN_DARK = '#158a62';
@@ -47,7 +48,8 @@ const features = [
 ];
 
 export default function Home() {
-  const [addedIdx, setAddedIdx] = useState(null);
+  const navigate = useNavigate();
+  const [viewedIdx, setViewedIdx] = useState(null);
   const [allStores, setAllStores] = useState([]);
   const [recentProducts, setRecentProducts] = useState([]);
   const [currentStorePage, setCurrentStorePage] = useState(0);
@@ -177,17 +179,14 @@ export default function Home() {
     setCurrentAnnouncementIndex(0);
   }, [announcements.length]);
 
-  const handleAddToCart = (idx) => {
-    setAddedIdx(idx);
-    setTimeout(() => setAddedIdx(null), 1400);
+  const handleViewProduct = (productId) => {
+    setViewedIdx(productId);
+    setTimeout(() => setViewedIdx(null), 1400);
+    navigate(`/buyer/productdetails/${productId}`);
   };
 
   const handleVisitStore = (storeId) => {
-    window.location.href = `/store/${storeId}`;
-  };
-
-  const handleViewProduct = (productId) => {
-    window.location.href = `/product/${productId}`;
+    navigate(`/store/${storeId}`);
   };
 
   // Announcement navigation handlers
@@ -332,9 +331,9 @@ export default function Home() {
                       currentStores.map((store) => (
                         <div
                           key={store._id}
-                          className="group overflow-hidden rounded-xl sm:rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md hover:-translate-y-0.5"
+                          className="group overflow-hidden rounded-xl sm:rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md hover:-translate-y-0.5 flex flex-col h-full"
                         >
-                          <div className="h-40 sm:h-52 overflow-hidden bg-gray-100">
+                          <div className="h-40 sm:h-52 overflow-hidden bg-gray-100 flex-shrink-0">
                             {store.logo ? (
                               <img
                                 src={store.logo}
@@ -357,20 +356,24 @@ export default function Home() {
                               </div>
                             )}
                           </div>
-                          <div className="px-3 sm:px-4 pt-2 sm:pt-3 pb-1">
-                            <p className="font-bold text-gray-800 text-sm sm:text-base">
-                              {store.name}
-                            </p>
-                            <p className="text-[8px] sm:text-[10px] font-semibold tracking-widest text-gray-400 mt-0.5">
-                              {store.vendor?.name || 'Verified Vendor'}
-                            </p>
-                            {store.description && (
-                              <p className="text-[10px] sm:text-xs text-gray-500 mt-1 sm:mt-2 line-clamp-2">
-                                {store.description}
+                          <div className="px-3 sm:px-4 pt-2 sm:pt-3 pb-1 flex-1 flex flex-col">
+                            <div>
+                              <p className="font-bold text-gray-800 text-sm sm:text-base">
+                                {store.name}
                               </p>
-                            )}
+                              <p className="text-[8px] sm:text-[10px] font-semibold tracking-widest text-gray-400 mt-0.5">
+                                {store.vendor?.name || 'Verified Vendor'}
+                              </p>
+                            </div>
+                            <div className="mt-1 sm:mt-2 min-h-[2.5rem] sm:min-h-[3rem]">
+                              {store.description && (
+                                <p className="text-[10px] sm:text-xs text-gray-500 line-clamp-2">
+                                  {store.description}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                          <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-1 sm:pt-2">
+                          <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-1 sm:pt-2 mt-auto">
                             <button
                               onClick={() => handleVisitStore(store._id)}
                               style={{ backgroundColor: GREEN }}
@@ -503,10 +506,10 @@ export default function Home() {
                       currentProducts.map((product, idx) => (
                         <div
                           key={product._id}
-                          className="group overflow-hidden rounded-xl sm:rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
+                          className="group overflow-hidden rounded-xl sm:rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md hover:-translate-y-0.5 cursor-pointer flex flex-col h-full"
                           onClick={() => handleViewProduct(product._id)}
                         >
-                          <div className="h-40 sm:h-52 overflow-hidden bg-gray-50 relative">
+                          <div className="h-40 sm:h-52 overflow-hidden bg-gray-50 relative flex-shrink-0">
                             {product.images && product.images[0] ? (
                               <img
                                 src={product.images[0]}
@@ -541,21 +544,23 @@ export default function Home() {
                               </span>
                             )}
                           </div>
-                          <div className="px-3 sm:px-4 pt-2 sm:pt-3 pb-1">
-                            <p className="font-bold text-gray-800 text-sm sm:text-base line-clamp-1">
-                              {product.name}
-                            </p>
-                            <p className="text-[8px] sm:text-[10px] font-semibold tracking-widest text-gray-400 mt-0.5 uppercase">
-                              {getCategoryName(product)}
-                            </p>
-                            {product.description && (
-                              <p className="text-[10px] sm:text-xs text-gray-500 mt-1 sm:mt-2 line-clamp-2">
-                                {product.description}
+                          <div className="px-3 sm:px-4 pt-2 sm:pt-3 pb-1 flex-1 flex flex-col">
+                            <div>
+                              <p className="font-bold text-gray-800 text-sm sm:text-base line-clamp-1">
+                                {product.name}
                               </p>
-                            )}
-                          </div>
-                          <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-1 sm:pt-2">
-                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-[8px] sm:text-[10px] font-semibold tracking-widest text-gray-400 mt-0.5 uppercase">
+                                {getCategoryName(product)}
+                              </p>
+                            </div>
+                            <div className="mt-1 sm:mt-2 min-h-[2.5rem] sm:min-h-[3rem]">
+                              {product.description && (
+                                <p className="text-[10px] sm:text-xs text-gray-500 line-clamp-2">
+                                  {product.description}
+                                </p>
+                              )}
+                            </div>
+                            <div className="mt-2">
                               <span
                                 style={{ color: GREEN }}
                                 className="text-base sm:text-lg font-bold"
@@ -563,25 +568,20 @@ export default function Home() {
                                 {formatPrice(product.price)}
                               </span>
                             </div>
+                          </div>
+                          <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-1 sm:pt-2 mt-auto">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleAddToCart(idx);
+                                handleViewProduct(product._id);
                               }}
-                              disabled={product.stock === 0}
                               style={{
-                                backgroundColor:
-                                  product.stock === 0 ? '#cccccc' : GREEN,
-                                cursor:
-                                  product.stock === 0 ? 'not-allowed' : 'pointer',
+                                backgroundColor: GREEN,
                               }}
-                              className="w-full rounded-lg py-1.5 sm:py-2.5 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-white transition hover:brightness-110 active:scale-95"
+                              className="w-full rounded-lg py-1.5 sm:py-2.5 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-white transition hover:brightness-110 active:scale-95 flex items-center justify-center gap-2"
                             >
-                              {addedIdx === idx
-                                ? '✓ Added!'
-                                : product.stock === 0
-                                  ? 'Out of Stock'
-                                  : 'Add to Cart'}
+                              <Eye size={14} />
+                              {viewedIdx === product._id ? '✓ Viewed!' : 'View Product'}
                             </button>
                           </div>
                         </div>
