@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, CheckCircle2, ShieldAlert, Image as ImageIcon, 
-  Send, Star, Upload, X, Check
+  Send, Star, Upload, X, Check, Store
 } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import Header from '../../components/Layouts/Header';
 import Footer from '../../components/Layouts/Footer';
 
 const ProductCreate = () => {
+  const [searchParams] = useSearchParams();
+  const storeId = searchParams.get('storeId');
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     price: '',
     stock: '',
-    store: '',
+    store: storeId || '',
     category: '',
     images: [],
     attributes: {
@@ -22,6 +27,8 @@ const ProductCreate = () => {
     }
   });
 
+  const [storeName, setStoreName] = useState('');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [categories, setCategories] = useState([]);
@@ -29,6 +36,22 @@ const ProductCreate = () => {
 
 
   useEffect(() => {
+    const fetchStoreDetails = async () => {
+      if (!storeId) return;
+      try {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+        const response = await fetch(`${baseUrl}/api/v1/store/${storeId}`);
+        const result = await response.json();
+        if (result.success) {
+          setStoreName(result.data.name);
+        }
+      } catch (error) {
+        console.error("Failed to fetch store details", error);
+      }
+    };
+
+    fetchStoreDetails();
+
     const fetchCategories = async () => {
       try {
         const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
@@ -96,8 +119,7 @@ const ProductCreate = () => {
       data.append('price', formData.price);
       data.append('category', formData.category);
       data.append('stock', formData.stock);
-      data.append('store',);
-     // data.append('attributes', JSON.stringify(formData.attributes));
+      data.append('store', storeId);
       
       formData.images.forEach(file => data.append('images', file));
 
@@ -223,14 +245,31 @@ const ProductCreate = () => {
           
           {/* Section: Product Details */}
           <div id="section-basic-details" className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-              <div>
-
-
-                <h2 className="text-lg font-bold text-slate-900">Product Details</h2>
-                <p className="text-sm text-slate-500 mt-1">Write a clear, informative description for your product</p>
+            <div className="px-8 py-6 border-b border-slate-50 bg-slate-50/50 flex flex-col space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Product Details</h2>
+                  <p className="text-sm text-slate-500 mt-1">Write a clear, informative description for your product</p>
+                </div>
+                <span className="text-xs font-semibold text-slate-400 bg-white px-3 py-1 rounded-full border border-slate-100">Step 1 of 4</span>
               </div>
-              <span className="text-xs font-semibold text-slate-400 bg-white px-3 py-1 rounded-full border border-slate-100">Step 1 of 4</span>
+
+              {/* Read-only Store Display Section */}
+              <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-emerald-100 text-emerald-600 p-2.5 rounded-xl">
+                    <Store className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-0.5">Adding Product To</p>
+                    <p className="text-base font-bold text-slate-900">{storeName || 'Loading Store...'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-full border border-emerald-100 shadow-sm">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                  <span className="text-[10px] font-black text-emerald-700 uppercase tracking-tighter">Verified Store</span>
+                </div>
+              </div>
             </div>
             
             <div className="p-8 space-y-6">
