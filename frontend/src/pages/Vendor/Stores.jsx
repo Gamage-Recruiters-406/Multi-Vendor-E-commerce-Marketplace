@@ -265,7 +265,7 @@ export default function StoresPage() {
                                 )}
                             </div>
                             <div>
-                              <div className="font-semibold text-slate-900">{store.name}</div>
+                              <div className="font-semibold text-slate-900 group-hover:text-emerald-600 transition-colors">{store.name}</div>
                             </div>
                           </div>
                         </td>
@@ -376,6 +376,16 @@ export default function StoresPage() {
           className="z-50 w-36 rounded-xl border border-slate-200 bg-white shadow-lg"
           onClick={(e) => e.stopPropagation()}
         >
+          <button
+            className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50"
+            onClick={() => {
+              navigate(`/vendor/store/${openMenuId}`);
+              setOpenMenuId(null);
+            }}
+          >
+            View
+          </button>
+
           <button
             className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50"
             onClick={() => {
