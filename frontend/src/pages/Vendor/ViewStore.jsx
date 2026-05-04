@@ -73,7 +73,7 @@ const ViewStore = () => {
                         {/* VENDOR BUTTON */}
                         {isOwner && (
                             <Link 
-                                to={`/vendor/add-product?storeId=${store._id}`} 
+                                to={`/vendor/product_create?storeId=${store._id}`} 
                                 className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-2 hover:bg-emerald-700 shadow-xl transition active:scale-95 uppercase tracking-widest"
                             >
                                 <PlusCircle size={22} /> ADD NEW PRODUCT
