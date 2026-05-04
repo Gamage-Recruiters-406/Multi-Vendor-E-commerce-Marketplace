@@ -6,6 +6,7 @@ import {
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import Header from '../../components/Layouts/Header';
 import Footer from '../../components/Layouts/Footer';
+import toast from 'react-hot-toast';
 
 const ProductCreate = () => {
   const [searchParams] = useSearchParams();
@@ -107,7 +108,7 @@ const ProductCreate = () => {
     e.preventDefault();
     // Validate required fields
     if (!formData.title || !formData.price || !formData.category || !storeId) {
-      alert("Name, Price, Category, and Store are required.");
+      toast.error("Name, Price, Category, and Store are required.");
       return;
     }
     
@@ -137,14 +138,18 @@ const ProductCreate = () => {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        alert("Listing published successfully!");
+        toast.success("Listing published successfully!");
         console.log("Success result:", result.data);
+        // Navigate back to the store view
+        if (storeId) {
+          navigate(`/vendor/store/${storeId}`);
+        }
       } else {
-        alert(`Failed to publish: ${result.message || 'Unknown error'}`);
+        toast.error(`Failed to publish: ${result.message || 'Unknown error'}`);
       }
     } catch (error) {
        console.error("Submission error:", error);
-       alert("An error occurred while publishing the listing.");
+       toast.error("An error occurred while publishing the listing.");
     } finally {
        setIsSubmitting(false);
     }
