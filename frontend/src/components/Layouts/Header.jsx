@@ -65,7 +65,7 @@ const roleConfigs = {
 			{ label: "Dashboard", path: "/vendor/dashboard" },
 			{ label: "Products", path: "/vendor/products" },
 			{ label: "Orders", path: "/vendor/orders" },
-			{ label: "Analytics", path: "/vendor/analytics" },
+			{ label: "Analytics", path: "/vendor/sales-analytics" },
 			{ label: "Settings", path: "/vendor/settings" },
 		],
 		cta: "STORE LIVE",
