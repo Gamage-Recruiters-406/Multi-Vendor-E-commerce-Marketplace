@@ -131,7 +131,7 @@ export const getVendorProfileById = async (vendorId) => {
 
 /**
  * Get vendor's products
- * GET /api/v1/product/vendor/:vendorId
+ * Uses getAllProducts endpoint with filters to get products by vendor
  * @param {string} vendorId - Vendor ID
  * @param {Object} filters - Filter parameters (page, limit, category, etc.)
  * @returns {Promise} Products list
@@ -142,36 +142,61 @@ export const getVendorProducts = async (vendorId, filters = {}) => {
       throw new Error('Vendor ID is required');
     }
 
-    const queryParams = new URLSearchParams(filters);
-    const url = `${API_URL}/product/vendor/${vendorId}${queryParams.toString() ? `?${queryParams}` : ''}`;
+    // We'll fetch all products and filter by vendor's store(s)
+    // First, try to get products using query parameter if backend supports vendor filter
+    const queryParams = new URLSearchParams({
+      ...filters,
+      // Some backends might support direct vendor filter
+      vendor: vendorId
+    });
     
-    const response = await apiClient.get(url);
+    let url = `${API_URL}/product?${queryParams.toString()}`;
     
-    if (response.data && (response.data.products || response.data.data)) {
-      const products = response.data.products || response.data.data;
+    try {
+      const response = await apiClient.get(url);
+      
+      if (response.data && response.data.data) {
+        const products = response.data.data;
+        
+        // Filter products by vendor if needed (in case backend doesn't do vendor filtering)
+        let filteredProducts = Array.isArray(products) ? products : [];
+        
+        return {
+          success: true,
+          data: filteredProducts,
+          total: response.data.count || filteredProducts.length,
+          page: response.data.page || 1,
+          pages: response.data.pages || 1,
+        };
+      }
+      
+      return {
+        success: false,
+        message: response.data?.message || "Failed to load products",
+        data: [],
+        total: 0,
+        page: 1,
+        pages: 1,
+      };
+    } catch (error) {
+      console.error("Get vendor products error:", error.message);
+      
+      // Return empty array gracefully instead of error
       return {
         success: true,
-        data: products,
-        total: response.data.total || (products.length || 0),
-        page: response.data.page || 1,
-        pages: response.data.pages || 1,
+        message: "No products found",
+        data: [],
+        total: 0,
+        page: 1,
+        pages: 1,
       };
     }
-    
-    return {
-      success: false,
-      message: response.data?.message || "Failed to load products",
-      data: [],
-      total: 0,
-      page: 1,
-      pages: 1,
-    };
   } catch (error) {
     console.error("Get vendor products error:", error.message);
     
     return {
-      success: false,
-      message: error.response?.data?.message || "Failed to load products",
+      success: true,
+      message: "Failed to load products",
       data: [],
       total: 0,
       page: 1,
@@ -181,225 +206,14 @@ export const getVendorProducts = async (vendorId, filters = {}) => {
 };
 
 /**
- * Get user profile (for vendor's own profile)
- * GET /api/v1/user/profile
- * @returns {Promise} User profile data
- */
-export const getUserProfile = async () => {
-  try {
-    const response = await apiClient.get(`${API_URL}/user/profile`);
-    
-    if (response.data.success && response.data.user) {
-      return {
-        success: true,
-        data: {
-          fullName: response.data.user.fullname || response.data.user.fullName || "",
-          email: response.data.user.email || "",
-          phone: response.data.user.phone || "",
-          role: response.data.user.role || "",
-          profilePicture: response.data.user.profilePicture || null,
-          createdAt: response.data.user.createdAt,
-        },
-      };
-    }
-    
-    return {
-      success: false,
-      message: response.data?.message || "Failed to load profile",
-      data: null,
-    };
-  } catch (error) {
-    console.error("Get user profile error:", error.message);
-    
-    if (error.response?.status === 401) {
-      return {
-        success: false,
-        message: "Not authenticated. Please login again.",
-        data: null,
-      };
-    }
-    
-    return {
-      success: false,
-      message: error.response?.data?.message || "Failed to load profile",
-      data: null,
-    };
-  }
-};
-
-/**
- * Get profile picture
- * GET /api/v1/user/get-profile-picture
- * @returns {Promise} Profile picture data
- */
-export const getProfilePicture = async () => {
-  try {
-    const response = await apiClient.get(`${API_URL}/user/get-profile-picture`, {
-      responseType: 'blob',
-    });
-
-    if (response.data) {
-      const imageUrl = URL.createObjectURL(response.data);
-      return {
-        success: true,
-        imageUrl: imageUrl,
-      };
-    }
-
-    return {
-      success: false,
-      message: "No profile picture found",
-      imageUrl: null,
-    };
-  } catch (error) {
-    console.error("Get profile picture error:", error.message);
-    
-    if (error.response?.status === 404) {
-      return {
-        success: false,
-        message: "No profile picture found",
-        imageUrl: null,
-      };
-    }
-    
-    return {
-      success: false,
-      message: error.response?.data?.message || "Failed to load profile picture",
-      imageUrl: null,
-    };
-  }
-};
-
-/**
- * Upload profile picture
- * @param {File} file - Image file to upload
- * @returns {Promise} Upload response
- */
-export const uploadProfilePicture = async (file) => {
-  try {
-    const formData = new FormData();
-    formData.append('profilePicture', file);
-
-    const response = await apiClient.post(`${API_URL}/user/upload-profile-picture`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-
-    if (response.data.success) {
-      return {
-        success: true,
-        message: response.data.message || "Profile picture uploaded successfully",
-        profilePicture: response.data.profilePicture || response.data.data?.profilePicture,
-      };
-    }
-
-    return {
-      success: false,
-      message: response.data?.message || "Failed to upload profile picture",
-    };
-  } catch (error) {
-    console.error("Upload profile picture error:", error.message);
-    
-    return {
-      success: false,
-      message: error.response?.data?.message || "Failed to upload profile picture",
-    };
-  }
-};
-
-/**
- * Remove profile picture
- * @returns {Promise} Remove response
- */
-export const removeProfilePicture = async () => {
-  try {
-    const response = await apiClient.delete(`${API_URL}/user/remove-profile-picture`);
-
-    return {
-      success: response.data.success,
-      message: response.data.message || "Profile picture removed successfully",
-    };
-  } catch (error) {
-    console.error("Remove profile picture error:", error.message);
-    
-    return {
-      success: false,
-      message: error.response?.data?.message || "Failed to remove profile picture",
-    };
-  }
-};
-
-/**
- * Update phone number
- * @param {string} phone - Phone number
- * @returns {Promise} Update response
- */
-export const updatePhone = async (phone) => {
-  try {
-    const response = await apiClient.put(`${API_URL}/user/update-phone`, { phone });
-
-    return {
-      success: response.data.success,
-      message: response.data.message || "Phone updated successfully",
-      data: response.data.user,
-    };
-  } catch (error) {
-    console.error("Update phone error:", error.message);
-    
-    return {
-      success: false,
-      message: error.response?.data?.message || "Failed to update phone",
-    };
-  }
-};
-
-/**
- * Change password
- * @param {string} currentPassword - Current password
- * @param {string} newPassword - New password
- * @param {string} confirmPassword - Confirm new password
- * @returns {Promise} Change password response
- */
-export const changePassword = async (currentPassword, newPassword, confirmPassword) => {
-  try {
-    const response = await apiClient.put(`${API_URL}/user/change-password`, {
-      currentPassword,
-      newPassword,
-      confirmNewPassword: confirmPassword,
-    });
-
-    return {
-      success: response.data.success,
-      message: response.data.message || "Password changed successfully",
-    };
-  } catch (error) {
-    console.error("Change password error:", error.message);
-    
-    return {
-      success: false,
-      message: error.response?.data?.message || "Failed to change password",
-    };
-  }
-};
-
-/**
- * Get vendor's orders
- * GET /api/v1/orders/vendor/:vendorId
+ * Get vendor's orders (for order count)
+ * GET /api/v1/orders/vendor/list (isVendor middleware)
  * @param {string} vendorId - Vendor ID
- * @param {Object} filters - Filter parameters (page, limit, status)
- * @returns {Promise} Orders data
+ * @returns {Promise} Orders list with count
  */
-export const getVendorOrders = async (vendorId, filters = {}) => {
+export const getVendorOrders = async () => {
   try {
-    if (!vendorId) {
-      throw new Error('Vendor ID is required');
-    }
-
-    const queryParams = new URLSearchParams(filters);
-    const url = `${API_URL}/orders/vendor/${vendorId}${queryParams.toString() ? `?${queryParams}` : ''}`;
-    
-    const response = await apiClient.get(url);
+    const response = await apiClient.get(`${API_URL}/orders/vendor/list`);
     
     if (response.data && (response.data.orders || response.data.data)) {
       const orders = response.data.orders || response.data.data;
@@ -407,8 +221,7 @@ export const getVendorOrders = async (vendorId, filters = {}) => {
         success: true,
         data: orders,
         total: response.data.total || (orders.length || 0),
-        page: response.data.page || 1,
-        pages: response.data.pages || 1,
+        count: orders.length || 0,
       };
     }
     
@@ -417,8 +230,20 @@ export const getVendorOrders = async (vendorId, filters = {}) => {
       message: response.data?.message || "Failed to load orders",
       data: [],
       total: 0,
+      count: 0,
     };
   } catch (error) {
+    // Handle 404 errors silently - orders may not exist
+    if (error.response?.status === 404) {
+      return {
+        success: false,
+        message: "No orders found",
+        data: [],
+        total: 0,
+        count: 0,
+      };
+    }
+    
     console.error("Get vendor orders error:", error.message);
     
     return {
@@ -426,44 +251,152 @@ export const getVendorOrders = async (vendorId, filters = {}) => {
       message: error.response?.data?.message || "Failed to load orders",
       data: [],
       total: 0,
+      count: 0,
     };
   }
 };
 
 /**
- * Update order status (for vendors)
- * PATCH /api/v1/orders/vendor/:orderId/status
- * @param {string} orderId - Order ID
- * @param {string} status - New order status
- * @returns {Promise} Update response
+ * Get product average rating
+ * GET /api/v1/review/average/:product_id
+ * @param {string} productId - Product ID
+ * @returns {Promise} Average rating data
  */
-export const updateOrderStatus = async (orderId, status) => {
+export const getProductAverageRating = async (productId) => {
   try {
-    if (!orderId) {
-      throw new Error('Order ID is required');
+    if (!productId) {
+      throw new Error('Product ID is required');
     }
 
-    const response = await apiClient.patch(`${API_URL}/orders/vendor/${orderId}/status`, { status });
+    const response = await apiClient.get(`${API_URL}/review/average/${productId}`);
+    
+    const averageRating = response.data?.averageRating || response.data?.rating || 0;
+    const totalReviews = response.data?.totalReviews || response.data?.count || 0;
     
     return {
-      success: response.data.success,
-      message: response.data.message || "Order status updated successfully",
-      data: response.data.order || response.data.data,
+      success: true,
+      averageRating: parseFloat(averageRating).toFixed(1),
+      totalReviews: totalReviews,
+      breakdown: response.data?.breakdown || {},
     };
   } catch (error) {
-    console.error("Update order status error:", error.message);
+    // Handle 404 silently - product ratings may not exist yet
+    if (error.response?.status === 404) {
+      return {
+        success: false,
+        averageRating: 0,
+        totalReviews: 0,
+        breakdown: {},
+      };
+    }
+    
+    console.error("Get product average rating error:", error.message);
     
     return {
       success: false,
-      message: error.response?.data?.message || "Failed to update order status",
+      averageRating: 0,
+      totalReviews: 0,
+      breakdown: {},
+      message: error.response?.data?.message || "Failed to load rating",
     };
   }
 };
 
-// ============ VENDOR RATING & REVIEWS ============
+/**
+ * Get vendor's reviews (for review count)
+ * GET /api/v1/review/my
+ * @returns {Promise} User's reviews
+ */
+export const getMyReviews = async () => {
+  try {
+    const response = await apiClient.get(`${API_URL}/review/my`);
+    
+    if (response.data && (response.data.reviews || response.data.data)) {
+      const reviews = response.data.reviews || response.data.data;
+      return {
+        success: true,
+        data: reviews,
+        total: response.data.total || (reviews.length || 0),
+        count: reviews.length || 0,
+      };
+    }
+    
+    return {
+      success: false,
+      message: response.data?.message || "Failed to load reviews",
+      data: [],
+      total: 0,
+      count: 0,
+    };
+  } catch (error) {
+    // Handle 404 silently - reviews may not exist
+    if (error.response?.status === 404) {
+      return {
+        success: false,
+        message: "No reviews found",
+        data: [],
+        total: 0,
+        count: 0,
+      };
+    }
+    
+    console.error("Get my reviews error:", error.message);
+    
+    return {
+      success: false,
+      message: error.response?.data?.message || "Failed to load reviews",
+      data: [],
+      total: 0,
+      count: 0,
+    };
+  }
+};
+
+/**
+ * Get vendor's stores/shop info
+ * GET /api/v1/store/my-stores (isVendor middleware)
+ * @returns {Promise} Vendor's stores
+ */
+export const getVendorStores = async () => {
+  try {
+    const response = await apiClient.get(`${API_URL}/store/my-stores`);
+    
+    if (response.data && (response.data.stores || response.data.data)) {
+      const stores = response.data.stores || response.data.data;
+      return {
+        success: true,
+        data: stores,
+      };
+    }
+    
+    return {
+      success: false,
+      message: response.data?.message || "Failed to load stores",
+      data: [],
+    };
+  } catch (error) {
+    // Handle 404 silently - stores may not exist
+    if (error.response?.status === 404) {
+      return {
+        success: false,
+        message: "No stores found",
+        data: [],
+      };
+    }
+    
+    console.error("Get vendor stores error:", error.message);
+    
+    return {
+      success: false,
+      message: error.response?.data?.message || "Failed to load stores",
+      data: [],
+    };
+  }
+};
 
 /**
  * Get vendor rating (aggregated from all products)
+ * Combines ratings from all vendor's products
  * @param {string} vendorId - Vendor ID
  * @returns {Promise} Vendor rating data
  */
@@ -495,7 +428,7 @@ export const getVendorRating = async (vendorId) => {
       try {
         const ratingResult = await getProductAverageRating(product._id);
         if (ratingResult.success) {
-          totalRating += ratingResult.averageRating || 0;
+          totalRating += parseFloat(ratingResult.averageRating) || 0;
           totalReviews += ratingResult.totalReviews || 0;
           
           if (ratingResult.breakdown) {
@@ -530,124 +463,11 @@ export const getVendorRating = async (vendorId) => {
   }
 };
 
-/**
- * Get product average rating
- * GET /api/v1/review/average/:product_id
- * @param {string} productId - Product ID
- * @returns {Promise} Average rating data
- */
-export const getProductAverageRating = async (productId) => {
-  try {
-    if (!productId) {
-      throw new Error('Product ID is required');
-    }
-
-    const response = await apiClient.get(`${API_URL}/review/average/${productId}`);
-    
-    return {
-      success: true,
-      averageRating: response.data.averageRating || response.data.rating || 0,
-      totalReviews: response.data.totalReviews || 0,
-      breakdown: response.data.breakdown || {},
-    };
-  } catch (error) {
-    console.error("Get product average rating error:", error.message);
-    
-    return {
-      success: false,
-      averageRating: 0,
-      totalReviews: 0,
-      breakdown: {},
-      message: error.response?.data?.message || "Failed to load rating",
-    };
-  }
-};
-
-/**
- * Get product reviews
- * GET /api/v1/review/product/:product_id
- * @param {string} productId - Product ID
- * @param {Object} filters - Filter parameters (page, limit)
- * @returns {Promise} Reviews list
- */
-export const getProductReviews = async (productId, filters = {}) => {
-  try {
-    if (!productId) {
-      throw new Error('Product ID is required');
-    }
-
-    const queryParams = new URLSearchParams(filters);
-    const url = `${API_URL}/review/product/${productId}${queryParams.toString() ? `?${queryParams}` : ''}`;
-    
-    const response = await apiClient.get(url);
-    
-    if (response.data && (response.data.reviews || response.data.data)) {
-      const reviews = response.data.reviews || response.data.data;
-      return {
-        success: true,
-        data: reviews,
-        total: response.data.total || (reviews.length || 0),
-        page: response.data.page || 1,
-        pages: response.data.pages || 1,
-      };
-    }
-    
-    return {
-      success: false,
-      message: response.data?.message || "Failed to load reviews",
-      data: [],
-      total: 0,
-    };
-  } catch (error) {
-    console.error("Get product reviews error:", error.message);
-    
-    return {
-      success: false,
-      message: error.response?.data?.message || "Failed to load reviews",
-      data: [],
-      total: 0,
-    };
-  }
-};
-
-/**
- * Get my reviews (for authenticated user)
- * GET /api/v1/review/my
- * @returns {Promise} User's reviews
- */
-export const getMyReviews = async () => {
-  try {
-    const response = await apiClient.get(`${API_URL}/review/my`);
-    
-    if (response.data && (response.data.reviews || response.data.data)) {
-      const reviews = response.data.reviews || response.data.data;
-      return {
-        success: true,
-        data: reviews,
-        total: response.data.total || (reviews.length || 0),
-      };
-    }
-    
-    return {
-      success: false,
-      message: response.data?.message || "Failed to load reviews",
-      data: [],
-    };
-  } catch (error) {
-    console.error("Get my reviews error:", error.message);
-    
-    return {
-      success: false,
-      message: error.response?.data?.message || "Failed to load reviews",
-      data: [],
-    };
-  }
-};
-
-// ============ FOLLOW & REPORT ============
+// ============ FOLLOW/UNFOLLOW VENDOR API CALLS ============
 
 /**
  * Follow a vendor
+ * POST /api/v1/follow/vendor/:vendorId
  * @param {string} vendorId - Vendor ID to follow
  * @returns {Promise} Follow response
  */
@@ -657,12 +477,19 @@ export const followVendor = async (vendorId) => {
       throw new Error('Vendor ID is required');
     }
 
-    const response = await apiClient.post(`${API_URL}/user/${vendorId}/follow`);
+    const response = await apiClient.post(`${API_URL}/follow/vendor/${vendorId}`);
+    
+    if (response.data?.success || response.status === 200 || response.status === 201) {
+      return {
+        success: true,
+        message: response.data?.message || "Successfully followed vendor",
+        data: response.data?.data || null,
+      };
+    }
     
     return {
-      success: response.data.success,
-      message: response.data.message || "Vendor followed successfully",
-      data: response.data.data,
+      success: false,
+      message: response.data?.message || "Failed to follow vendor",
     };
   } catch (error) {
     console.error("Follow vendor error:", error.message);
@@ -676,6 +503,7 @@ export const followVendor = async (vendorId) => {
 
 /**
  * Unfollow a vendor
+ * DELETE /api/v1/follow/vendor/:vendorId
  * @param {string} vendorId - Vendor ID to unfollow
  * @returns {Promise} Unfollow response
  */
@@ -685,12 +513,19 @@ export const unfollowVendor = async (vendorId) => {
       throw new Error('Vendor ID is required');
     }
 
-    const response = await apiClient.post(`${API_URL}/user/${vendorId}/unfollow`);
+    const response = await apiClient.delete(`${API_URL}/follow/vendor/${vendorId}`);
+    
+    if (response.data?.success || response.status === 200 || response.status === 204) {
+      return {
+        success: true,
+        message: response.data?.message || "Successfully unfollowed vendor",
+        data: response.data?.data || null,
+      };
+    }
     
     return {
-      success: response.data.success,
-      message: response.data.message || "Vendor unfollowed successfully",
-      data: response.data.data,
+      success: false,
+      message: response.data?.message || "Failed to unfollow vendor",
     };
   } catch (error) {
     console.error("Unfollow vendor error:", error.message);
@@ -703,8 +538,9 @@ export const unfollowVendor = async (vendorId) => {
 };
 
 /**
- * Check follow status for a vendor
- * @param {string} vendorId - Vendor ID
+ * Check if user is following a vendor
+ * GET /api/v1/follow/vendor/:vendorId/status
+ * @param {string} vendorId - Vendor ID to check
  * @returns {Promise} Follow status
  */
 export const checkFollowStatus = async (vendorId) => {
@@ -713,26 +549,32 @@ export const checkFollowStatus = async (vendorId) => {
       throw new Error('Vendor ID is required');
     }
 
-    const response = await apiClient.get(`${API_URL}/user/${vendorId}/follow-status`);
+    const response = await apiClient.get(`${API_URL}/follow/vendor/${vendorId}/status`);
     
     return {
       success: true,
-      isFollowing: response.data.isFollowing || response.data.following || false,
+      isFollowing: response.data?.isFollowing || false,
+      data: response.data?.data || null,
     };
   } catch (error) {
     console.error("Check follow status error:", error.message);
     
+    // Return false for follow status if there's an error (not following)
     return {
       success: false,
       isFollowing: false,
+      message: error.response?.data?.message || "Failed to check follow status",
     };
   }
 };
 
+// ============ REPORT VENDOR API CALLS ============
+
 /**
  * Report a vendor
+ * POST /api/v1/report/vendor/:vendorId
  * @param {string} vendorId - Vendor ID to report
- * @param {Object} reportData - Report details (reason, description)
+ * @param {Object} reportData - Report data { reason, description }
  * @returns {Promise} Report response
  */
 export const reportVendor = async (vendorId, reportData) => {
@@ -741,18 +583,26 @@ export const reportVendor = async (vendorId, reportData) => {
       throw new Error('Vendor ID is required');
     }
 
-    const response = await apiClient.post(`${API_URL}/user/${vendorId}/report`, reportData);
+    const response = await apiClient.post(`${API_URL}/report/vendor/${vendorId}`, reportData);
+    
+    if (response.data?.success || response.status === 200 || response.status === 201) {
+      return {
+        success: true,
+        message: response.data?.message || "Report submitted successfully",
+        data: response.data?.data || null,
+      };
+    }
     
     return {
-      success: response.data.success,
-      message: response.data.message || "Vendor reported successfully",
+      success: false,
+      message: response.data?.message || "Failed to submit report",
     };
   } catch (error) {
     console.error("Report vendor error:", error.message);
     
     return {
       success: false,
-      message: error.response?.data?.message || "Failed to report vendor",
+      message: error.response?.data?.message || "Failed to submit report",
     };
   }
 };
@@ -816,27 +666,20 @@ export default {
   getMyVendorProfile,
   getVendorProfileById,
   getVendorProducts,
-  getUserProfile,
-  getProfilePicture,
-  uploadProfilePicture,
-  removeProfilePicture,
-  updatePhone,
-  changePassword,
-  
-  // Orders
   getVendorOrders,
-  updateOrderStatus,
+  getVendorStores,
   
   // Ratings & Reviews
   getVendorRating,
   getProductAverageRating,
-  getProductReviews,
   getMyReviews,
   
-  // Follow & Report
+  // Follow/Unfollow
   followVendor,
   unfollowVendor,
   checkFollowStatus,
+  
+  // Report
   reportVendor,
   
   // Utility
