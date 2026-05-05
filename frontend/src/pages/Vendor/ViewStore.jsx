@@ -90,7 +90,7 @@ const ViewStore = () => {
                             <h2 className="text-2xl font-black text-emerald-900 flex items-center gap-2 uppercase tracking-tighter">
                                 <ShoppingBag className="text-emerald-500" /> Featured Collection ({products.length})
                             </h2>
-                            <Link to="/vendor/products" className="text-emerald-600 font-black flex items-center gap-1 hover:underline text-xs uppercase tracking-widest">
+                            <Link to={`/vendor/products?storeId=${id}`} className="text-emerald-600 font-black flex items-center gap-1 hover:underline text-xs uppercase tracking-widest">
                                 View All Product <ArrowRight size={16} />
                             </Link>
                         </div>
