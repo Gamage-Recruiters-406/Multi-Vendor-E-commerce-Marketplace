@@ -4,10 +4,20 @@ import {
   getVendorProfile,
   getVendorOrders,
   getAnnouncementsFeed,
-  getVendorSalesAnalytics,
   getMyStores,
   getVendorProductsByStore,
+  getPaidPaymentsByStore,
 } from "../api/vendorDashboard";
+
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 import Layout from "../components/Layouts/Layout";
 
@@ -20,73 +30,31 @@ const STATUS_STYLES = {
 };
 
 function SalesChart({ data, labels }) {
-  if (!data || data.length === 0) return null;
+  if (!data || !labels || data.length === 0) return null;
 
-  const max = Math.max(...data);
-  const W = 500;
-  const H = 130;
-  const PAD = 10;
-
-  const pts = data.map((v, i) => {
-    const x = PAD + (i / (data.length - 1)) * (W - PAD * 2);
-    const y = H - PAD - (v / max) * (H - PAD * 2);
-    return [x, y];
-  });
-
-  const pointStr = pts.map(([x, y]) => `${x},${y}`).join(" ");
-  const areaPath = `M ${pointStr} L ${W - PAD},${H - PAD} L ${PAD},${H - PAD} Z`;
+  const chartRows = labels.map((label, index) => ({
+    label,
+    sales: data[index] || 0,
+  }));
 
   return (
-    <div className="w-full">
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="w-full"
-        style={{ height: 150 }}
-        preserveAspectRatio="none"
-      >
-        {[0, 1, 2, 3].map((i) => (
-          <line
-            key={i}
-            x1={PAD}
-            y1={PAD + i * 28}
-            x2={W - PAD}
-            y2={PAD + i * 28}
-            stroke="#F3F4F6"
-            strokeWidth="1"
-          />
-        ))}
-
-        <path d={areaPath} fill="#1A9F7318" />
-
-        <polyline
-          points={pointStr}
-          fill="none"
-          stroke="#1A9F73"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {pts.map(([x, y], i) => (
-          <circle
-            key={i}
-            cx={x}
-            cy={y}
-            r="4"
-            fill="white"
+    <div className="h-[180px] w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={chartRows}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+          <YAxis tick={{ fontSize: 10 }} />
+          <Tooltip />
+          <Line
+            type="monotone"
+            dataKey="sales"
             stroke="#1A9F73"
-            strokeWidth="2"
+            strokeWidth={3}
+            dot={{ r: 4 }}
+            activeDot={{ r: 6 }}
           />
-        ))}
-      </svg>
-
-      <div className="flex justify-between mt-1 px-1">
-        {labels.map((l) => (
-          <span key={l} className="text-[10px] text-gray-400">
-            {l}
-          </span>
-        ))}
-      </div>
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }
@@ -97,22 +65,43 @@ export default function VendorDashboard() {
   const [chartPeriod, setChartPeriod] = useState("daily");
   const [profile, setProfile] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [payments, setPayments] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [chartData, setChartData] = useState(null);
   const [stores, setStores] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const getPaymentNetAmount = (payment) => {
+    if (Array.isArray(payment.myShare) && payment.myShare.length > 0) {
+      return payment.myShare.reduce(
+        (sum, share) => sum + Number(share.netAmount || 0),
+        0,
+      );
+    }
+
+    if (
+      Array.isArray(payment.storePayments) &&
+      payment.storePayments.length > 0
+    ) {
+      return payment.storePayments.reduce(
+        (sum, share) => sum + Number(share.netAmount || 0),
+        0,
+      );
+    }
+
+    return Number(payment.amount?.netAmount || payment.amount?.amount || 0);
+  };
+
   useEffect(() => {
     const loadDashboard = async () => {
       try {
-        const [profileRes, ordersRes, announcementsRes, storesRes, chartRes] =
+        const [profileRes, ordersRes, announcementsRes, storesRes] =
           await Promise.allSettled([
             getVendorProfile(),
             getVendorOrders(),
             getAnnouncementsFeed(),
             getMyStores(),
-            getVendorSalesAnalytics(chartPeriod),
           ]);
 
         if (profileRes.status === "fulfilled") {
@@ -136,10 +125,6 @@ export default function VendorDashboard() {
           );
         }
 
-        if (chartRes.status === "fulfilled") {
-          setChartData(chartRes.value);
-        }
-
         if (storesRes.status === "fulfilled") {
           const myStores =
             storesRes.value?.stores ||
@@ -147,20 +132,41 @@ export default function VendorDashboard() {
             storesRes.value ||
             [];
 
-          setStores(Array.isArray(myStores) ? myStores : []);
+          const safeStores = Array.isArray(myStores) ? myStores : [];
+          setStores(safeStores);
 
           const productResults = await Promise.allSettled(
-            (Array.isArray(myStores) ? myStores : []).map((store) =>
-              getVendorProductsByStore(store._id),
-            ),
+            safeStores.map((store) => getVendorProductsByStore(store._id)),
           );
 
           const mergedProducts = productResults.flatMap((result) => {
             if (result.status !== "fulfilled") return [];
-            return result.value?.data || result.value?.products || [];
+            return (
+              result.value?.data || result.value?.products || result.value || []
+            );
           });
 
           setAllProducts(mergedProducts);
+
+          const paymentResults = await Promise.allSettled(
+            safeStores.map((store) => getPaidPaymentsByStore(store._id)),
+          );
+
+          const mergedPayments = paymentResults.flatMap((result) => {
+            if (result.status !== "fulfilled") return [];
+
+            return (
+              result.value?.payments || result.value?.data || result.value || []
+            );
+          });
+
+          const uniquePayments = Array.from(
+            new Map(
+              mergedPayments.map((payment) => [payment._id, payment]),
+            ).values(),
+          );
+
+          setPayments(uniquePayments);
         }
       } catch (err) {
         console.error("Dashboard load error:", err);
@@ -172,31 +178,61 @@ export default function VendorDashboard() {
     loadDashboard();
   }, []);
 
+  const paidPayments = payments.filter((payment) => payment.status === "paid");
+
+  const generatePaymentChartData = (paidPayments, period) => {
+    if (!paidPayments || paidPayments.length === 0) {
+      return { labels: [], data: [] };
+    }
+
+    const grouped = {};
+
+    paidPayments.forEach((payment) => {
+      const date = new Date(payment.paymentDate || payment.createdAt);
+
+      let key;
+
+      if (period === "daily") {
+        key = date.toLocaleDateString("en-US", { weekday: "short" });
+      } else if (period === "weekly") {
+        key = `Week ${Math.ceil(date.getDate() / 7)}`;
+      } else {
+        key = date.toLocaleDateString("en-US", { month: "short" });
+      }
+
+      const amount = getPaymentNetAmount(payment);
+      grouped[key] = (grouped[key] || 0) + amount;
+    });
+
+    return {
+      labels: Object.keys(grouped),
+      data: Object.values(grouped),
+    };
+  };
+
   useEffect(() => {
-    getVendorSalesAnalytics(chartPeriod).then(setChartData);
-  }, [chartPeriod]);
+    const chart = generatePaymentChartData(paidPayments, chartPeriod);
+    setChartData(chart);
+  }, [payments, chartPeriod]);
 
   const totalOrders = orders.length;
 
-  const totalSales = orders.reduce(
-    (sum, order) => sum + Number(order.vendorOrder?.totalAmount || 0),
+  const totalSales = paidPayments.reduce(
+    (sum, payment) => sum + getPaymentNetAmount(payment),
     0,
   );
 
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
 
-  const monthlyRevenue = orders
-    .filter((order) => {
-      const date = new Date(order.createdAt);
+  const monthlyRevenue = paidPayments
+    .filter((payment) => {
+      const date = new Date(payment.paymentDate || payment.createdAt);
       return (
         date.getMonth() === currentMonth && date.getFullYear() === currentYear
       );
     })
-    .reduce(
-      (sum, order) => sum + Number(order.vendorOrder?.totalAmount || 0),
-      0,
-    );
+    .reduce((sum, payment) => sum + getPaymentNetAmount(payment), 0);
 
   const lowStockAlerts = allProducts.filter(
     (product) => Number(product.stock || 0) <= 10,
@@ -208,7 +244,7 @@ export default function VendorDashboard() {
     {
       label: "Total Sales",
       value: `Rs. ${totalSales.toLocaleString()}`,
-      change: "Live data",
+      change: "Paid payments",
       up: true,
       icon: "💰",
       alert: false,
@@ -224,7 +260,7 @@ export default function VendorDashboard() {
     {
       label: "Monthly Revenue",
       value: `Rs. ${monthlyRevenue.toLocaleString()}`,
-      change: "This month",
+      change: "Paid this month",
       up: true,
       icon: "📈",
       alert: false,
@@ -232,7 +268,7 @@ export default function VendorDashboard() {
     {
       label: "Low Stock Alerts",
       value: lowStockAlerts,
-      change: "Needs attention",
+      change: lowStockAlerts > 0 ? "Needs attention" : "All good",
       up: false,
       icon: "⚠️",
       alert: true,
@@ -279,9 +315,7 @@ export default function VendorDashboard() {
           customer:
             order.buyer?.fullname || order.shippingAddress?.fullName || "—",
           status: order.vendorOrder?.status || "—",
-          amount: `Rs. ${Number(
-            order.vendorOrder?.totalAmount || 0,
-          ).toLocaleString()}`,
+          amount: `Rs. ${Number(order.vendorOrder?.totalAmount || 0).toLocaleString()}`,
         }))
       : [];
 
@@ -303,7 +337,45 @@ export default function VendorDashboard() {
         ? "⚠️"
         : "⭐";
 
-  const topProducts = allProducts.slice(0, 5);
+  const storeIdSet = new Set(stores.map((store) => String(store._id)));
+
+  const topProducts = Object.values(
+    paidPayments.reduce((acc, payment) => {
+      const items = payment.cartId?.items || [];
+
+      items.forEach((item) => {
+        const itemStoreId =
+          item.store_id?._id?.toString() || item.store_id?.toString();
+
+        if (!storeIdSet.has(itemStoreId)) return;
+
+        const product = item.product_id;
+        const productId = product?._id?.toString() || product?.toString();
+
+        if (!productId) return;
+
+        if (!acc[productId]) {
+          acc[productId] = {
+            productId,
+            productName: product?.name || item.name || "Product",
+            imageUrl: product?.images?.[0] || "",
+            unitPrice: Number(product?.price || item.price || 0),
+            sold: 0,
+            revenue: 0,
+          };
+        }
+
+        acc[productId].sold += Number(item.quantity || 0);
+        acc[productId].revenue +=
+          Number(item.price || product?.price || 0) *
+          Number(item.quantity || 0);
+      });
+
+      return acc;
+    }, {}),
+  )
+    .sort((a, b) => b.sold - a.sold)
+    .slice(0, 5);
 
   if (loading) {
     return (
@@ -320,299 +392,302 @@ export default function VendorDashboard() {
   }
 
   return (
-    <>
-      <Layout>
-        <div className="w-full max-w-[1900px] mx-auto px-4 md:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">
-                Good morning, {profile?.fullname?.split(" ")[0] || "prime"} 👋
-              </h1>
-              <p className="text-xs text-gray-400 mt-0.5">
-                Here's what's happening with your store today.
+    <Layout>
+      <div className="w-full max-w-[1900px] mx-auto px-4 md:px-6 lg:px-8 py-4">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">
+              Good morning, {profile?.fullname?.split(" ")[0] || "prime"} 👋
+            </h1>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Here's what's happening with your store today.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/vendor/products/create")}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition"
+              style={{ background: "#1A9F73" }}
+            >
+              + Add New Product
+            </button>
+
+            <div className="relative w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center cursor-pointer hover:border-[#1A9F73] transition">
+              <span className="text-base">🔔</span>
+              {displayNotifs.length > 0 && (
+                <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-4 mb-5">
+          {STAT_CARDS.map((card, i) => (
+            <div
+              key={i}
+              className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-md transition-shadow"
+            >
+              <div className="flex justify-between items-start mb-3">
+                <span className="text-xs text-gray-400 font-medium">
+                  {card.label}
+                </span>
+
+                <div
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center text-base ${
+                    card.alert ? "bg-amber-50" : "bg-green-50"
+                  }`}
+                >
+                  {card.icon}
+                </div>
+              </div>
+
+              <p className="text-2xl font-bold text-gray-900 mb-1">
+                {card.value}
+              </p>
+
+              <p
+                className={`text-xs font-medium ${
+                  card.up
+                    ? "text-[#1A9F73]"
+                    : card.alert
+                      ? "text-amber-500"
+                      : "text-red-400"
+                }`}
+              >
+                {card.up ? "↑ " : card.alert ? "⚠ " : "↓ "}
+                {card.change}
               </p>
             </div>
+          ))}
+        </div>
 
-            <div className="flex items-center gap-3">
+        <div className="grid grid-cols-4 gap-3 mb-5">
+          {QUICK_ACCESS.map((q, i) => (
+            <div
+              key={i}
+              onClick={() => navigate(q.path)}
+              className="bg-white rounded-xl p-3 border border-gray-100 flex items-center gap-3 cursor-pointer hover:border-[#1A9F73] hover:shadow-sm transition-all"
+            >
+              <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
+                {q.icon}
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-gray-800">{q.label}</p>
+                <p className="text-[10px] text-gray-400">{q.sub}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="col-span-2 bg-white rounded-2xl p-5 border border-gray-100">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-gray-800">
+                Sales Overview
+              </h2>
+
+              <div className="flex gap-1">
+                {["daily", "weekly", "monthly"].map((period) => (
+                  <button
+                    key={period}
+                    onClick={() => setChartPeriod(period)}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium capitalize transition ${
+                      chartPeriod === period
+                        ? "text-white"
+                        : "text-gray-400 hover:bg-gray-50"
+                    }`}
+                    style={
+                      chartPeriod === period ? { background: "#1A9F73" } : {}
+                    }
+                  >
+                    {period}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {chartData && chartData.data.length > 0 ? (
+              <SalesChart data={chartData.data} labels={chartData.labels} />
+            ) : (
+              <p className="text-xs text-gray-400 py-10 text-center">
+                No paid payment data for chart.
+              </p>
+            )}
+          </div>
+
+          <div className="bg-white rounded-2xl p-5 border border-gray-100">
+            <div className="mb-3">
+              <h2 className="text-sm font-bold text-gray-800">Notifications</h2>
+            </div>
+
+            {displayNotifs.length > 0 ? (
+              displayNotifs.map((n) => (
+                <div
+                  key={n.id}
+                  className="flex gap-3 py-2.5 border-b border-gray-50 last:border-0"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-sm flex-shrink-0">
+                    {notifIcon(n.type)}
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold text-gray-800">
+                      {n.title}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{n.desc}</p>
+                    <p className="text-[10px] text-gray-300 mt-0.5">{n.time}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-gray-400">No notifications yet.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <div className="col-span-2 bg-white rounded-2xl p-5 border border-gray-100">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-gray-800">Recent Orders</h2>
+
+              <button
+                onClick={() => navigate("/vendor/orders")}
+                className="text-xs font-semibold hover:underline"
+                style={{ color: "#1A9F73" }}
+              >
+                View all →
+              </button>
+            </div>
+
+            <div className="grid grid-cols-5 gap-2 pb-2 border-b border-gray-100">
+              {["Order ID", "Product", "Customer", "Status", "Amount"].map(
+                (heading) => (
+                  <span
+                    key={heading}
+                    className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide"
+                  >
+                    {heading}
+                  </span>
+                ),
+              )}
+            </div>
+
+            {displayOrders.length > 0 ? (
+              displayOrders.map((order) => (
+                <div
+                  key={order.id}
+                  className="grid grid-cols-5 gap-2 py-2.5 border-b border-gray-50 items-center last:border-0"
+                >
+                  <span
+                    className="text-xs font-bold"
+                    style={{ color: "#1A9F73" }}
+                  >
+                    {order.id}
+                  </span>
+
+                  <span className="text-xs text-gray-700 truncate">
+                    {order.product}
+                  </span>
+
+                  <span className="text-xs text-gray-400 truncate">
+                    {order.customer}
+                  </span>
+
+                  <span
+                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-md w-fit ${
+                      STATUS_STYLES[order.status] || "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {order.status}
+                  </span>
+
+                  <span className="text-xs font-bold text-gray-800">
+                    {order.amount}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-gray-400 py-4">
+                No recent orders found.
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <div className="bg-white rounded-2xl p-5 border border-gray-100 flex-1">
+              <h2 className="text-sm font-bold text-gray-800 mb-3">
+                Top Selling Products
+              </h2>
+
+              {topProducts.length > 0 ? (
+                topProducts.map((product) => (
+                  <div
+                    key={product.productId}
+                    className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0"
+                  >
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.productName}
+                        className="w-9 h-9 rounded-lg object-cover bg-green-50"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-400">
+                        N/A
+                      </div>
+                    )}
+
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-gray-800 truncate">
+                        {product.productName}
+                      </p>
+                      <p className="text-[10px] text-gray-400">
+                        Sold: {product.sold}
+                      </p>
+                    </div>
+
+                    <span
+                      className="text-xs font-bold flex-shrink-0"
+                      style={{ color: "#1A9F73" }}
+                    >
+                      Rs. {Number(product.unitPrice || 0).toLocaleString()}
+                      <p className="text-[10px] text-gray-400">
+                        Sold: {product.sold} • Revenue: Rs.{" "}
+                        {product.revenue.toLocaleString()}
+                      </p>
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-gray-400">No products found.</p>
+              )}
+            </div>
+
+            <div className="bg-white rounded-2xl p-5 border border-gray-100">
+              <h2 className="text-sm font-bold text-gray-800 mb-3">
+                Quick Actions
+              </h2>
+
               <button
                 onClick={() => navigate("/vendor/products/create")}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition"
+                className="w-full py-2.5 rounded-xl text-white text-sm font-semibold mb-2 hover:opacity-90 transition"
                 style={{ background: "#1A9F73" }}
               >
                 + Add New Product
               </button>
 
-              <div className="relative w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center cursor-pointer hover:border-[#1A9F73] transition">
-                <span className="text-base">🔔</span>
-                <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-4 gap-4 mb-5">
-            {STAT_CARDS.map((card, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-md transition-shadow"
+              <button
+                onClick={() => navigate("/vendor/orders")}
+                className="w-full py-2.5 rounded-xl bg-gray-50 text-gray-700 text-sm font-medium border border-gray-100 hover:border-[#1A9F73] transition"
               >
-                <div className="flex justify-between items-start mb-3">
-                  <span className="text-xs text-gray-400 font-medium">
-                    {card.label}
-                  </span>
-
-                  <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center text-base ${
-                      card.alert ? "bg-amber-50" : "bg-green-50"
-                    }`}
-                  >
-                    {card.icon}
-                  </div>
-                </div>
-
-                <p className="text-2xl font-bold text-gray-900 mb-1">
-                  {card.value}
-                </p>
-
-                <p
-                  className={`text-xs font-medium ${
-                    card.up
-                      ? "text-[#1A9F73]"
-                      : card.alert
-                        ? "text-amber-500"
-                        : "text-red-400"
-                  }`}
-                >
-                  {card.up ? "↑ " : card.alert ? "⚠ " : "↓ "}
-                  {card.change}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-4 gap-3 mb-5">
-            {QUICK_ACCESS.map((q, i) => (
-              <div
-                key={i}
-                onClick={() => navigate(q.path)}
-                className="bg-white rounded-xl p-3 border border-gray-100 flex items-center gap-3 cursor-pointer hover:border-[#1A9F73] hover:shadow-sm transition-all"
-              >
-                <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
-                  {q.icon}
-                </div>
-
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-gray-800">
-                    {q.label}
-                  </p>
-                  <p className="text-[10px] text-gray-400">{q.sub}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <div className="col-span-2 bg-white rounded-2xl p-5 border border-gray-100">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-bold text-gray-800">
-                  Sales Overview
-                </h2>
-
-                <div className="flex gap-1">
-                  {["daily", "weekly", "monthly"].map((period) => (
-                    <button
-                      key={period}
-                      onClick={() => setChartPeriod(period)}
-                      className={`px-3 py-1 rounded-lg text-xs font-medium capitalize transition ${
-                        chartPeriod === period
-                          ? "text-white"
-                          : "text-gray-400 hover:bg-gray-50"
-                      }`}
-                      style={
-                        chartPeriod === period ? { background: "#1A9F73" } : {}
-                      }
-                    >
-                      {period}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {chartData && (
-                <SalesChart data={chartData.data} labels={chartData.labels} />
-              )}
-            </div>
-
-            <div className="bg-white rounded-2xl p-5 border border-gray-100">
-              <div className="mb-3">
-                <h2 className="text-sm font-bold text-gray-800">
-                  Notifications
-                </h2>
-              </div>
-
-              {displayNotifs.length > 0 ? (
-                displayNotifs.map((n) => (
-                  <div
-                    key={n.id}
-                    className="flex gap-3 py-2.5 border-b border-gray-50 last:border-0"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-sm flex-shrink-0">
-                      {notifIcon(n.type)}
-                    </div>
-
-                    <div>
-                      <p className="text-xs font-semibold text-gray-800">
-                        {n.title}
-                      </p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">
-                        {n.desc}
-                      </p>
-                      <p className="text-[10px] text-gray-300 mt-0.5">
-                        {n.time}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-gray-400">No notifications yet.</p>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-2 bg-white rounded-2xl p-5 border border-gray-100">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-bold text-gray-800">
-                  Recent Orders
-                </h2>
-
-                <button
-                  onClick={() => navigate("/vendor/orders")}
-                  className="text-xs font-semibold hover:underline"
-                  style={{ color: "#1A9F73" }}
-                >
-                  View all →
-                </button>
-              </div>
-
-              <div className="grid grid-cols-5 gap-2 pb-2 border-b border-gray-100">
-                {["Order ID", "Product", "Customer", "Status", "Amount"].map(
-                  (heading) => (
-                    <span
-                      key={heading}
-                      className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide"
-                    >
-                      {heading}
-                    </span>
-                  ),
-                )}
-              </div>
-
-              {displayOrders.length > 0 ? (
-                displayOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="grid grid-cols-5 gap-2 py-2.5 border-b border-gray-50 items-center last:border-0"
-                  >
-                    <span
-                      className="text-xs font-bold"
-                      style={{ color: "#1A9F73" }}
-                    >
-                      {order.id}
-                    </span>
-
-                    <span className="text-xs text-gray-700 truncate">
-                      {order.product}
-                    </span>
-
-                    <span className="text-xs text-gray-400 truncate">
-                      {order.customer}
-                    </span>
-
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-md w-fit ${
-                        STATUS_STYLES[order.status] ||
-                        "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {order.status}
-                    </span>
-
-                    <span className="text-xs font-bold text-gray-800">
-                      {order.amount}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-gray-400 py-4">
-                  No recent orders found.
-                </p>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-4">
-              <div className="bg-white rounded-2xl p-5 border border-gray-100 flex-1">
-                <h2 className="text-sm font-bold text-gray-800 mb-3">
-                  Top Selling Products
-                </h2>
-
-                {topProducts.length > 0 ? (
-                  topProducts.map((product) => (
-                    <div
-                      key={product._id}
-                      className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0"
-                    >
-                      <img
-                        src={product.images?.[0]}
-                        alt={product.name}
-                        className="w-9 h-9 rounded-lg object-cover bg-green-50"
-                      />
-
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-gray-800 truncate">
-                          {product.name}
-                        </p>
-                        <p className="text-[10px] text-gray-400">
-                          Stock: {product.stock}
-                        </p>
-                      </div>
-
-                      <span
-                        className="text-xs font-bold flex-shrink-0"
-                        style={{ color: "#1A9F73" }}
-                      >
-                        Rs. {Number(product.price || 0).toLocaleString()}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-gray-400">No products found.</p>
-                )}
-              </div>
-
-              <div className="bg-white rounded-2xl p-5 border border-gray-100">
-                <h2 className="text-sm font-bold text-gray-800 mb-3">
-                  Quick Actions
-                </h2>
-
-                <button
-                  onClick={() => navigate("/vendor/products/create")}
-                  className="w-full py-2.5 rounded-xl text-white text-sm font-semibold mb-2 hover:opacity-90 transition"
-                  style={{ background: "#1A9F73" }}
-                >
-                  + Add New Product
-                </button>
-
-                <button
-                  onClick={() => navigate("/vendor/orders")}
-                  className="w-full py-2.5 rounded-xl bg-gray-50 text-gray-700 text-sm font-medium border border-gray-100 hover:border-[#1A9F73] transition"
-                >
-                  👁 View All Orders
-                </button>
-              </div>
+                👁 View All Orders
+              </button>
             </div>
           </div>
         </div>
-      </Layout>
-    </>
+      </div>
+    </Layout>
   );
 }

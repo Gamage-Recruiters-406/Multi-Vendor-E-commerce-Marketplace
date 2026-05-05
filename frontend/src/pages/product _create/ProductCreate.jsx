@@ -1,17 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, CheckCircle2, ShieldAlert, Image as ImageIcon, 
-  Send, Star, Upload, X, Check
+  Send, Star, Upload, X, Check, Store
 } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import Header from '../../components/Layouts/Header';
 import Footer from '../../components/Layouts/Footer';
+import toast from 'react-hot-toast';
 
 const ProductCreate = () => {
+  const [searchParams] = useSearchParams();
+  const storeId = searchParams.get('storeId');
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     price: '',
     stock: '',
+    store: storeId || '',
     category: '',
     images: [],
     attributes: {
@@ -21,6 +28,8 @@ const ProductCreate = () => {
     }
   });
 
+  const [storeName, setStoreName] = useState('');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [categories, setCategories] = useState([]);
@@ -28,6 +37,22 @@ const ProductCreate = () => {
 
 
   useEffect(() => {
+    const fetchStoreDetails = async () => {
+      if (!storeId) return;
+      try {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+        const response = await fetch(`${baseUrl}/api/v1/store/${storeId}`);
+        const result = await response.json();
+        if (result.success) {
+          setStoreName(result.data.name);
+        }
+      } catch (error) {
+        console.error("Failed to fetch store details", error);
+      }
+    };
+
+    fetchStoreDetails();
+
     const fetchCategories = async () => {
       try {
         const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
@@ -82,8 +107,8 @@ const ProductCreate = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     // Validate required fields
-    if (!formData.title || !formData.price || !formData.category) {
-      alert("Title, Price, and Category are required.");
+    if (!formData.title || !formData.price || !formData.category || !storeId) {
+      toast.error("Name, Price, Category, and Store are required.");
       return;
     }
     
@@ -95,7 +120,7 @@ const ProductCreate = () => {
       data.append('price', formData.price);
       data.append('category', formData.category);
       data.append('stock', formData.stock);
-      data.append('attributes', JSON.stringify(formData.attributes));
+      data.append('store', storeId);
       
       formData.images.forEach(file => data.append('images', file));
 
@@ -113,14 +138,18 @@ const ProductCreate = () => {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        alert("Listing published successfully!");
+        toast.success("Listing published successfully!");
         console.log("Success result:", result.data);
+        // Navigate back to the store view
+        if (storeId) {
+          navigate(`/vendor/store/${storeId}`);
+        }
       } else {
-        alert(`Failed to publish: ${result.message || 'Unknown error'}`);
+        toast.error(`Failed to publish: ${result.message || 'Unknown error'}`);
       }
     } catch (error) {
        console.error("Submission error:", error);
-       alert("An error occurred while publishing the listing.");
+       toast.error("An error occurred while publishing the listing.");
     } finally {
        setIsSubmitting(false);
     }
@@ -135,7 +164,7 @@ const ProductCreate = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800 pb-24 font-sans">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-800 font-sans">
       <Header userRole="Vendor" />
       
       {/* Header Area */}
@@ -221,12 +250,31 @@ const ProductCreate = () => {
           
           {/* Section: Product Details */}
           <div id="section-basic-details" className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Product Details</h2>
-                <p className="text-sm text-slate-500 mt-1">Write a clear, informative description for your product</p>
+            <div className="px-8 py-6 border-b border-slate-50 bg-slate-50/50 flex flex-col space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Product Details</h2>
+                  <p className="text-sm text-slate-500 mt-1">Write a clear, informative description for your product</p>
+                </div>
+                <span className="text-xs font-semibold text-slate-400 bg-white px-3 py-1 rounded-full border border-slate-100">Step 1 of 4</span>
               </div>
-              <span className="text-xs font-semibold text-slate-400 bg-white px-3 py-1 rounded-full border border-slate-100">Step 1 of 4</span>
+
+              {/* Read-only Store Display Section */}
+              <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-emerald-100 text-emerald-600 p-2.5 rounded-xl">
+                    <Store className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-0.5">Adding Product To</p>
+                    <p className="text-base font-bold text-slate-900">{storeName || 'Loading Store...'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-full border border-emerald-100 shadow-sm">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                  <span className="text-[10px] font-black text-emerald-700 uppercase tracking-tighter">Verified Store</span>
+                </div>
+              </div>
             </div>
             
             <div className="p-8 space-y-6">
@@ -564,19 +612,19 @@ const ProductCreate = () => {
         </div>
       </main>
 
-      {/* Sticky Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-slate-200 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center sm:justify-start sm:space-x-4 sm:flex-row-reverse mb-safe pb-safe">
+      {/* Bottom Action Bar (Non-overlay) */}
+      <div className="bg-white border-t border-slate-200 mt-12">
+        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col-reverse sm:flex-row-reverse justify-between items-center sm:justify-start gap-4 mb-safe pb-safe">
             <button 
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className={`flex items-center justify-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-emerald-500/20 transition-all active:scale-95 w-full sm:w-auto ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+              className={`flex items-center justify-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white px-10 py-4 rounded-xl font-bold shadow-lg shadow-emerald-500/20 transition-all active:scale-95 w-full sm:w-auto ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               <Send className={`w-4 h-4 ${isSubmitting ? 'animate-pulse' : ''}`} />
               <span>{isSubmitting ? 'Publishing...' : 'Publish Now'}</span>
             </button>
 
-            <button className="flex items-center justify-center space-x-2 bg-white hover:bg-rose-50 text-rose-500 px-8 py-3.5 rounded-xl font-bold transition-all border border-transparent hover:border-rose-100 w-full sm:w-auto mt-0 sm:mr-4">
+            <button className="flex items-center justify-center space-x-2 bg-white hover:bg-slate-50 text-slate-600 px-10 py-4 rounded-xl font-bold transition-all border border-slate-200 hover:border-slate-300 w-full sm:w-auto">
               <X className="w-4 h-4" />
               <span>Discard</span>
             </button>

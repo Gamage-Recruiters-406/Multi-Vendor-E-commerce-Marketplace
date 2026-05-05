@@ -1,58 +1,69 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, ShoppingBag, PlusCircle, Mail, Phone, Globe, Store, Star } from 'lucide-react';
+import { MapPin, ShoppingBag, Mail, Phone, Globe, Store, ArrowRight } from 'lucide-react';
+
+// Shared Components
 import Header from "../../components/Layouts/Header";
 import Footer from "../../components/Layouts/Footer";
 
 const ViewStore = () => {
     const { id } = useParams();
     const [store, setStore] = useState(null);
-    const [isOwner, setIsOwner] = useState(false);
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
     const apiVersion = import.meta.env.VITE_API_VERSION || '/api/v1';
     const API_URL = `${baseUrl.replace(/\/+$/, '')}/${apiVersion.replace(/^\/+/, '')}`;
 
     useEffect(() => {
-        const fetchStore = async () => {
+        const fetchAllData = async () => {
             try {
-                const res = await axios.get(`${API_URL}/store/${id}`);
-                
-                if (res.data.success) {
-                    const fetchedStore = res.data.data;
-                    setStore(fetchedStore);
+                const token = localStorage.getItem('token');
+                const config = {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    withCredentials: true 
+                };
 
-                    // Ownership Check
-                    const currentUser = JSON.parse(localStorage.getItem('user'));
-                    const storeVendorId = fetchedStore.vendor._id || fetchedStore.vendor;
-                    
-                    if (currentUser && 
-                        currentUser._id === storeVendorId && 
-                        currentUser.role === 'Vendor') {
-                        setIsOwner(true);
-                    }
+                // 1. Fetch Store Details
+                const storeRes = await axios.get(`${API_URL}/store/${id}`, config);
+                if (storeRes.data.success) {
+                    setStore(storeRes.data.data);
+                }
+
+                // 2. Fetch Products directly for this store
+                const prodRes = await axios.get(`${API_URL}/product/store/${id}`, config);
+                
+                if (prodRes.data.success) {
+                    setProducts(prodRes.data.data || []);
                 }
             } catch (err) {
-                console.error("Error:", err);
+                console.error("Error fetching store data:", err);
+            } finally {
+                setLoading(false);
             }
         };
-        
-        if (id) fetchStore();
+
+        if (id) fetchAllData();
     }, [id, API_URL]);
 
-    if (!store) return <div className="p-20 text-center font-bold text-emerald-600 animate-pulse uppercase tracking-widest">LOADING NEXIO STORE...</div>;
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center font-black text-emerald-600 animate-pulse uppercase tracking-[0.2em]">
+            Loading Tech Space...
+        </div>
+    );
 
     return (
         <>
-            <Header /> {/* ADDED HEADER */}
-            
+            <Header />
             <div className="bg-gray-50 min-h-screen pb-20">
+                {/* Branding Header */}
                 <div className="bg-white border-b py-12 px-6 shadow-sm">
                     <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
                         <div className="flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
                             <div className="w-32 h-32 rounded-full border-4 border-emerald-50 overflow-hidden shadow-md bg-white">
-                                {store.logo ? (
+                                {store?.logo ? (
                                     <img src={store.logo} alt="Logo" className="w-full h-full object-cover" />
                                 ) : (
                                     <div className="w-full h-full bg-emerald-50 flex items-center justify-center text-emerald-200">
@@ -61,51 +72,66 @@ const ViewStore = () => {
                                 )}
                             </div>
                             <div>
-                                <h1 className="text-4xl font-black text-emerald-900 tracking-tight uppercase">{store.name}</h1>
-                                <p className="text-gray-500 mt-2 italic max-w-lg">{store.description}</p>
+                                <h1 className="text-4xl font-black text-emerald-900 tracking-tight uppercase">{store?.name || "Clothing X"}</h1>
+                                <p className="text-gray-500 mt-2 italic max-w-lg leading-relaxed">{store?.description || "New potent clothing"}</p>
                                 <div className="flex gap-3 mt-4 justify-center md:justify-start items-center">
                                     <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">Vendor Store</span>
-                                    <span className="flex items-center gap-1 text-gray-400 text-xs font-bold uppercase"><MapPin size={14}/> COLOMBO, LK</span>
+                                    <span className="flex items-center gap-1 text-gray-400 text-xs font-bold uppercase tracking-wider"><MapPin size={14}/> COLOMBO, LK</span>
                                 </div>
                             </div>
                         </div>
-
-                        {/* VENDOR BUTTON */}
-                        {isOwner && (
-                            <Link 
-                                to={`/vendor/add-product?storeId=${store._id}`} 
-                                className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-2 hover:bg-emerald-700 shadow-xl transition active:scale-95 uppercase tracking-widest"
-                            >
-                                <PlusCircle size={22} /> ADD NEW PRODUCT
-                            </Link>
-                        )}
                     </div>
                 </div>
 
+                {/* Main Collection Display */}
                 <div className="max-w-6xl mx-auto px-6 mt-12 grid grid-cols-1 lg:grid-cols-4 gap-12">
                     <div className="lg:col-span-3">
-                        <h2 className="text-2xl font-black text-emerald-900 mb-8 flex items-center gap-2 uppercase tracking-tighter">
-                            <ShoppingBag className="text-emerald-500" /> Featured Collection
-                        </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="col-span-3 py-24 text-center border-2 border-dashed rounded-3xl text-gray-300 font-bold uppercase tracking-widest">
-                                No Products Listed Yet
-                            </div>
+                        <div className="flex justify-between items-center mb-8">
+                            <h2 className="text-2xl font-black text-emerald-900 flex items-center gap-2 uppercase tracking-tighter">
+                                <ShoppingBag className="text-emerald-500" /> Featured Collection ({products.length})
+                            </h2>
+                            <Link to={`/vendor/products?storeId=${id}`} className="text-emerald-600 font-black flex items-center gap-1 hover:underline text-xs uppercase tracking-widest">
+                                View All Product <ArrowRight size={16} />
+                            </Link>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {products.length > 0 ? (
+                                products.slice(0, 4).map((product) => (
+                                    <div key={product._id} className="bg-white p-4 rounded-3xl border shadow-sm hover:shadow-md transition-all group">
+                                        <div className="w-full h-40 bg-gray-50 rounded-2xl overflow-hidden mb-4">
+                                            <img 
+                                                src={product.images?.[0] || 'https://via.placeholder.com/400'} 
+                                                alt={product.name} 
+                                                className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
+                                            />
+                                        </div>
+                                        <h3 className="font-black text-gray-800 text-base uppercase tracking-tight truncate">{product.name}</h3>
+                                        <p className="text-emerald-600 font-black mt-1 text-lg">
+                                            LKR {product.price?.toLocaleString()}
+                                        </p>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="col-span-2 py-32 text-center border-4 border-dashed border-gray-100 rounded-[3rem] text-gray-300 font-black uppercase tracking-[0.2em]">
+                                    No Products Found For This Store
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    <aside className="bg-white p-8 rounded-3xl border shadow-sm h-fit">
-                        <h4 className="font-black text-gray-800 text-lg mb-6 border-b pb-4 uppercase">Contact Vendor</h4>
-                        <ul className="space-y-6 text-sm text-gray-600 font-bold">
-                            <li className="flex items-center gap-4 group"><Mail size={18} className="text-emerald-500"/> support@nexio.lk</li>
-                            <li className="flex items-center gap-4 group"><Phone size={18} className="text-emerald-500"/> +94 77 123 4567</li>
-                            <li className="flex items-center gap-4 group"><Globe size={18} className="text-emerald-500"/> www.nexio.market</li>
+                    {/* Contact Sidebar */}
+                    <aside className="bg-white p-8 rounded-[2.5rem] border shadow-sm h-fit">
+                        <h4 className="font-black text-gray-800 text-lg mb-6 border-b border-gray-100 pb-4 uppercase tracking-tighter">Contact Vendor</h4>
+                        <ul className="space-y-6 text-sm text-slate-600 font-bold">
+                            <li className="flex items-center gap-4 group cursor-default"><Mail size={18} className="text-emerald-500"/> support@nexio.lk</li>
+                            <li className="flex items-center gap-4 group cursor-default"><Phone size={18} className="text-emerald-500"/> +94 77 123 4567</li>
+                            <li className="flex items-center gap-4 group cursor-default"><Globe size={18} className="text-emerald-500"/> www.nexio.market</li>
                         </ul>
                     </aside>
                 </div>
             </div>
-
-            <Footer /> {/* ADDED FOOTER */}
+            <Footer />
         </>
     );
 };

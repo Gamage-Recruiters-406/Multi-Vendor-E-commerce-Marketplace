@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Header from '../../components/ShoppingCart/Header';
+import Header from '../../components/Layouts/Header';
 import CartSection from '../../components/ShoppingCart/CartSection';
 import OrderSummary from '../../components/ShoppingCart/OrderSummary';
-import Footer from '../../components/ShoppingCart/Footer';
+import Footer from '../../components/Layouts/Footer';
 import { getCart } from '../../services/cartService';
 
 export default function ShoppingCartPage() {
@@ -138,12 +138,15 @@ export default function ShoppingCartPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F7F9FB] text-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-[#F7F9FB] text-gray-900">
         <Header />
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
-          <p className="mt-4 text-gray-500">Loading your cart...</p>
-        </div>
+        <main className="flex min-h-[calc(100vh-160px)] items-center justify-center px-4 py-8">
+          <div className="text-center">
+            <div className="inline-block h-12 w-12 animate-spin rounded-full border-b-2 border-emerald-500"></div>
+            <p className="mt-4 text-gray-500">Loading your cart...</p>
+          </div>
+        </main>
+        <Footer />
       </div>
     );
   }

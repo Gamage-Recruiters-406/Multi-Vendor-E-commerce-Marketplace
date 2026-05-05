@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Star,
   Heart,
@@ -22,6 +22,14 @@ import {
 //import Header from "../../components/Layouts/Header";
 import Layout from "../../components/Layouts/Layout";
 
+import { addToCartApi, addToWishlistApi } from "../../api/buyerCartWishlist";
+
+import {
+  getFAQQuestionsApi,
+  askAIQuestionApi,
+  contactVendorApi,
+  sendVendorMessageApi,
+} from "../../api/buyerChatbot";
 function Stars({ value, size = 14 }) {
   return (
     <div className="flex items-center gap-0.5">
@@ -64,6 +72,69 @@ export default function BuyerProductDetailsPage() {
   const [selectedImage, setSelectedImage] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState("description");
+
+  const navigate = useNavigate();
+  const [actionLoading, setActionLoading] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatSessionId, setChatSessionId] = useState(null);
+  const [chatLoading, setChatLoading] = useState(false);
+  const handleAddToCart = async () => {
+    try {
+      setActionLoading(true);
+      await addToCartApi({
+        product_id: product._id,
+        quantity,
+      });
+      alert("Added to cart successfully");
+    } catch (error) {
+      alert(error.message || "Failed to add to cart");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAddToWishlist = async () => {
+    try {
+      setActionLoading(true);
+      await addToWishlistApi(product._id);
+      alert("Added to wishlist successfully");
+    } catch (error) {
+      alert(error.message || "Failed to add to wishlist");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAskAI = async () => {
+    if (!chatInput.trim()) return;
+
+    const userMsg = chatInput;
+    setChatInput("");
+
+    setChatMessages((prev) => [...prev, { sender: "user", message: userMsg }]);
+
+    try {
+      setChatLoading(true);
+
+      const res = await askAIQuestionApi({
+        productId: product._id,
+        message: userMsg,
+        sessionId: chatSessionId,
+      });
+
+      setChatSessionId(res.sessionId);
+
+      setChatMessages((prev) => [
+        ...prev,
+        { sender: "ai", message: res.answer },
+      ]);
+    } catch (error) {
+      alert(error.message || "Chat failed");
+    } finally {
+      setChatLoading(false);
+    }
+  };
 
   useEffect(() => {
     const loadProductPage = async () => {
@@ -246,16 +317,20 @@ export default function BuyerProductDetailsPage() {
                   </div>
 
                   <div className="mt-6 space-y-3">
-                    <button className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-emerald-700">
+                    <button
+                      onClick={handleAddToCart}
+                      disabled={actionLoading || product.stock <= 0}
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
                       <ShoppingCart size={16} />
-                      Add to Cart
+                      {actionLoading ? "Adding..." : "Add to Cart"}
                     </button>
 
-                    <button className="w-full rounded-2xl bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800">
-                      Buy Now
-                    </button>
-
-                    <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                    <button
+                      onClick={handleAddToWishlist}
+                      disabled={actionLoading}
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
                       <Heart size={16} />
                       Save to Wishlist
                     </button>
@@ -305,6 +380,7 @@ export default function BuyerProductDetailsPage() {
                   { key: "description", label: "Description" },
                   { key: "specifications", label: "Specifications" },
                   { key: "reviews", label: `Reviews (${reviewCount})` },
+                  { key: "chat", label: "Chat" },
                 ].map((tab) => (
                   <button
                     key={tab.key}
@@ -455,6 +531,53 @@ export default function BuyerProductDetailsPage() {
                     ) : (
                       <p className="text-sm text-slate-500">No reviews yet.</p>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "chat" && (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <h2 className="text-xl font-bold text-slate-900">
+                    Chat about this product
+                  </h2>
+
+                  <div className="mt-5 h-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+                    {chatMessages.length === 0 ? (
+                      <p className="text-sm text-slate-400">
+                        Ask anything about this product.
+                      </p>
+                    ) : (
+                      chatMessages.map((msg, i) => (
+                        <div
+                          key={i}
+                          className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
+                            msg.sender === "user"
+                              ? "ml-auto bg-emerald-600 text-white"
+                              : "bg-slate-100 text-slate-700"
+                          }`}
+                        >
+                          {msg.message}
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="mt-4 flex gap-3">
+                    <input
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAskAI()}
+                      placeholder="Type your question..."
+                      className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-500"
+                    />
+
+                    <button
+                      onClick={handleAskAI}
+                      disabled={chatLoading}
+                      className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                    >
+                      {chatLoading ? "Sending..." : "Send"}
+                    </button>
                   </div>
                 </div>
               )}
