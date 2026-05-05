@@ -35,20 +35,9 @@ const request = async (url, options) => {
   return data;
 };
 
-export const getVendorOrders = async (params = {}) => {
-  const query = new URLSearchParams();
-  if (params.page) query.set('page', params.page);
-  if (params.limit) query.set('limit', params.limit);
-  if (params.status) query.set('status', params.status);
-  if (params.sort) query.set('sort', params.sort);
-
-  const url = `${API_URL}/orders/vendor/list${query.toString() ? `?${query.toString()}` : ''}`;
-  return request(url, {
-    method: 'GET',
-    headers: getAuthHeaders(),
-  });
-};
-
+/**
+ * Fetch all stores belonging to the logged-in vendor.
+ */
 export const getMyStores = async () => {
   return request(`${API_URL}/store/my-stores`, {
     method: 'GET',
@@ -56,6 +45,9 @@ export const getMyStores = async () => {
   });
 };
 
+/**
+ * Fetch products for a specific store (used to build product→category map).
+ */
 export const getProductsByStore = async (storeId) => {
   return request(`${API_URL}/product/store/${storeId}`, {
     method: 'GET',
@@ -63,37 +55,26 @@ export const getProductsByStore = async (storeId) => {
   });
 };
 
-export const getAllCategories = async () => {
-  return request(`${API_URL}/category`, {
-    method: 'GET',
-    headers: getAuthHeaders(),
-  });
-};
-
-export const getPaidPaymentsForOwner = async (params = {}) => {
+/**
+ * Fetch paid payments for a specific store owned by the logged-in vendor.
+ *
+ * Sends `store_id` as a URL query parameter — this is the standard approach
+ * for GET requests and matches the updated backend that reads:
+ *   const store_id = req.query.store_id || req.body?.store_id;
+ */
+export const getPaidPaymentsForStore = async (storeId, params = {}) => {
   const query = new URLSearchParams();
-  if (params.page) query.set('page', params.page);
-  if (params.limit) query.set('limit', params.limit);
-  if (params.startDate) query.set('startDate', params.startDate);
-  if (params.endDate) query.set('endDate', params.endDate);
+  query.set('store_id', storeId);                    // primary param
+  if (params.page)      query.set('page',      params.page);
+  if (params.limit)     query.set('limit',      params.limit);
+  if (params.startDate) query.set('startDate',  params.startDate);
+  if (params.endDate)   query.set('endDate',    params.endDate);
 
-  const url = `${API_URL}/payments/get-paid-payments-for-owner${query.toString() ? `?${query.toString()}` : ''}`;
+  const url = `${API_URL}/payment/get-paid-payments-for-owner?${query.toString()}`;
+
   return request(url, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
 };
 
-export const getAllOrders = async (params = {}) => {
-  const query = new URLSearchParams();
-  if (params.page) query.set('page', params.page);
-  if (params.limit) query.set('limit', params.limit);
-  if (params.status) query.set('status', params.status);
-  if (params.search) query.set('search', params.search);
-
-  const url = `${API_URL}/orders/admin/list${query.toString() ? `?${query.toString()}` : ''}`;
-  return request(url, {
-    method: 'GET',
-    headers: getAuthHeaders(),
-  });
-};
