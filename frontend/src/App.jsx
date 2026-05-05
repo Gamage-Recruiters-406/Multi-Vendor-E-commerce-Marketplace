@@ -25,6 +25,7 @@ import VendorDashboard from "./pages/VendorDashboard";
 import BuyerProductDetailsPage from "./pages/Buyer/BuyerProductDetailsPage";
 import ShoppingCartPage from "./pages/ShoppingCart/ShoppingCartPage";
 import UserManagement from './pages/admin/UserManagement'
+import VendorOrderManagementPage from "./pages/Vendor/OrderManagement";
 
 
 function App() {
@@ -59,6 +60,7 @@ function App() {
           <Route path="/vendor/edit-store/:id" element={<EditStore />} />
           <Route path="/vendor/sales-analytics" element={<SalesAnalytics />} />
           <Route path="/vendor/dashboard" element={<VendorDashboard />} />
+          <Route path="/vendor/orders" element={<VendorOrderManagementPage />} />
           frontend
           {/* Admin Module */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
