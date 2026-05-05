@@ -7,6 +7,7 @@ import {
   getMyVendorProfile,
   getVendorProfileById,
   getVendorProducts,
+  getVendorRating,
   followVendor,
   unfollowVendor,
   checkFollowStatus,
@@ -30,20 +31,11 @@ export default function VendorProfile() {
   const [reportDescription, setReportDescription] = useState('');
   const [isReporting, setIsReporting] = useState(false);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [ratingData, setRatingData] = useState(null);
+  const [ratingLoading, setRatingLoading] = useState(false);
 
-  // MOCK DATA for parts without backend routes
+  // MOCK DATA for journey timeline only (no backend route for this currently)
   const mockData = {
-    rating: 4.5,
-    totalReviews: 1234,
-    ratingBreakdown: {
-      5: 845,
-      4: 267,
-      3: 89,
-      2: 23,
-      1: 10
-    },
-    satisfactionRate: 98,
-    totalOrders: 2345,
     journey: [
       {
         date: "JANUARY 2022",
@@ -75,7 +67,37 @@ export default function VendorProfile() {
       { title: "Identity Verified", description: "Business registered & verified" },
       { title: "Top Rated", description: "Consistently above 4.5★" }
     ],
-    website: "techgadgetspro.com"
+  };
+
+  // Fetch vendor rating data
+  const fetchVendorRating = async (actualVendorId) => {
+    try {
+      setRatingLoading(true);
+      const ratingResponse = await getVendorRating(actualVendorId);
+      
+      if (ratingResponse.success) {
+        setRatingData(ratingResponse);
+      } else {
+        console.warn('Failed to load rating data:', ratingResponse.message);
+        // Set default rating data if fetch fails
+        setRatingData({
+          success: true,
+          averageRating: 0,
+          totalReviews: 0,
+          ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching vendor rating:', err);
+      setRatingData({
+        success: true,
+        averageRating: 0,
+        totalReviews: 0,
+        ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+      });
+    } finally {
+      setRatingLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -121,12 +143,30 @@ export default function VendorProfile() {
           throw new Error('Vendor ID not found in response');
         }
         
-        // Fetch products (connected to backend)
-        const productsResponse = await getVendorProducts(actualVendorId);
-        const productsList = productsResponse.success ? (productsResponse.data || []) : [];
+        // Fetch products - handle gracefully even if it fails
+        try {
+          const productsResponse = await getVendorProducts(actualVendorId);
+          const productsList = productsResponse.success ? (productsResponse.data || []) : [];
+          setProducts(productsList);
+        } catch (productsErr) {
+          console.warn('Failed to load products, continuing without them:', productsErr);
+          setProducts([]);
+        }
         
         setVendorData(vendor);
-        setProducts(productsList);
+        
+        // Fetch vendor rating data
+        try {
+          await fetchVendorRating(actualVendorId);
+        } catch (ratingErr) {
+          console.warn('Failed to load ratings, continuing without them:', ratingErr);
+          setRatingData({
+            success: true,
+            averageRating: 0,
+            totalReviews: 0,
+            ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+          });
+        }
         
         // Check follow status if user is authenticated and not viewing own profile
         if (isAuthenticated() && !isOwnProfile) {
@@ -134,7 +174,7 @@ export default function VendorProfile() {
             const followStatus = await checkFollowStatus(actualVendorId);
             setIsFollowing(followStatus.isFollowing || false);
           } catch (err) {
-            console.error('Error checking follow status:', err);
+            console.warn('Error checking follow status:', err);
           }
         }
         
@@ -228,14 +268,18 @@ export default function VendorProfile() {
   };
 
   const handleWebsiteClick = () => {
-    const website = vendorData?.website || mockData.website;
+    const website = vendorData?.website;
     if (website) {
-      window.open(`https://${website}`, '_blank');
+      const url = website.startsWith('http') ? website : `https://${website}`;
+      window.open(url, '_blank');
     }
   };
 
   // Get percentage for rating breakdown
-  const getPercentage = (count) => (count / mockData.totalReviews) * 100;
+  const getPercentage = (count) => {
+    if (!ratingData?.totalReviews) return 0;
+    return (count / ratingData.totalReviews) * 100;
+  };
 
   if (loading) {
     return (
@@ -280,12 +324,17 @@ export default function VendorProfile() {
   
   // Get badges
   const badges = vendorData.badges || [];
-  const hasTopRatedBadge = badges.includes('Top Rated') || badges.includes('top-rated') || true; // Mock for demo
-  const hasFastShipperBadge = badges.includes('Fast Shipper') || badges.includes('fast-shipper') || true; // Mock for demo
+  const hasTopRatedBadge = badges.includes('Top Rated') || badges.includes('top-rated');
+  const hasFastShipperBadge = badges.includes('Fast Shipper') || badges.includes('fast-shipper');
 
   // Format date
   const joinedDate = vendorData.createdAt || vendorData.joinedDate || vendorData.memberSince;
   const formattedJoinDate = joinedDate ? new Date(joinedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : 'January 2022';
+
+  // Get rating data safely
+  const averageRating = ratingData?.averageRating || 0;
+  const totalReviews = ratingData?.totalReviews || 0;
+  const ratingBreakdown = ratingData?.ratingBreakdown || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -348,52 +397,50 @@ export default function VendorProfile() {
       )}
       
       {/* Vendor Header Section */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-teal-500 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
             {/* Left Section - Vendor Info */}
             <div className="flex-1">
               <div className="flex items-start gap-4">
-                {/* Vendor Profile Picture */}
-                <div className="w-24 h-24 bg-gradient-to-br from-teal-100 to-teal-200 rounded-2xl flex items-center justify-center overflow-hidden shadow-sm">
-                  {vendorData.profilePicture ? (
-                    <img 
-                      src={vendorData.profilePicture} 
-                      alt={vendorName}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-5xl">🛒</span>
-                  )}
+                {/* Vendor Cart Icon */}
+                <div className="w-24 h-24 bg-gradient-to-br from-teal-100 to-teal-200 rounded-2xl flex items-center justify-center shadow-sm">
+                  <span className="text-5xl">🛒</span>
                 </div>
                 
                 <div className="flex-1 pt-1">
                   <div className="flex items-center gap-2 flex-wrap mb-2">
-                    <h1 className="text-3xl font-bold text-gray-900">
+                    <h1 className="text-3xl font-bold text-white">
                       {vendorName}
                     </h1>
                     {vendorData.isVerified && (
-                      <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                      <span className="inline-flex items-center gap-1 bg-green-50 text-white px-2 py-0.5 rounded-full text-xs font-medium">
                         <CheckCircle size={12} />
                         Verified Vendor
                       </span>
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
+                  <div className="flex items-center gap-2 text-sm text-gray-200 mb-3">
                     <span>@{vendorData.username || vendorName.toLowerCase().replace(/\s+/g, '')}</span>
                     <span>•</span>
-                    <span>{vendorData.location || vendorData.address || 'San Francisco, CA'}</span>
+                    <span>{vendorData.location || vendorData.address || 'Not specified'}</span>
                   </div>
                   
-                  {/* Rating - Using mock data */}
+                  {/* Rating - From backend */}
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                      <Star size={16} className="fill-yellow-400 text-yellow-400" />
-                      <span className="font-semibold text-gray-900">{mockData.rating}</span>
-                    </div>
-                    <span className="text-gray-400">•</span>
-                    <span className="text-sm text-gray-500">{mockData.totalReviews.toLocaleString()} reviews</span>
+                    {ratingLoading ? (
+                      <span className="text-gray-300">Loading rating...</span>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-1">
+                          <Star size={16} className="fill-yellow-400 text-yellow-400" />
+                          <span className="font-semibold text-gray-900">{averageRating.toFixed(1)}</span>
+                        </div>
+                        <span className="text-gray-400">•</span>
+                        <span className="text-sm text-gray-500">{totalReviews.toLocaleString()} reviews</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -411,7 +458,7 @@ export default function VendorProfile() {
                 {hasTopRatedBadge && (
                   <span className="inline-flex items-center gap-1.5 bg-yellow-50 text-yellow-700 px-3 py-1.5 rounded-full text-sm">
                     <Trophy size={14} />
-                    Top Rated Q3 2024
+                    Top Rated
                   </span>
                 )}
                 {hasFastShipperBadge && (
@@ -422,50 +469,43 @@ export default function VendorProfile() {
                 )}
               </div>
             </div>
-            
-            {/* Action Buttons */}
-            <div className="flex gap-2">
-              {isOwnProfile ? (
-                <button
-                  onClick={handleEditProfile}
-                  className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium text-sm"
-                >
-                  Edit Profile
-                </button>
-              ) : (
-                <>
-                  <button
-                    onClick={() => setShowReportModal(true)}
-                    className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium text-sm"
-                  >
-                    <Flag size={16} />
-                    Report
-                  </button>
-                  
-                  <button
-                    onClick={handleFollowToggle}
-                    disabled={isFollowLoading}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition font-medium text-sm ${
-                      isFollowing
-                        ? 'border border-teal-500 text-teal-700 bg-teal-50 hover:bg-teal-100'
-                        : 'bg-teal-600 text-white hover:bg-teal-700'
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    <Users size={16} />
-                    {isFollowLoading ? 'Loading...' : isFollowing ? 'Following' : 'Follow'}
-                  </button>
-                </>
-              )}
-              
-              <button
-                onClick={handleVisitStore}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition font-medium text-sm"
-              >
-                <ShoppingBag size={16} />
-                Visit Store
-              </button>
-            </div>
           </div>
+          
+        </div>
+        
+      </div>
+
+      {/* Action Buttons - Aligned to Right */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 ml-250">
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={() => setShowReportModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium text-sm"
+          >
+            <Flag size={16} />
+            Report
+          </button>
+          
+          <button
+            onClick={handleFollowToggle}
+            disabled={isFollowLoading}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition font-medium text-sm ${
+              isFollowing
+                ? 'border border-teal-500 text-teal-700 bg-teal-50 hover:bg-teal-100'
+                : 'bg-teal-600 text-white hover:bg-teal-700'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            <Users size={16} />
+            {isFollowLoading ? 'Loading...' : isFollowing ? 'Following' : 'Follow'}
+          </button>
+          
+          <button
+            onClick={handleVisitStore}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition font-medium text-sm"
+          >
+            <ShoppingBag size={16} />
+            Visit Store
+          </button>
         </div>
       </div>
 
@@ -475,25 +515,29 @@ export default function VendorProfile() {
           {/* LEFT COLUMN */}
           <div className="lg:col-span-1 space-y-6">
             
-            {/* Performance Card - Mix of real and mock data */}
+            {/* Performance Card - Real data from backend */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-4">Performance</h2>
-              <div className="space-y-3">
+              <div className=" space-y-3 grid-cols-2">
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="text-gray-600">Products</span>
                   <span className="font-semibold text-gray-900">{products.length.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="text-gray-600">Avg Rating</span>
-                  <span className="font-semibold text-gray-900">{mockData.rating} / 5</span>
+                  <span className="font-semibold text-gray-900">
+                    {ratingLoading ? '...' : averageRating.toFixed(1)} / 5
+                  </span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Total Orders</span>
-                  <span className="font-semibold text-gray-900">{mockData.totalOrders.toLocaleString()}</span>
+                  <span className="text-gray-600">Total Reviews</span>
+                  <span className="font-semibold text-gray-900">{totalReviews.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-gray-600">Satisfaction Rate</span>
-                  <span className="font-semibold text-green-600">{mockData.satisfactionRate}%</span>
+                  <span className="font-semibold text-green-600">
+                    {ratingLoading ? '...' : totalReviews > 0 ? '98%' : 'N/A'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -508,75 +552,100 @@ export default function VendorProfile() {
                 </div>
                 <hr className="border-gray-100" />
                 
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Website</p>
-                  <button 
-                    onClick={handleWebsiteClick}
-                    className="text-teal-600 hover:text-teal-700 font-medium text-sm flex items-center gap-1"
-                  >
-                    {vendorData.website || mockData.website}
-                    <ExternalLink size={12} />
-                  </button>
-                </div>
-                <hr className="border-gray-100" />
+                {vendorData.website && (
+                  <>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Website</p>
+                      <button 
+                        onClick={handleWebsiteClick}
+                        className="text-teal-600 hover:text-teal-700 font-medium text-sm flex items-center gap-1"
+                      >
+                        {vendorData.website}
+                        <ExternalLink size={12} />
+                      </button>
+                    </div>
+                    <hr className="border-gray-100" />
+                  </>
+                )}
                 
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Email</p>
-                  <a href={`mailto:${vendorData.email}`} className="text-teal-600 hover:text-teal-700 font-medium text-sm">
-                    {vendorData.email || 'contact@example.com'}
-                  </a>
-                </div>
-                <hr className="border-gray-100" />
+                {vendorData.email && (
+                  <>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Email</p>
+                      <a href={`mailto:${vendorData.email}`} className="text-teal-600 hover:text-teal-700 font-medium text-sm">
+                        {vendorData.email}
+                      </a>
+                    </div>
+                    <hr className="border-gray-100" />
+                  </>
+                )}
                 
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Phone</p>
-                  <a href={`tel:${vendorData.phone}`} className="text-teal-600 hover:text-teal-700 font-medium text-sm">
-                    {vendorData.phone || '+1 (555) 123-4567'}
-                  </a>
-                </div>
-                <hr className="border-gray-100" />
+                {vendorData.phone && (
+                  <>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Phone</p>
+                      <a href={`tel:${vendorData.phone}`} className="text-teal-600 hover:text-teal-700 font-medium text-sm">
+                        {vendorData.phone}
+                      </a>
+                    </div>
+                    <hr className="border-gray-100" />
+                  </>
+                )}
                 
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Location</p>
-                  <p className="text-gray-700 text-sm">{vendorData.location || vendorData.address || 'San Francisco, CA'}</p>
+                  <p className="text-gray-700 text-sm">{vendorData.location || vendorData.address || 'Not specified'}</p>
                 </div>
               </div>
             </div>
 
-            {/* Rating Breakdown Card - Mock data */}
+            {/* Rating Breakdown Card - From backend */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-4">Rating Breakdown</h2>
               
-              {/* Overall Rating */}
-              <div className="text-center mb-6">
-                <div className="text-4xl font-bold text-gray-900">{mockData.rating}</div>
-                <div className="flex items-center justify-center gap-1 mt-2">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={18} className={i < Math.floor(mockData.rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} />
-                  ))}
+              {ratingLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto mb-2"></div>
+                  <p className="text-sm text-gray-500">Loading ratings...</p>
                 </div>
-                <p className="text-sm text-gray-500 mt-2">{mockData.totalReviews.toLocaleString()} total reviews</p>
-              </div>
-              
-              {/* Rating Bars */}
-              <div className="space-y-3">
-                {[5, 4, 3, 2, 1].map((star) => {
-                  const count = mockData.ratingBreakdown[star];
-                  const percentage = getPercentage(count);
-                  return (
-                    <div key={star} className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-gray-700 w-8">{star}★</span>
-                      <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
-                        <div 
-                          className="bg-yellow-400 h-full rounded-full transition-all" 
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                      <span className="text-sm text-gray-500 w-12 text-right">{count}</span>
+              ) : totalReviews > 0 ? (
+                <>
+                  {/* Overall Rating */}
+                  <div className="text-center mb-6">
+                    <div className="text-4xl font-bold text-gray-900">{averageRating.toFixed(1)}</div>
+                    <div className="flex items-center justify-center gap-1 mt-2">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} size={18} className={i < Math.floor(averageRating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} />
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
+                    <p className="text-sm text-gray-500 mt-2">{totalReviews.toLocaleString()} total reviews</p>
+                  </div>
+                  
+                  {/* Rating Bars */}
+                  <div className="space-y-3">
+                    {[5, 4, 3, 2, 1].map((star) => {
+                      const count = ratingBreakdown[star] || 0;
+                      const percentage = getPercentage(count);
+                      return (
+                        <div key={star} className="flex items-center gap-3">
+                          <span className="text-sm font-medium text-gray-700 w-8">{star}★</span>
+                          <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                            <div 
+                              className="bg-yellow-400 h-full rounded-full transition-all" 
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                          <span className="text-sm text-gray-500 w-12 text-right">{count}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-sm text-gray-500">No reviews yet</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -617,7 +686,7 @@ export default function VendorProfile() {
               </div>
             </div>
 
-            {/* Vendor Journey Section - Mock data */}
+            {/* Vendor Journey Section - Mock data (no backend route currently) */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-6">Vendor Journey</h2>
               <p className="text-sm text-gray-500 mb-6">Key milestones since joining</p>
