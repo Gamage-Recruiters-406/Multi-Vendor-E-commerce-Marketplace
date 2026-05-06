@@ -292,7 +292,7 @@ export default function VendorDashboard() {
       icon: "📊",
       label: "Sales Analytics",
       sub: "View reports",
-      path: "/vendor/analytics",
+      path: "/vendor/sales-analytics",
     },
     {
       icon: "🏪",
@@ -406,19 +406,19 @@ export default function VendorDashboard() {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate("/vendor/products/create")}
+              onClick={() => navigate("/vendor/product_create")}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition"
               style={{ background: "#1A9F73" }}
             >
               + Add New Product
             </button>
 
-            <div className="relative w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center cursor-pointer hover:border-[#1A9F73] transition">
+            {/*<div className="relative w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center cursor-pointer hover:border-[#1A9F73] transition">
               <span className="text-base">🔔</span>
               {displayNotifs.length > 0 && (
                 <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
               )}
-            </div>
+            </div>*/}
           </div>
         </div>
 
@@ -671,7 +671,7 @@ export default function VendorDashboard() {
               </h2>
 
               <button
-                onClick={() => navigate("/vendor/products/create")}
+                onClick={() => navigate("/vendor/product_create")}
                 className="w-full py-2.5 rounded-xl text-white text-sm font-semibold mb-2 hover:opacity-90 transition"
                 style={{ background: "#1A9F73" }}
               >
