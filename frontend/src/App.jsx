@@ -26,6 +26,7 @@ import BuyerProductDetailsPage from "./pages/Buyer/BuyerProductDetailsPage";
 import ShoppingCartPage from "./pages/ShoppingCart/ShoppingCartPage";
 import UserManagement from './pages/admin/UserManagement'
 import VendorOrderManagementPage from "./pages/Vendor/OrderManagement";
+import Q_AND_A_PAGE from "./pages/Buyer/Q&APage";
 
 
 function App() {
@@ -78,6 +79,10 @@ function App() {
           <Route
             path="/buyer/productdetails/:id"
             element={<BuyerProductDetailsPage />}
+          />
+          <Route
+            path="/buyer/product/:productId/qa"
+            element={<Q_AND_A_PAGE />}
           />
           <Route path="/cart" element={<ShoppingCartPage />} />
           {/* Checkout */}
