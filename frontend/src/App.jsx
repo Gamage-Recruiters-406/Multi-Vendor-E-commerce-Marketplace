@@ -24,6 +24,7 @@ import SalesAnalytics from "./pages/Vendor/SalesAnalytics";
 import VendorDashboard from "./pages/VendorDashboard";
 import BuyerProductDetailsPage from "./pages/Buyer/BuyerProductDetailsPage";
 import ShoppingCartPage from "./pages/ShoppingCart/ShoppingCartPage";
+import { MyOrders } from "./pages/MyOrders/MyOrders.jsx";
 import UserManagement from './pages/admin/UserManagement'
 import VendorOrderManagementPage from "./pages/Vendor/OrderManagement";
 
@@ -61,7 +62,6 @@ function App() {
           <Route path="/vendor/sales-analytics" element={<SalesAnalytics />} />
           <Route path="/vendor/dashboard" element={<VendorDashboard />} />
           <Route path="/vendor/orders" element={<VendorOrderManagementPage />} />
-          frontend
           {/* Admin Module */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/announcements" element={<Announcements />} />
@@ -79,6 +79,7 @@ function App() {
             path="/buyer/productdetails/:id"
             element={<BuyerProductDetailsPage />}
           />
+          <Route path="/orders" element={<MyOrders />} />
           <Route path="/cart" element={<ShoppingCartPage />} />
           {/* Checkout */}
           <Route path="/checkout" element={<CheckoutPage />} />
