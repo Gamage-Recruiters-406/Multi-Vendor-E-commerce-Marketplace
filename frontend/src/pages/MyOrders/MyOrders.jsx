@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Search, ChevronDown, ClipboardList } from 'lucide-react'
-import { Navbar } from '../../components/MyOrders/Navbar.jsx'
-import { Footer } from '../../components/MyOrders/Footer.jsx'
+import Header from '../../components/Layouts/Header'
+import Footer from '../../components/Layouts/Footer'
 import { OrderCard } from '../../components/MyOrders/OrderCard.jsx'
 import { getBuyerOrders } from '../../api/buyerOrders.js'
 import toast from 'react-hot-toast'
@@ -51,7 +51,7 @@ export function MyOrders() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navbar />
+      <Header />
 
       <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-8">
         {/* Header */}
