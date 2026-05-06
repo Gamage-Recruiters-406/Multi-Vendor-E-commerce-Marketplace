@@ -24,9 +24,11 @@ import SalesAnalytics from "./pages/Vendor/SalesAnalytics";
 import VendorDashboard from "./pages/VendorDashboard";
 import BuyerProductDetailsPage from "./pages/Buyer/BuyerProductDetailsPage";
 import ShoppingCartPage from "./pages/ShoppingCart/ShoppingCartPage";
+import { MyOrders } from "./pages/MyOrders/MyOrders.jsx";
 import UserManagement from './pages/admin/UserManagement'
 import VendorOrderManagementPage from "./pages/Vendor/OrderManagement";
 import VendorOrderDetailsPage from "./pages/Vendor/OrderDetails";
+import Q_AND_A_PAGE from "./pages/Buyer/Q&APage";
 
 
 function App() {
@@ -81,6 +83,11 @@ function App() {
             path="/buyer/productdetails/:id"
             element={<BuyerProductDetailsPage />}
           />
+          <Route
+            path="/buyer/product/:productId/qa"
+            element={<Q_AND_A_PAGE />}
+          />
+          <Route path="/orders" element={<MyOrders />} />
           <Route path="/cart" element={<ShoppingCartPage />} />
           {/* Checkout */}
           <Route path="/checkout" element={<CheckoutPage />} />
