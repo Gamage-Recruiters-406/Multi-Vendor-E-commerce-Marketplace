@@ -208,9 +208,9 @@ export default function BuyerProductDetailsPage() {
                     <Badge className="bg-emerald-100 text-emerald-700">
                       {product.stock > 0 ? "● IN STOCK" : "OUT OF STOCK"}
                     </Badge>
-                    <button className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600">
+                    {/*<button className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600">
                       <Heart size={18} />
-                    </button>
+                    </button>*/}
                   </div>
 
                   <div className="overflow-hidden rounded-2xl bg-slate-100">
@@ -365,9 +365,9 @@ export default function BuyerProductDetailsPage() {
                         </div>
                       </div>
 
-                      <button className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                      {/*<button className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
                         View Store
-                      </button>
+                      </button>*/}
                     </div>
                   </div>
                 </div>
