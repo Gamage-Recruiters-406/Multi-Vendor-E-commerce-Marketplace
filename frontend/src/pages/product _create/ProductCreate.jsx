@@ -142,7 +142,7 @@ const ProductCreate = () => {
         console.log("Success result:", result.data);
         // Navigate back to the store view
         if (storeId) {
-          navigate(`/vendor/store/${storeId}`);
+          navigate(`/vendor/products?storeId=${storeId}`);
         }
       } else {
         toast.error(`Failed to publish: ${result.message || 'Unknown error'}`);
@@ -179,7 +179,10 @@ const ProductCreate = () => {
             <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Add New Product</h1>
             <p className="text-slate-500 mt-2 text-sm">Fill in the details below to publish your product to the marketplace.</p>
           </div>
-          <button className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-full hover:bg-slate-50 transition-colors shadow-sm font-medium">
+          <button 
+            onClick={() => navigate(storeId ? `/vendor/products?storeId=${storeId}` : '/vendor/products')}
+            className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-full hover:bg-slate-50 transition-colors shadow-sm font-medium"
+          >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to List</span>
           </button>
@@ -624,7 +627,10 @@ const ProductCreate = () => {
               <span>{isSubmitting ? 'Publishing...' : 'Publish Now'}</span>
             </button>
 
-            <button className="flex items-center justify-center space-x-2 bg-white hover:bg-slate-50 text-slate-600 px-10 py-4 rounded-xl font-bold transition-all border border-slate-200 hover:border-slate-300 w-full sm:w-auto">
+            <button 
+              onClick={() => navigate(storeId ? `/vendor/products?storeId=${storeId}` : '/vendor/products')}
+              className="flex items-center justify-center space-x-2 bg-white hover:bg-slate-50 text-slate-600 px-10 py-4 rounded-xl font-bold transition-all border border-slate-200 hover:border-slate-300 w-full sm:w-auto"
+            >
               <X className="w-4 h-4" />
               <span>Discard</span>
             </button>
