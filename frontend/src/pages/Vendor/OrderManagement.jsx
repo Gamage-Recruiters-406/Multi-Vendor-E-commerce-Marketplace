@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+import Layout from "../../components/Layouts/Layout";
 
 
 
@@ -166,6 +168,8 @@ export default function VendorOrderManagementPage() {
   const pendingOrders = ordersData.filter((o) => o.overallStatus === "Placed").length;
   const cancelledOrders = ordersData.filter((o) => o.overallStatus === "Cancelled").length;
 
+  const navigate = useNavigate();
+
   const resetPage = (setter, value) => {
     setter(value);
     setPage(1);
@@ -173,210 +177,214 @@ export default function VendorOrderManagementPage() {
 
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight text-[#1A9F73] sm:text-3xl">
-            Order Management
-          </h1>
-        </div>
+    <Layout>
+      <div className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-6">
+            <h1 className="text-2xl font-semibold tracking-tight text-[#1A9F73] sm:text-3xl">
+              Order Management
+            </h1>
+          </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            icon={ShoppingBag}
-            label="Total Orders"
-            value={totalOrders}
-            iconClass="bg-violet-50 text-violet-700"
-            bordercolor="border-b-4 border-b-violet-700"
-          />
-          <StatCard
-            icon={CheckCircle2}
-            label="Completed Orders"
-            value={completedOrders}
-            iconClass="bg-emerald-50 text-[#1A9F73]"
-            bordercolor="border-b-4 border-b-[#1A9F73]"
-          />
-          <StatCard
-            icon={Clock3}
-            label="Pending Orders"
-            value={pendingOrders}
-            iconClass="bg-orange-50 text-orange-700"
-            bordercolor="border-b-4 border-b-orange-700"
-          />
-          <StatCard
-            icon={XCircle}
-            label="Cancelled Orders"
-            value={cancelledOrders}
-            iconClass="bg-rose-50 text-rose-700"
-            bordercolor="border-b-4 border-b-rose-700"
-          />
-        </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              icon={ShoppingBag}
+              label="Total Orders"
+              value={totalOrders}
+              iconClass="bg-violet-50 text-violet-700"
+              bordercolor="border-b-4 border-b-violet-700"
+            />
+            <StatCard
+              icon={CheckCircle2}
+              label="Completed Orders"
+              value={completedOrders}
+              iconClass="bg-emerald-50 text-[#1A9F73]"
+              bordercolor="border-b-4 border-b-[#1A9F73]"
+            />
+            <StatCard
+              icon={Clock3}
+              label="Pending Orders"
+              value={pendingOrders}
+              iconClass="bg-orange-50 text-orange-700"
+              bordercolor="border-b-4 border-b-orange-700"
+            />
+            <StatCard
+              icon={XCircle}
+              label="Cancelled Orders"
+              value={cancelledOrders}
+              iconClass="bg-rose-50 text-rose-700"
+              bordercolor="border-b-4 border-b-rose-700"
+            />
+          </div>
 
-        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:items-start">
-            <div className="space-y-4">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-                <input
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="Search by Order ID or Buyer"
-                  className="h-12 w-full max-w-md rounded-xl border border-slate-300 bg-white pl-12 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-[#1A9F73] focus:ring-2 focus:ring-emerald-100"
-                />
-              </div>
-
-              <div className="flex flex-wrap gap-3">
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:items-start">
+              <div className="space-y-4">
                 <div className="relative">
-                  <select
-                    value={date}
-                    onChange={(e) => resetPage(setDate, e.target.value)}
-                    className="h-11 appearance-none rounded-xl border border-slate-300 bg-white pl-10 pr-10 text-sm outline-none transition focus:border-[#1A9F73] focus:ring-2 focus:ring-emerald-100"
-                  >
-                    {dateOptions.map((opt) => (
-                      <option key={opt}>{opt}</option>
-                    ))}
-                  </select>
-                  <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 " />
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                  <input
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
+                    placeholder="Search by Order ID or Buyer"
+                    className="h-12 w-full max-w-md rounded-xl border border-slate-300 bg-white pl-12 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-[#1A9F73] focus:ring-2 focus:ring-emerald-100"
+                  />
                 </div>
 
-                <div className="relative">
-                  <select
-                    value={payment}
-                    onChange={(e) => resetPage(setPayment, e.target.value)}
-                    className="h-11 appearance-none rounded-xl border border-slate-300 bg-white pl-10 pr-10 text-sm outline-none transition focus:border-[#1A9F73] focus:ring-2 focus:ring-emerald-100"
-                  >
-                    {paymentOptions.map((opt) => (
-                      <option key={opt}>{opt}</option>
-                    ))}
-                  </select>
-                  <CreditCard className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                </div>
-
-                <div className="relative">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => resetPage(setSortBy, e.target.value)}
-                    className="h-11 appearance-none rounded-xl border border-slate-300 bg-white pl-10 pr-10 text-sm outline-none transition focus:border-[#1A9F73] focus:ring-2 focus:ring-emerald-100"
-                  >
-                    {sortOptions.map((opt) => (
-                      <option key={opt}>{opt}</option>
-                    ))}
-                  </select>
-                  <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                </div>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <div className="w-full min-w-143 rounded-2xl border border-slate-200">
-                <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
-                  <SlidersHorizontal className="h-4 w-4" />
-                  Status
-                </div>
-                <div className="flex flex-wrap gap-0 p-2">
-                  {statusTabs.map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => resetPage(setStatus, tab)}
-                      className={`border-r border-slate-200 px-4 py-2 text-sm font-medium last:border-r-0 ${
-                        status === tab ? "text-[#1A9F73]" : "text-slate-600 hover:text-slate-900"
-                      }`}
+                <div className="flex flex-wrap gap-3">
+                  <div className="relative">
+                    <select
+                      value={date}
+                      onChange={(e) => resetPage(setDate, e.target.value)}
+                      className="h-11 appearance-none rounded-xl border border-slate-300 bg-white pl-10 pr-10 text-sm outline-none transition focus:border-[#1A9F73] focus:ring-2 focus:ring-emerald-100"
                     >
-                      {tab}
-                    </button>
-                  ))}
+                      {dateOptions.map((opt) => (
+                        <option key={opt}>{opt}</option>
+                      ))}
+                    </select>
+                    <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 " />
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  </div>
+
+                  <div className="relative">
+                    <select
+                      value={payment}
+                      onChange={(e) => resetPage(setPayment, e.target.value)}
+                      className="h-11 appearance-none rounded-xl border border-slate-300 bg-white pl-10 pr-10 text-sm outline-none transition focus:border-[#1A9F73] focus:ring-2 focus:ring-emerald-100"
+                    >
+                      {paymentOptions.map((opt) => (
+                        <option key={opt}>{opt}</option>
+                      ))}
+                    </select>
+                    <CreditCard className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  </div>
+
+                  <div className="relative">
+                    <select
+                      value={sortBy}
+                      onChange={(e) => resetPage(setSortBy, e.target.value)}
+                      className="h-11 appearance-none rounded-xl border border-slate-300 bg-white pl-10 pr-10 text-sm outline-none transition focus:border-[#1A9F73] focus:ring-2 focus:ring-emerald-100"
+                    >
+                      {sortOptions.map((opt) => (
+                        <option key={opt}>{opt}</option>
+                      ))}
+                    </select>
+                    <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <div className="w-full min-w-143 rounded-2xl border border-slate-200">
+                  <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    Status
+                  </div>
+                  <div className="flex flex-wrap gap-0 p-2">
+                    {statusTabs.map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => resetPage(setStatus, tab)}
+                        className={`border-r border-slate-200 px-4 py-2 text-sm font-medium last:border-r-0 ${
+                          status === tab ? "text-[#1A9F73]" : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="mt-6 overflow-hidden rounded-2xl border border-slate-700 bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="min-w-245 w-full text-left text-sm">
-              <thead className="bg-emerald-600 text-white">
-                <tr>
-                  <th className="px-4 py-4 font-medium">Order ID</th>
-                  <th className="px-4 py-4 font-medium">Buyer</th>
-                  <th className="px-4 py-4 font-medium">Order Date</th>
-                  <th className="px-4 py-4 font-medium">Total amount ($)</th>
-                  <th className="px-4 py-4 font-medium">Payment</th>
-                  <th className="px-4 py-4 font-medium">Status</th>
-                  <th className="px-4 py-4 font-medium">Items</th>
-                  <th className="px-4 py-4 font-medium">Actions</th>
-                </tr>
-              </thead>
+          <div className="mt-6 overflow-hidden rounded-2xl border border-slate-700 bg-white shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="min-w-245 w-full text-left text-sm">
+                <thead className="bg-emerald-600 text-white">
+                  <tr>
+                    <th className="px-4 py-4 font-medium">Order ID</th>
+                    <th className="px-4 py-4 font-medium">Buyer</th>
+                    <th className="px-4 py-4 font-medium">Order Date</th>
+                    <th className="px-4 py-4 font-medium">Total amount ($)</th>
+                    <th className="px-4 py-4 font-medium">Payment</th>
+                    <th className="px-4 py-4 font-medium">Status</th>
+                    <th className="px-4 py-4 font-medium">Items</th>
+                    <th className="px-4 py-4 font-medium">Actions</th>
+                  </tr>
+                </thead>
 
-              <tbody className="divide-y divide-slate-200">
-                {currentOrders.length ? (
-                  currentOrders.map((order) => (
-                    <tr key={order.orderId || order.orderNumber} className="hover:bg-slate-50">
-                      <td className="px-4 py-4 font-medium text-slate-700">{order.orderNumber}</td>
-                      <td className="px-4 py-4 text-slate-600">{order.buyer?.fullname}</td>
-                      <td className="px-4 py-4 text-slate-600">{formatDate(order.createdAt)}</td>
-                      <td className="px-4 py-4 text-slate-600">{formatAmount(order.vendorOrder?.totalAmount || 0)}</td>
-                      <td className="px-4 py-4">
-                        <Pill variant={order.paymentStatus.toLowerCase()}>{order.paymentStatus}</Pill>
-                      </td>
-                      <td className="px-4 py-4">
-                        <Pill variant={order.overallStatus.toLowerCase()}>{order.overallStatus}</Pill>
-                      </td>
-                      <td className="px-4 py-4 text-slate-600">{order.vendorOrder?.itemCount}</td>
-                      <td className="px-4 py-4">
-                        <button className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-[#1A9F73]">
-                          <Eye className="h-4 w-4" />
-                          View
-                        </button>
+                <tbody className="divide-y divide-slate-200">
+                  {currentOrders.length ? (
+                    currentOrders.map((order) => (
+                      <tr key={order.orderId || order.orderNumber} className="hover:bg-slate-50">
+                        <td className="px-4 py-4 font-medium text-slate-700">{order.orderNumber}</td>
+                        <td className="px-4 py-4 text-slate-600">{order.buyer?.fullname}</td>
+                        <td className="px-4 py-4 text-slate-600">{formatDate(order.createdAt)}</td>
+                        <td className="px-4 py-4 text-slate-600">{formatAmount(order.vendorOrder?.totalAmount || 0)}</td>
+                        <td className="px-4 py-4">
+                          <Pill variant={order.paymentStatus.toLowerCase()}>{order.paymentStatus}</Pill>
+                        </td>
+                        <td className="px-4 py-4">
+                          <Pill variant={order.overallStatus.toLowerCase()}>{order.overallStatus}</Pill>
+                        </td>
+                        <td className="px-4 py-4 text-slate-600">{order.vendorOrder?.itemCount}</td>
+                        <td className="px-4 py-4">
+                          <button 
+                            onClick={() => navigate(`/vendor/orderDetails/${order.orderId}`)}
+                            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-[#1A9F73]">
+                            <Eye className="h-4 w-4" />
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-10 text-center text-slate-500">
+                        No orders found for the selected filters.
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-10 text-center text-slate-500">
-                      No orders found for the selected filters.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-          <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-slate-500">
-              Showing {filteredOrders.length ? (safePage - 1) * pageSize + 1 : 0} to{" "}
-              {Math.min(safePage * pageSize, filteredOrders.length)} of {filteredOrders.length} orders
-            </p>
+            <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-slate-500">
+                Showing {filteredOrders.length ? (safePage - 1) * pageSize + 1 : 0} to{" "}
+                {Math.min(safePage * pageSize, filteredOrders.length)} of {filteredOrders.length} orders
+              </p>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={safePage === 1}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <ChevronDown className="h-4 w-4 rotate-90" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronDown className="h-4 w-4 rotate-90" />
+                </button>
 
-              <span className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white">
-                {safePage}
-              </span>
+                <span className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white">
+                  {safePage}
+                </span>
 
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={safePage === totalPages}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <ChevronDown className="h-4 w-4 -rotate-90" />
-              </button>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronDown className="h-4 w-4 -rotate-90" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }
