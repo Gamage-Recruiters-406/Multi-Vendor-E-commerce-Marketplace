@@ -362,7 +362,7 @@ export const getAllPaidPaymentsForAdmin = async (req, res) => {
 export const getPaidPaymentsForOwner = async (req, res) => {
     try {
         const ownerId = req.user._id;
-        const { store_id } = req.body;
+        const store_id = req.query.store_id || req.body?.store_id;
         const { startDate, endDate, limit = 10, page = 1 } = req.query;
 
         if (!store_id) {
