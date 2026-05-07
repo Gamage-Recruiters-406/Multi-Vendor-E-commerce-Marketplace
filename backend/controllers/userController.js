@@ -577,3 +577,33 @@ export const unsuspendUser = async (req, res) => {
     });
   }
 };
+
+// Get all addresses of logged-in user
+export const getAddresses = async (req, res) => {
+  try {
+
+    // Find user and select only addresses
+    const user = await User.findById(req.user._id).select("addresses");
+
+    // Check user exists
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: user.addresses.length,
+      addresses: user.addresses,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching addresses",
+      error: error.message,
+    });
+  }
+};
