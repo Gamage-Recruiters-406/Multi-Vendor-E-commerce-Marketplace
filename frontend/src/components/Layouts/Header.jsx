@@ -63,7 +63,7 @@ const roleConfigs = {
 		tone: "vendor",
 		links: [
 			{ label: "Dashboard", path: "/vendor/dashboard" },
-			{ label: "Products", path: "/vendor/products" },
+			{ label: "Stores", path: "/vendor/stores" },
 			{ label: "Orders", path: "/vendor/orders" },
 			{ label: "Analytics", path: "/vendor/sales-analytics" },
 			{ label: "Settings", path: "/vendor/settings" },
