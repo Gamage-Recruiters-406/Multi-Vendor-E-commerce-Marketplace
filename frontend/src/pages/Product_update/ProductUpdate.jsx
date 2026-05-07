@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
 	ArrowLeft,
 	CheckCircle2,
@@ -36,6 +36,7 @@ const ProductUpdate = () => {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [isLoadingProduct, setIsLoadingProduct] = useState(true);
 	const [productLoadError, setProductLoadError] = useState('');
+	const [storeId, setStoreId] = useState('');
 	const [categories, setCategories] = useState([]);
 	const [isLoadingCats, setIsLoadingCats] = useState(true);
 	const [activeStep, setActiveStep] = useState(1);
@@ -73,9 +74,9 @@ const ProductUpdate = () => {
 	useEffect(() => {
 		const fetchCategories = async () => {
 			try {
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-        const version = import.meta.env.VITE_API_VERSION || '/v1';
-        const response = await fetch(`${baseUrl}${version}/category`);
+				const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+				const version = import.meta.env.VITE_API_VERSION || '/api/v1';
+				const response = await fetch(`${baseUrl}${version}/category`);
 				const text = await response.text();
 				try {
 					const result = JSON.parse(text);
@@ -99,8 +100,8 @@ const ProductUpdate = () => {
 				setIsLoadingProduct(true);
 				setProductLoadError('');
 
-				const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-				const version = import.meta.env.VITE_API_VERSION || '/v1';
+				const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+				const version = import.meta.env.VITE_API_VERSION || '/api/v1';
 				const response = await fetch(`${baseUrl}${version}/product/${id}`);
 				const result = await response.json();
 
@@ -120,6 +121,7 @@ const ProductUpdate = () => {
 					images: [],
 					attributes: parseAttributesToToggles(product.attributes),
 				}));
+				setStoreId(product?.store?._id || product?.store || '');
 			} catch (error) {
 				console.error('Failed to fetch product', error);
 				setProductLoadError(error.message || 'Failed to load product');
@@ -185,8 +187,8 @@ const ProductUpdate = () => {
 			formData.images.forEach((file) => data.append('images', file));
 
 			const token = localStorage.getItem('token');
-			const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-			const version = import.meta.env.VITE_API_VERSION || '/v1';
+			const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+			const version = import.meta.env.VITE_API_VERSION || '/api/v1';
 
 			const response = await fetch(`${baseUrl}${version}/product/${id}`, {
 				method: 'PUT',
@@ -200,7 +202,7 @@ const ProductUpdate = () => {
 
 			if (response.ok && result.success) {
 				alert('Product updated successfully!');
-				navigate('/vendor/products');
+				navigate(storeId ? `/vendor/products?storeId=${storeId}` : '/vendor/products');
 			} else {
 				alert(`Failed to update: ${result.message || 'Unknown error'}`);
 			}
@@ -267,7 +269,7 @@ const ProductUpdate = () => {
 						<p className="text-slate-500 mt-2 text-sm">Edit the product details and save your changes.</p>
 					</div>
 					<button
-						onClick={() => navigate('/vendor/products')}
+						onClick={() => navigate(storeId ? `/vendor/products?storeId=${storeId}` : '/vendor/products')}
 						className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-full hover:bg-slate-50 transition-colors shadow-sm font-medium"
 					>
 						<ArrowLeft className="w-4 h-4" />
@@ -642,7 +644,7 @@ const ProductUpdate = () => {
 					<div className="rounded-2xl border border-slate-200 bg-white/95 px-6 py-4 shadow-sm shadow-slate-200/60 backdrop-blur-md">
 						<div className="flex items-center justify-between gap-4">
 							<button
-								onClick={() => navigate('/vendor/products')}
+								onClick={() => navigate(storeId ? `/vendor/products?storeId=${storeId}` : '/vendor/products')}
 								className="flex items-center justify-center space-x-2 bg-white hover:bg-rose-50 text-rose-500 px-8 py-3.5 rounded-xl font-bold transition-all border border-transparent hover:border-rose-100 w-full sm:w-auto"
 							>
 								<X className="w-4 h-4" />
