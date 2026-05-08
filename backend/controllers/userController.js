@@ -13,7 +13,7 @@ const generateToken = (userId) => {
 //register user
 export const register = async (req, res) => {
   try {
-    const { fullname, email, phone, password, confirmPassword, role } = req.body;
+    const { fullname, email, phone, password, role } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -24,13 +24,13 @@ export const register = async (req, res) => {
       });
     }
 
-    // Check if passwords match
+    /* Check if passwords match
     if (password !== confirmPassword) {
       return res.status(400).json({
         success: false,
         message: "Passwords do not match",
       });
-    }
+    }*/
 
     // Create new user
     const user = await User.create({
@@ -38,7 +38,7 @@ export const register = async (req, res) => {
       email,
       phone,
       password,
-      confirmPassword,
+      //confirmPassword,
       role: role || "Buyer", // Default to Buyer if not specified
     });
 
@@ -69,8 +69,15 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check if user exists
-    const user = await User.findOne({ email });
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -78,7 +85,6 @@ export const login = async (req, res) => {
       });
     }
 
-    // Check if user is suspended
     if (user.isSuspended) {
       return res.status(403).json({
         success: false,
@@ -86,8 +92,8 @@ export const login = async (req, res) => {
       });
     }
 
-    // Check password
     const isPasswordValid = await user.matchPassword(password);
+
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
@@ -95,18 +101,16 @@ export const login = async (req, res) => {
       });
     }
 
-    // Generate token
     const token = generateToken(user._id);
 
-    // Remove password from response
     const userResponse = user.toObject();
     delete userResponse.password;
 
-    // Set cookie
     res.cookie("access_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.status(200).json({
@@ -115,6 +119,7 @@ export const login = async (req, res) => {
       token,
       user: userResponse,
     });
+
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -128,9 +133,14 @@ export const login = async (req, res) => {
 export const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword, confirmNewPassword } = req.body;
-    const userId = req.user._id;
 
-    // Check if new passwords match
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized access",
+      });
+    }
+
     if (newPassword !== confirmNewPassword) {
       return res.status(400).json({
         success: false,
@@ -138,7 +148,6 @@ export const changePassword = async (req, res) => {
       });
     }
 
-    // Check password length
     if (newPassword.length < 6) {
       return res.status(400).json({
         success: false,
@@ -146,8 +155,15 @@ export const changePassword = async (req, res) => {
       });
     }
 
-    // Find user
-    const user = await User.findById(userId);
+    if (newPassword === currentPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New password cannot be same as current password",
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -155,8 +171,8 @@ export const changePassword = async (req, res) => {
       });
     }
 
-    // Verify current password
     const isPasswordValid = await user.matchPassword(currentPassword);
+
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
@@ -164,7 +180,6 @@ export const changePassword = async (req, res) => {
       });
     }
 
-    // Update password
     user.password = newPassword;
     await user.save();
 
@@ -172,6 +187,7 @@ export const changePassword = async (req, res) => {
       success: true,
       message: "Password changed successfully",
     });
+
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -238,7 +254,10 @@ export const updatePhone = async (req, res) => {
     }
 
     // Check if phone already exists
-    const existingPhone = await User.findOne({ phone });
+    const existingPhone = await User.findOne({
+      phone,
+      _id: { $ne: req.user._id }
+    });
     if (existingPhone) {
       return res.status(400).json({
         success: false,
@@ -407,7 +426,21 @@ export const addAddress = async (req, res) => {
   try {
     const { street, city, district, postalCode, country } = req.body;
 
+    if (!street || !city || !district) {
+      return res.status(400).json({
+        success: false,
+        message: "Street, city and district are required",
+      });
+    }
+
     const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
     user.addresses.push({ street, city, district, postalCode, country });
 
@@ -436,12 +469,29 @@ export const updateAddress = async (req, res) => {
 
     const user = await User.findById(req.user._id);
 
-    const address = user.addresses.id(addressId);
-    if (!address) {
-      return res.status(404).json({ message: "Address not found" });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
-    Object.assign(address, updatedData);
+    const address = user.addresses.id(addressId);
+
+    if (!address) {
+      return res.status(404).json({
+        success: false,
+        message: "Address not found",
+      });
+    }
+
+    const allowedFields = ["street", "city", "district", "postalCode", "country"];
+
+    allowedFields.forEach((field) => {
+      if (updatedData[field] !== undefined) {
+        address[field] = updatedData[field];
+      }
+    });
 
     await user.save();
 
@@ -467,8 +517,15 @@ export const deleteAddress = async (req, res) => {
 
     const user = await User.findById(req.user._id);
 
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
     user.addresses = user.addresses.filter(
-      (addr) => addr._id.toString() !== addressId
+      (addr) => addr._id?.toString() !== addressId
     );
 
     await user.save();
@@ -493,15 +550,7 @@ export const suspendUser = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Use findByIdAndUpdate with validation disabled
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { isSuspended: true },
-      { 
-        new: true,           // Return updated document
-        runValidators: false // Skip validation to avoid confirmPassword error
-      }
-    ).select("-password -confirmPassword");
+    const user = await User.findById(userId);
 
     if (!user) {
       return res.status(404).json({
@@ -513,9 +562,12 @@ export const suspendUser = async (req, res) => {
     if (user.isSuspended) {
       return res.status(400).json({
         success: false,
-        message: "User is suspended",
+        message: "User already suspended",
       });
     }
+
+    user.isSuspended = true;
+    await user.save();
 
     res.status(200).json({
       success: true,
@@ -524,7 +576,6 @@ export const suspendUser = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error suspending user:", error);
     res.status(500).json({
       success: false,
       message: "Error suspending user",
@@ -538,15 +589,7 @@ export const unsuspendUser = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Use findByIdAndUpdate with validation disabled
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { isSuspended: false },
-      { 
-        new: true,           // Return updated document
-        runValidators: false // Skip validation to avoid confirmPassword error
-      }
-    ).select("-password -confirmPassword");
+    const user = await User.findById(userId);
 
     if (!user) {
       return res.status(404).json({
@@ -562,6 +605,9 @@ export const unsuspendUser = async (req, res) => {
       });
     }
 
+    user.isSuspended = false;
+    await user.save();
+
     res.status(200).json({
       success: true,
       message: "User unsuspended successfully",
@@ -569,7 +615,6 @@ export const unsuspendUser = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error unsuspending user:", error);
     res.status(500).json({
       success: false,
       message: "Error unsuspending user",
@@ -581,11 +626,8 @@ export const unsuspendUser = async (req, res) => {
 // Get all addresses of logged-in user
 export const getAddresses = async (req, res) => {
   try {
-
-    // Find user and select only addresses
     const user = await User.findById(req.user._id).select("addresses");
 
-    // Check user exists
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -593,10 +635,13 @@ export const getAddresses = async (req, res) => {
       });
     }
 
+    const addresses = user.addresses || [];
+
     res.status(200).json({
       success: true,
-      count: user.addresses.length,
-      addresses: user.addresses,
+      message: "Addresses fetched successfully",
+      count: addresses.length,
+      addresses,
     });
 
   } catch (error) {
