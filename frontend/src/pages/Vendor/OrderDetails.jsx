@@ -11,6 +11,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import Layout from "../../components/Layouts/Layout";
 import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 
 function Pill({ children, variant = "neutral" }) {
@@ -49,136 +50,173 @@ export default function VendorOrderDetailsPage() {
   const receiptRef = useRef();
 
   const downloadReceipt = () => {
-    const pdf = new jsPDF("p", "mm", "a4");
+  const pdf = new jsPDF("p", "mm", "a4");
 
-    const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageWidth = pdf.internal.pageSize.getWidth();
 
-    let y = 15; // vertical cursor
+  // ================= HEADER =================
+  pdf.setFontSize(20);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("INVOICE", pageWidth / 2, 20, {
+    align: "center",
+  });
 
-    // ================= HEADER =================
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(18);
-    pdf.text("INVOICE", pageWidth / 2, y, { align: "center" });
+  // ================= ORDER INFO =================
+  pdf.setFontSize(10);
+  pdf.setFont("helvetica", "normal");
 
-    y += 10;
+  pdf.text(`Order Number: ${order.orderNumber}`, 14, 35);
 
-    pdf.setFontSize(10);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(`Order No: ${order.orderNumber}`, 14, y);
-    pdf.text(`Date: ${new Date(order.createdAt).toLocaleDateString()}`, 140, y);
+  pdf.text(
+    `Order Date: ${new Date(order.createdAt).toLocaleDateString()}`,
+    14,
+    42
+  );
 
-    y += 10;
-    pdf.line(14, y, 196, y); // separator line
+  pdf.text(`Order Status: ${order.overallStatus}`, 140, 35);
 
-    y += 10;
+  pdf.text(`Payment: ${order.paymentStatus}`, 140, 42);
 
-    // ================= CUSTOMER INFO =================
-    pdf.setFont("helvetica", "bold");
-    pdf.text("BILL TO:", 14, y);
+  // ================= CUSTOMER =================
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Customer Information", 14, 58);
 
-    y += 6;
-    pdf.setFont("helvetica", "normal");
-    pdf.text(order.buyer?.fullname || "-", 14, y);
-    y += 5;
-    pdf.text(order.buyer?.email || "-", 14, y);
-    y += 5;
-    pdf.text(order.buyer?.phone || "-", 14, y);
+  pdf.setFont("helvetica", "normal");
 
-    y += 10;
+  pdf.text(`Name: ${order.buyer?.fullname || "-"}`, 14, 66);
 
-    // ================= SHIPPING =================
-    pdf.setFont("bold");
-    pdf.text("SHIPPING ADDRESS:", 14, y);
+  pdf.text(`Email: ${order.buyer?.email || "-"}`, 14, 73);
 
-    y += 6;
-    pdf.setFont("normal");
+  pdf.text(`Phone: ${order.buyer?.phone || "-"}`, 14, 80);
 
-    const address = [
-        order.shippingAddress?.line1,
-        order.shippingAddress?.line2,
-        order.shippingAddress?.city,
-        order.shippingAddress?.state,
-        order.shippingAddress?.postalCode,
-        order.shippingAddress?.country,
-    ]
-        .filter(Boolean)
-        .join(", ");
+  // ================= SHIPPING =================
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Shipping Address", 120, 58);
 
-    pdf.text(address || "-", 14, y);
+  pdf.setFont("helvetica", "normal");
 
-    y += 12;
+  const address = [
+    order.shippingAddress?.line1,
+    order.shippingAddress?.line2,
+    order.shippingAddress?.city,
+    order.shippingAddress?.state,
+    order.shippingAddress?.postalCode,
+    order.shippingAddress?.country,
+  ]
+    .filter(Boolean)
+    .join(", ");
 
-    // ================= ITEMS TABLE =================
-    pdf.setFont("bold");
-    pdf.text("ORDER ITEMS", 14, y);
+  const splitAddress = pdf.splitTextToSize(address, 70);
 
-    y += 8;
+  pdf.text(splitAddress, 120, 66);
 
-    pdf.setFontSize(9);
+  // ================= ITEMS TABLE =================
+  const tableBody = order.vendorOrder?.items.map((item) => [
+    item.productName?.substring(0, 40),
+    item.productId || "-",
+    item.quantity,
+    `Rs. ${item.unitPrice}`,
+    `Rs. ${item.totalPrice}`,
+  ]);
 
-    // Table Header
-    pdf.text("Product", 14, y);
-    pdf.text("Qty", 110, y);
-    pdf.text("Price", 130, y);
-    pdf.text("Total", 160, y);
+  autoTable(pdf, {
+    startY: 95,
 
-    y += 4;
-    pdf.line(14, y, 196, y);
+    margin: { 
+        left: 14, 
+        right: 14 
+    },
 
-    y += 6;
+    head: [
+      ["Product", "Product ID", "Qty", "Unit Price", "Total"],
+    ],
 
-    pdf.setFont("normal");
+    body: tableBody,
 
-    order.vendorOrder?.items.forEach((item) => {
-        pdf.text(item.productName?.substring(0, 25) || "-", 14, y);
-        pdf.text(String(item.quantity), 110, y);
-        pdf.text(`Rs. ${item.unitPrice}`, 130, y);
-        pdf.text(`Rs. ${item.totalPrice}`, 160, y);
+    theme: "grid",
 
-        y += 6;
-    });
+    tableWidth: "auto",
 
-    y += 5;
-    pdf.line(14, y, 196, y);
+    styles: {
+      fontSize: 8,
+      cellPadding: 2.5,
+      valign: "middle",
+      overflow: "linebreak",
+      lineWidth: 0.1,
+      cellWidth: "wrap",
+    },
 
-    y += 10;
+    headStyles: {
+      fillColor: [26, 159, 115],
+      textColor: 255,
+      fontStyle: "bold",
+    },
 
-    // ================= SUMMARY =================
-    pdf.setFont("bold");
-    pdf.text("PAYMENT SUMMARY", 14, y);
+    
 
-    y += 8;
-    pdf.setFont("normal");
+    alternateRowStyles: {
+      fillColor: [248, 250, 252],
+    },
 
-    pdf.text("Subtotal:", 14, y);
-    pdf.text(`Rs. ${order.vendorOrder?.subtotal}`, 160, y);
+    columnStyles: {
+      0: { cellWidth: 58 },
+      1: { cellWidth: 35 },
+      2: { halign: "center", cellWidth: 16 },
+      3: { halign: "right", cellWidth: 30 },
+      4: { halign: "right", cellWidth: 30 },
+    },
+  });
 
-    y += 6;
+  // ================= PAYMENT SUMMARY =================
+  const finalY = pdf.lastAutoTable.finalY + 15;
 
-    pdf.text("Discount:", 14, y);
-    pdf.text(`- Rs. ${order.vendorOrder?.discountAmount}`, 160, y);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Payment Summary", 14, finalY);
 
-    y += 6;
+  pdf.setFont("helvetica", "normal");
 
-    pdf.text("Shipping:", 14, y);
-    pdf.text(`Rs. ${order.vendorOrder?.shippingFee}`, 160, y);
+  pdf.text("Subtotal:", 130, finalY + 10);
+  pdf.text(`Rs. ${order.vendorOrder?.subtotal}`, 170, finalY + 10);
 
-    y += 8;
+  pdf.text("Discount:", 130, finalY + 18);
+  pdf.text(
+    `- Rs. ${order.vendorOrder?.discountAmount}`,
+    170,
+    finalY + 18
+  );
 
-    pdf.setFont("bold");
-    pdf.text("TOTAL:", 14, y);
-    pdf.text(`Rs. ${order.vendorOrder?.totalAmount}`, 160, y);
+  pdf.text("Shipping Fee:", 130, finalY + 26);
+  pdf.text(
+    `Rs. ${order.vendorOrder?.shippingFee}`,
+    170,
+    finalY + 26
+  );
 
-    y += 15;
+  pdf.setFont("helvetica", "bold");
 
-    // ================= FOOTER =================
-    pdf.setFontSize(8);
-    pdf.setTextColor(120);
-    pdf.text("Thank you for your purchase!", pageWidth / 2, y, {
-        align: "center",
-    });
+  pdf.text("Total Amount:", 130, finalY + 38);
 
-    pdf.save(`Invoice-${order.orderNumber}.pdf`);
+  pdf.text(
+    `Rs. ${order.vendorOrder?.totalAmount}`,
+    170,
+    finalY + 38
+  );
+
+  // ================= FOOTER =================
+  pdf.setFontSize(9);
+  pdf.setTextColor(120);
+
+  pdf.text(
+    "Thank you for shopping with us!",
+    pageWidth / 2,
+    285,
+    {
+      align: "center",
+    }
+  );
+
+  // ================= SAVE =================
+  pdf.save(`Invoice-${order.orderNumber}.pdf`);
 };
 
 
@@ -208,7 +246,7 @@ export default function VendorOrderDetailsPage() {
         `${API_BASE_URL}${API_VERSION}/orders/${orderId}/tracking`
       );
       setTracking(res.data.tracking || []);
-      console.log("Tracking: ",res.data.tracking);
+    //   console.log("Tracking: ",res.data.tracking);
     } catch (err) {
       console.error(err);
     }
