@@ -35,6 +35,10 @@ const ProductCreate = () => {
   const [categories, setCategories] = useState([]);
   const [isLoadingCats, setIsLoadingCats] = useState(true);
 
+  const [myStores, setMyStores] = useState([]);
+  const [isLoadingStores, setIsLoadingStores] = useState(false);
+  const [selectedStoreId, setSelectedStoreId] = useState(storeId || '');
+
 
   useEffect(() => {
     const fetchStoreDetails = async () => {
@@ -52,6 +56,37 @@ const ProductCreate = () => {
     };
 
     fetchStoreDetails();
+
+    const fetchMyStores = async () => {
+      if (storeId) return;
+      setIsLoadingStores(true);
+      try {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${baseUrl}/api/v1/store/my-stores`, {
+          headers: {
+            ...(token && { 'Authorization': `Bearer ${token}` })
+          }
+        });
+        const result = await response.json();
+        if (result.success) {
+          setMyStores(result.data);
+          // If only one store, select it automatically
+          if (result.data.length === 1) {
+            const onlyStore = result.data[0];
+            setSelectedStoreId(onlyStore._id);
+            setStoreName(onlyStore.name);
+            setFormData(prev => ({ ...prev, store: onlyStore._id }));
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch stores", error);
+      } finally {
+        setIsLoadingStores(false);
+      }
+    };
+
+    fetchMyStores();
 
     const fetchCategories = async () => {
       try {
@@ -107,7 +142,7 @@ const ProductCreate = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     // Validate required fields
-    if (!formData.title || !formData.price || !formData.category || !storeId) {
+    if (!formData.title || !formData.price || !formData.category || !formData.store) {
       toast.error("Name, Price, Category, and Store are required.");
       return;
     }
@@ -120,7 +155,7 @@ const ProductCreate = () => {
       data.append('price', formData.price);
       data.append('category', formData.category);
       data.append('stock', formData.stock);
-      data.append('store', storeId);
+      data.append('store', formData.store);
       
       formData.images.forEach(file => data.append('images', file));
 
@@ -141,8 +176,8 @@ const ProductCreate = () => {
         toast.success("Listing published successfully!");
         console.log("Success result:", result.data);
         // Navigate back to the store view
-        if (storeId) {
-          navigate(`/vendor/products?storeId=${storeId}`);
+        if (formData.store) {
+          navigate(`/vendor/products?storeId=${formData.store}`);
         }
       } else {
         toast.error(`Failed to publish: ${result.message || 'Unknown error'}`);
@@ -180,7 +215,7 @@ const ProductCreate = () => {
             <p className="text-slate-500 mt-2 text-sm">Fill in the details below to publish your product to the marketplace.</p>
           </div>
           <button 
-            onClick={() => navigate(storeId ? `/vendor/products?storeId=${storeId}` : '/vendor/products')}
+            onClick={() => navigate(formData.store ? `/vendor/products?storeId=${formData.store}` : '/vendor/products')}
             className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-full hover:bg-slate-50 transition-colors shadow-sm font-medium"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -262,21 +297,61 @@ const ProductCreate = () => {
                 <span className="text-xs font-semibold text-slate-400 bg-white px-3 py-1 rounded-full border border-slate-100">Step 1 of 4</span>
               </div>
 
-              {/* Read-only Store Display Section */}
-              <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="bg-emerald-100 text-emerald-600 p-2.5 rounded-xl">
-                    <Store className="w-5 h-5" />
+              {/* Store Display / Selection Section */}
+              <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 flex flex-col space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-emerald-100 text-emerald-600 p-2.5 rounded-xl">
+                      <Store className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-0.5">
+                        {storeId ? 'Adding Product To' : 'Select Destination Store'}
+                      </p>
+                      <p className="text-base font-bold text-slate-900">{storeName || (storeId ? 'Loading Store...' : 'Please choose a store')}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-0.5">Adding Product To</p>
-                    <p className="text-base font-bold text-slate-900">{storeName || 'Loading Store...'}</p>
+                  {storeId && (
+                    <div className="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-full border border-emerald-100 shadow-sm">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                      <span className="text-[10px] font-black text-emerald-700 uppercase tracking-tighter">Verified Store</span>
+                    </div>
+                  )}
+                </div>
+
+                {!storeId && (
+                  <div className="pt-2 border-t border-emerald-100/50">
+                    {isLoadingStores ? (
+                      <p className="text-xs text-slate-400 animate-pulse">Fetching your stores...</p>
+                    ) : myStores.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {myStores.map(store => (
+                          <button
+                            key={store._id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedStoreId(store._id);
+                              setStoreName(store.name);
+                              setFormData(prev => ({ ...prev, store: store._id }));
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                              selectedStoreId === store._id
+                                ? 'bg-emerald-500 text-white shadow-md'
+                                : 'bg-white text-slate-600 border border-slate-200 hover:border-emerald-300'
+                            }`}
+                          >
+                            {store.name}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-amber-600 flex items-center space-x-2 bg-amber-50 p-2 rounded-lg border border-amber-100">
+                        <ShieldAlert className="w-3 h-3" />
+                        <span>No stores found. Please <a href="/vendor/create-store" className="underline font-bold">create a store</a> first.</span>
+                      </div>
+                    )}
                   </div>
-                </div>
-                <div className="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-full border border-emerald-100 shadow-sm">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                  <span className="text-[10px] font-black text-emerald-700 uppercase tracking-tighter">Verified Store</span>
-                </div>
+                )}
               </div>
             </div>
             
@@ -628,7 +703,7 @@ const ProductCreate = () => {
             </button>
 
             <button 
-              onClick={() => navigate(storeId ? `/vendor/products?storeId=${storeId}` : '/vendor/products')}
+              onClick={() => navigate(formData.store ? `/vendor/products?storeId=${formData.store}` : '/vendor/products')}
               className="flex items-center justify-center space-x-2 bg-white hover:bg-slate-50 text-slate-600 px-10 py-4 rounded-xl font-bold transition-all border border-slate-200 hover:border-slate-300 w-full sm:w-auto"
             >
               <X className="w-4 h-4" />
