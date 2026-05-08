@@ -16,13 +16,32 @@ import {
   setDefaultAddress,
 } from '../../services/addressbookServices';
 
+// Normalize profile picture URL (same as in Header.jsx)
+const normalizeProfilePictureUrl = (value) => {
+  if (!value || typeof value !== "string") return null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const cloudinaryMarker = "https://res.cloudinary.com/";
+  const firstIndex = trimmed.indexOf(cloudinaryMarker);
+  if (firstIndex === -1) return trimmed;
+
+  const secondIndex = trimmed.indexOf(cloudinaryMarker, firstIndex + cloudinaryMarker.length);
+  if (secondIndex !== -1) {
+    return trimmed.slice(secondIndex);
+  }
+
+  return trimmed;
+};
+
 export default function UserProfileAndAddressBook() {
   // ============ PROFILE STATE ============
   const [profile, setProfile] = useState({
     fullName: '',
     email: '',
     phone: '',
-    country: 'United States',
+    country: 'Sri Lanka',
     profilePicture: null,
   });
   const [editingProfile, setEditingProfile] = useState(null);
@@ -61,7 +80,7 @@ export default function UserProfileAndAddressBook() {
     city: '',
     state: '',
     zip: '',
-    country: 'United States',
+    country: 'Sri Lanka',
   });
   const [editingAddressData, setEditingAddressData] = useState(null);
 
@@ -112,11 +131,28 @@ export default function UserProfileAndAddressBook() {
       const response = await getProfile();
 
       if (response.success && response.data) {
+        // Normalize profile picture from the profile response
+        let profilePictureUrl = null;
+        if (response.data.profilePicture) {
+          profilePictureUrl = normalizeProfilePictureUrl(response.data.profilePicture);
+        }
+
+        // If no picture in profile, try to fetch from dedicated endpoint
+        if (!profilePictureUrl) {
+          const pictureResponse = await getProfilePicture();
+          if (pictureResponse.success && pictureResponse.imageUrl) {
+            profilePictureUrl = normalizeProfilePictureUrl(pictureResponse.imageUrl);
+          }
+        }
+
         setProfile(response.data);
         setEditingProfile(response.data);
-        
-        // Load profile picture separately
-        await loadProfilePicture();
+
+        // Set the profile picture if found
+        if (profilePictureUrl) {
+          console.log('Setting profile picture from loadProfileData:', profilePictureUrl);
+          setProfilePictureUrl(profilePictureUrl);
+        }
       } else {
         showError(response.message || 'Failed to load profile');
       }
@@ -130,12 +166,26 @@ export default function UserProfileAndAddressBook() {
 
   const loadProfilePicture = async () => {
     try {
+      console.log('Loading profile picture...');
       const response = await getProfilePicture();
+      console.log('Profile picture response:', response);
+      
       if (response.success && response.imageUrl) {
-        setProfilePictureUrl(response.imageUrl);
+        const normalizedUrl = normalizeProfilePictureUrl(response.imageUrl);
+        console.log('Normalized profile picture URL:', normalizedUrl);
+        
+        if (normalizedUrl) {
+          setProfilePictureUrl(normalizedUrl);
+        } else {
+          setProfilePictureUrl(null);
+        }
+      } else {
+        console.log('No profile picture found or response unsuccessful');
+        setProfilePictureUrl(null);
       }
     } catch (err) {
       console.error('Error loading profile picture:', err);
+      setProfilePictureUrl(null);
     }
   };
 
@@ -158,14 +208,26 @@ export default function UserProfileAndAddressBook() {
 
     try {
       setIsUploadingPicture(true);
+      console.log('Uploading profile picture:', file.name);
+      
       const response = await uploadProfilePicture(file);
+
+      console.log('Upload response:', response);
 
       if (response.success) {
         showSuccess('Profile picture updated successfully!');
-        // Reload profile picture
-        await loadProfilePicture();
-        // Also reload profile data to get updated user info
-        await loadProfileData();
+        
+        // Wait a moment then reload profile data and picture
+        setTimeout(async () => {
+          const pictureResponse = await getProfilePicture();
+          if (pictureResponse.success && pictureResponse.imageUrl) {
+            const normalizedUrl = normalizeProfilePictureUrl(pictureResponse.imageUrl);
+            console.log('Normalized picture URL after upload:', normalizedUrl);
+            if (normalizedUrl) {
+              setProfilePictureUrl(normalizedUrl);
+            }
+          }
+        }, 500);
       } else {
         showError(response.message || 'Failed to upload profile picture');
       }
@@ -186,19 +248,22 @@ export default function UserProfileAndAddressBook() {
     }
 
     try {
+      console.log('=== Starting profile picture removal ===');
       const response = await removeProfilePicture();
 
+      console.log('Remove response:', response);
+
       if (response.success) {
+        console.log('✅ Picture removed successfully');
         showSuccess('Profile picture removed successfully!');
         setProfilePictureUrl(null);
-        // Reload profile data
-        await loadProfileData();
       } else {
+        console.log('❌ Picture removal failed:', response.message);
         showError(response.message || 'Failed to remove profile picture');
       }
     } catch (err) {
-      showError('Error removing profile picture');
-      console.error('Remove error:', err);
+      console.error('Exception in remove handler:', err);
+      showError('Error removing profile picture: ' + err.message);
     }
   };
 
@@ -251,7 +316,7 @@ export default function UserProfileAndAddressBook() {
 
     if (field === 'new') {
       setPasswordStrength({
-        length: value.length >= 8,
+        length: value.length >= 6,
         uppercase: /[A-Z]/.test(value),
         special: /[!@#$%^&*]/.test(value),
         nophrase: !['password', 'qwerty', '12345'].some(phrase =>
@@ -266,35 +331,47 @@ export default function UserProfileAndAddressBook() {
     try {
       setError(null);
 
-      // Validate passwords match
-      if (passwords.new !== passwords.confirm) {
-        showError('New passwords do not match');
+      // Validate that fields are filled
+      if (!passwords.current || !passwords.new || !passwords.confirm) {
+        showError('Please fill in all password fields');
         return;
       }
 
-      // Validate password strength
-      if (!passwordStrength.length || !passwordStrength.uppercase || !passwordStrength.special) {
-        showError('Password does not meet security requirements');
+      // Validate passwords match
+      if (passwords.new !== passwords.confirm) {
+        showError('New password and confirm password do not match');
+        return;
+      }
+
+      // Validate password length (backend requires minimum 6 characters)
+      if (passwords.new.length < 6) {
+        showError('New password must be at least 6 characters long');
         return;
       }
 
       setIsUpdatingPassword(true);
+      console.log('Calling changePassword function...');
+      
       const response = await changePassword(
         passwords.current,
         passwords.new,
         passwords.confirm
       );
 
+      console.log('Password change response:', response);
+
       if (response.success) {
+        // Clear password fields
         setPasswords({ current: '', new: '', confirm: '' });
         setPasswordStrength({ length: false, uppercase: false, special: false, nophrase: false });
-        showSuccess('Password changed successfully!');
+        
+        showSuccess('✓ Password changed successfully!');
       } else {
         showError(response.message || 'Failed to change password');
       }
     } catch (err) {
-      showError(err.message || 'Failed to change password');
-      console.error('Update password error:', err);
+      console.error('Password update error:', err);
+      showError(err.message || 'Failed to change password. Please check your current password and try again.');
     } finally {
       setIsUpdatingPassword(false);
     }
@@ -339,7 +416,7 @@ export default function UserProfileAndAddressBook() {
           city: '',
           state: '',
           zip: '',
-          country: 'United States',
+          country: 'Sri Lanka',
         });
         setIsAddingAddress(false);
         showSuccess('Address added successfully!');
@@ -525,15 +602,6 @@ export default function UserProfileAndAddressBook() {
             <div>
               <h3 className="font-semibold text-gray-900">Profile Picture</h3>
               <p className="text-sm text-gray-600 mt-1">JPG, PNG or GIF (Max 5MB)</p>
-              {profilePictureUrl && (
-                <button
-                  onClick={handleRemoveProfilePicture}
-                  className="mt-2 text-sm text-red-600 hover:text-red-700 flex items-center gap-1"
-                >
-                  <Trash size={14} />
-                  Remove Picture
-                </button>
-              )}
               {isUploadingPicture && (
                 <p className="text-sm text-emerald-600 mt-2">Uploading...</p>
               )}
@@ -613,11 +681,7 @@ export default function UserProfileAndAddressBook() {
                     onChange={(e) => setEditingProfile({ ...editingProfile, country: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
-                    <option>United States</option>
-                    <option>Canada</option>
-                    <option>United Kingdom</option>
-                    <option>Australia</option>
-                    <option>Other</option>
+                    <option>Sri Lanka</option>
                   </select>
                 </div>
               </div>
@@ -666,11 +730,13 @@ export default function UserProfileAndAddressBook() {
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       placeholder="••••••••"
                       required
+                      disabled={isUpdatingPassword}
                     />
                     <button
                       type="button"
                       onClick={() => setPasswordVisibility({ ...passwordVisibility, current: !passwordVisibility.current })}
-                      className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
+                      className="absolute right-3 top-3 text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                      disabled={isUpdatingPassword}
                     >
                       {passwordVisibility.current ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
@@ -688,11 +754,13 @@ export default function UserProfileAndAddressBook() {
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                         placeholder="••••••••"
                         required
+                        disabled={isUpdatingPassword}
                       />
                       <button
                         type="button"
                         onClick={() => setPasswordVisibility({ ...passwordVisibility, new: !passwordVisibility.new })}
-                        className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
+                        className="absolute right-3 top-3 text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                        disabled={isUpdatingPassword}
                       >
                         {passwordVisibility.new ? <EyeOff size={20} /> : <Eye size={20} />}
                       </button>
@@ -709,11 +777,13 @@ export default function UserProfileAndAddressBook() {
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                         placeholder="••••••••"
                         required
+                        disabled={isUpdatingPassword}
                       />
                       <button
                         type="button"
                         onClick={() => setPasswordVisibility({ ...passwordVisibility, confirm: !passwordVisibility.confirm })}
-                        className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
+                        className="absolute right-3 top-3 text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                        disabled={isUpdatingPassword}
                       >
                         {passwordVisibility.confirm ? <EyeOff size={20} /> : <Eye size={20} />}
                       </button>
@@ -726,7 +796,7 @@ export default function UserProfileAndAddressBook() {
                   disabled={isUpdatingPassword}
                   className="px-6 py-2 bg-teal-700 text-white rounded-lg font-medium hover:bg-teal-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isUpdatingPassword ? 'Updating...' : 'Update Password'}
+                  {isUpdatingPassword ? 'Updating Password...' : 'Update Password'}
                 </button>
               </div>
 
@@ -742,7 +812,7 @@ export default function UserProfileAndAddressBook() {
                     ) : (
                       <X size={16} className="text-gray-300" />
                     )}
-                    <span className={passwordStrength.length ? 'text-emerald-900' : 'text-gray-500'}>8+ characters</span>
+                    <span className={passwordStrength.length ? 'text-emerald-900' : 'text-gray-500'}>6+ characters</span>
                   </li>
                   <li className="flex items-center gap-2">
                     {passwordStrength.uppercase ? (
