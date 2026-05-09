@@ -32,6 +32,11 @@ const ProductCreate = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [generatedQuestions, setGeneratedQuestions] = useState([]);
+  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+  const [questionsGenerated, setQuestionsGenerated] = useState(false);
+  const [createdProductId, setCreatedProductId] = useState(null);
+
   const [categories, setCategories] = useState([]);
   const [isLoadingCats, setIsLoadingCats] = useState(true);
 
@@ -190,6 +195,71 @@ const ProductCreate = () => {
     }
   };
 
+  const handleGenerateQuestions = async () => {
+    if (!formData.title || !formData.price || !formData.category || !formData.store) {
+      toast.error("Name, Price, Category, and Store are required.");
+      return;
+    }
+
+    setIsGeneratingQuestions(true);
+    try {
+      const data = new FormData();
+      data.append('name', formData.title);
+      data.append('description', formData.description);
+      data.append('price', formData.price);
+      data.append('category', formData.category);
+      data.append('stock', formData.stock);
+      data.append('store', formData.store);
+      formData.images.forEach(file => data.append('images', file));
+
+      const token = localStorage.getItem('token');
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
+      const productResponse = await fetch(`${baseUrl}/api/v1/product`, {
+        method: 'POST',
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: data
+      });
+
+      const productResult = await productResponse.json();
+
+      if (!productResponse.ok || !productResult.success) {
+        toast.error(`Failed to create product: ${productResult.message || 'Unknown error'}`);
+        return;
+      }
+
+      const newProductId = productResult.data._id;
+      setCreatedProductId(newProductId);
+      toast.success("Product created! Generating product questions...");
+
+      const faqResponse = await fetch(`${baseUrl}/api/v1/chatbot/faq/generate-ai`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify({ productId: newProductId })
+      });
+
+      const faqResult = await faqResponse.json();
+
+      if (faqResult.success) {
+        setGeneratedQuestions(faqResult.questions);
+        setQuestionsGenerated(true);
+        toast.success("Questions generated successfully! You can now publish.");
+      } else {
+        toast.error(`Failed to generate questions: ${faqResult.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error("Generation error:", error);
+      toast.error("An error occurred while generating questions.");
+    } finally {
+      setIsGeneratingQuestions(false);
+    }
+  };
+
   const scrollToSection = (id) => {
     const el = document.getElementById(id);
     if (el) {
@@ -215,7 +285,7 @@ const ProductCreate = () => {
             <p className="text-slate-500 mt-2 text-sm">Fill in the details below to publish your product to the marketplace.</p>
           </div>
           <button 
-            onClick={() => navigate(formData.store ? `/vendor/products?storeId=${formData.store}` : '/vendor/products')}
+            onClick={() => navigate('/vendor/products')}
             className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-full hover:bg-slate-50 transition-colors shadow-sm font-medium"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -616,6 +686,31 @@ const ProductCreate = () => {
             </div>
           </div>
 
+          {/* Section: Generated Questions */}
+          {generatedQuestions.length > 0 && (
+            <div id="section-questions" className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+              <div className="px-8 py-6 border-b border-slate-50 bg-slate-50/50">
+                <h2 className="text-lg font-bold text-slate-900">Generated Product Questions</h2>
+                <p className="text-sm text-slate-500 mt-1">AI-generated FAQs to help customers learn about your product</p>
+              </div>
+              <div className="p-8 space-y-4">
+                {generatedQuestions.map((q, index) => (
+                  <div key={q._id || index} className="p-4 rounded-xl border border-slate-100 bg-slate-50/50">
+                    <div className="flex items-start space-x-3">
+                      <span className="flex-shrink-0 w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">
+                        {index + 1}
+                      </span>
+                      <div>
+                        <p className="font-semibold text-slate-900">{q.question}</p>
+                        <p className="text-sm text-slate-600 mt-1">{q.answer}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
 
         {/* Right Sidebar Column */}
@@ -694,16 +789,56 @@ const ProductCreate = () => {
       <div className="bg-white border-t border-slate-200 mt-12">
         <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col-reverse sm:flex-row-reverse justify-between items-center sm:justify-start gap-4 mb-safe pb-safe">
             <button 
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className={`flex items-center justify-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white px-10 py-4 rounded-xl font-bold shadow-lg shadow-emerald-500/20 transition-all active:scale-95 w-full sm:w-auto ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+              onClick={() => {
+                if (questionsGenerated && createdProductId) {
+                  navigate('/vendor/products');
+                }
+              }}
+              disabled={!questionsGenerated}
+              className={`flex items-center justify-center space-x-2 px-10 py-4 rounded-xl font-bold shadow-lg transition-all active:scale-95 w-full sm:w-auto ${
+                questionsGenerated
+                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20'
+                  : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              }`}
             >
-              <Send className={`w-4 h-4 ${isSubmitting ? 'animate-pulse' : ''}`} />
-              <span>{isSubmitting ? 'Publishing...' : 'Publish Now'}</span>
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{questionsGenerated ? 'Publish Now' : 'Generate Questions First'}</span>
             </button>
 
             <button 
-              onClick={() => navigate(formData.store ? `/vendor/products?storeId=${formData.store}` : '/vendor/products')}
+              onClick={handleGenerateQuestions}
+              disabled={isGeneratingQuestions || questionsGenerated}
+              className={`flex items-center justify-center space-x-2 px-10 py-4 rounded-xl font-bold transition-all w-full sm:w-auto ${
+                isGeneratingQuestions
+                  ? 'bg-blue-200 text-blue-400 cursor-not-allowed'
+                  : questionsGenerated
+                    ? 'bg-emerald-100 text-emerald-600 cursor-not-allowed border border-emerald-200'
+                    : 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+              }`}
+            >
+              {isGeneratingQuestions ? (
+                <>
+                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  <span>Generating...</span>
+                </>
+              ) : questionsGenerated ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>Generated</span>
+                </>
+              ) : (
+                <>
+                  <Star className="w-4 h-4" />
+                  <span>Generate Questions</span>
+                </>
+              )}
+            </button>
+
+            <button 
+              onClick={() => navigate('/vendor/products')}
               className="flex items-center justify-center space-x-2 bg-white hover:bg-slate-50 text-slate-600 px-10 py-4 rounded-xl font-bold transition-all border border-slate-200 hover:border-slate-300 w-full sm:w-auto"
             >
               <X className="w-4 h-4" />
