@@ -1,11 +1,11 @@
-import Cart from "../models/Cart.js";
+import Wishlist from "../models/Wishlist.js";
 import Product from "../models/Product.js";
 
-// Add item to cart
-export const addToCart = async (req, res) => {
+// Add to wishlist
+export const addToWishlist = async (req, res) => {
     try {
         const user_id = req.user._id;
-        const { product_id, quantity } = req.body;
+        const { product_id } = req.body;
 
         if (!product_id) {
             return res.status(400).json({
@@ -23,44 +23,36 @@ export const addToCart = async (req, res) => {
             });
         }
 
-        let cart = await Cart.findOne({ user_id });
+        let wishlist = await Wishlist.findOne({ user_id });
 
-        // Create cart if not exists
-        if (!cart) {
-            cart = await Cart.create({
+        // create wishlist if not exists
+        if (!wishlist) {
+            wishlist = await Wishlist.create({
                 user_id,
-                items: [],
-                totalPrice: 0
+                items: []
             });
         }
 
-        // Check existing item
-        const existingItem = cart.items.find(
+        // check existing item
+        const exists = wishlist.items.find(
             item => String(item.product_id) === String(product_id)
         );
 
-        if (existingItem) {
-            existingItem.quantity += quantity || 1;
-        } else {
-            cart.items.push({
-                product_id,
-                quantity: quantity || 1,
-                price: product.price
+        if (exists) {
+            return res.status(400).json({
+                success: false,
+                message: "Already in wishlist"
             });
         }
 
-        // Recalculate total
-        cart.totalPrice = cart.items.reduce(
-            (sum, item) => sum + item.price * item.quantity,
-            0
-        );
+        wishlist.items.push({ product_id });
 
-        await cart.save();
+        await wishlist.save();
 
         res.status(200).json({
             success: true,
-            message: "Added to cart",
-            data: cart
+            message: "Added to wishlist",
+            data: wishlist
         });
 
     } catch (error) {
@@ -73,33 +65,25 @@ export const addToCart = async (req, res) => {
     }
 };
 
-// Get cart
-export const getCart = async (req, res) => {
+// Get wishlist
+export const getWishlist = async (req, res) => {
     try {
-        const cart = await Cart.findOne({ user_id: req.user._id })
-            .populate({
-                path: 'items.product_id',
-                select: 'name description price images stock store category',
-                populate: {
-                    path: 'store',
-                    select: 'name logo'
-                }
-            })
+        const wishlist = await Wishlist.findOne({ user_id: req.user._id })
+            .populate("items.product_id")
             .lean();
 
-        if (!cart) {
+        if (!wishlist) {
             return res.status(200).json({
                 success: true,
                 data: {
-                    items: [],
-                    totalPrice: 0
+                    items: []
                 }
             });
         }
 
         res.status(200).json({
             success: true,
-            data: cart
+            data: wishlist
         });
 
     } catch (error) {
@@ -112,36 +96,31 @@ export const getCart = async (req, res) => {
     }
 };
 
-// Remove item from cart
-export const removeFromCart = async (req, res) => {
+// Remove from wishlist
+export const removeFromWishlist = async (req, res) => {
     try {
         const user_id = req.user._id;
         const { product_id } = req.params;
 
-        const cart = await Cart.findOne({ user_id });
+        const wishlist = await Wishlist.findOne({ user_id });
 
-        if (!cart) {
+        if (!wishlist) {
             return res.status(404).json({
                 success: false,
-                message: "Cart not found"
+                message: "Wishlist not found"
             });
         }
 
-        cart.items = cart.items.filter(
+        wishlist.items = wishlist.items.filter(
             item => String(item.product_id) !== String(product_id)
         );
 
-        cart.totalPrice = cart.items.reduce(
-            (sum, item) => sum + item.price * item.quantity,
-            0
-        );
-
-        await cart.save();
+        await wishlist.save();
 
         res.status(200).json({
             success: true,
-            message: "Item removed",
-            data: cart
+            message: "Removed from wishlist",
+            data: wishlist
         });
 
     } catch (error) {
@@ -154,14 +133,14 @@ export const removeFromCart = async (req, res) => {
     }
 };
 
-// Clear cart
-export const clearCart = async (req, res) => {
+// Clear wishlist
+export const clearWishlist = async (req, res) => {
     try {
-        await Cart.findOneAndDelete({ user_id: req.user._id });
+        await Wishlist.findOneAndDelete({ user_id: req.user._id });
 
         res.status(200).json({
             success: true,
-            message: "Cart cleared"
+            message: "Wishlist cleared"
         });
 
     } catch (error) {
