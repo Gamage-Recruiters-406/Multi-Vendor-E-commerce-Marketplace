@@ -30,6 +30,7 @@ const transformOrder = (backendOrder) => {
   
   // Extract items from all vendor orders
   const allItems = backendOrder.vendorOrders?.flatMap(vo => vo.items) || [];
+  const primaryItemName = allItems[0]?.productName || 'Order';
   
   // Format tags from items (show first 2-3 products)
   const tags = allItems.slice(0, 3).map(item => ({
@@ -43,6 +44,7 @@ const transformOrder = (backendOrder) => {
 
   return {
     id: backendOrder._id || '',
+    displayName: primaryItemName,
     status: (backendOrder.overallStatus || 'Placed').toUpperCase(),
     brand: vendorName,
     date: new Date(backendOrder.createdAt).toLocaleDateString('en-US', {

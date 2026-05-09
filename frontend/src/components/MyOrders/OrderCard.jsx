@@ -22,6 +22,7 @@ const getPriceColor = (status) => {
 
 export function OrderCard({
   id,
+  displayName,
   status,
   brand,
   date,
@@ -39,7 +40,7 @@ export function OrderCard({
       {/* Details */}
       <div className="flex-1 space-y-3">
         <div className="flex flex-wrap items-center gap-3">
-          <h3 className="font-bold text-gray-900">{id}</h3>
+          <h3 className="font-bold text-gray-900">{displayName || id}</h3>
           <span
             className={`px-3 py-0.5 rounded-full text-[10px] font-bold tracking-wider ${getStatusStyles(status)}`}
           >
