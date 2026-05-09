@@ -29,6 +29,7 @@ export function OrderCard({
   tags,
   price,
   initials,
+  onViewDetails,
 }) {
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row gap-6 items-start sm:items-center">
@@ -77,7 +78,11 @@ export function OrderCard({
           </div>
         </div>
 
-        <button className="text-blue-500 hover:text-blue-600 text-sm font-medium flex items-center gap-1 group transition-colors">
+        <button
+          type="button"
+          onClick={onViewDetails}
+          className="text-blue-500 hover:text-blue-600 text-sm font-medium flex items-center gap-1 group transition-colors"
+        >
           View details
           <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
         </button>
