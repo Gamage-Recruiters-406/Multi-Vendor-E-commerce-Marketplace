@@ -149,7 +149,7 @@ export const changePassword = async (currentPassword, newPassword, confirmPasswo
     console.log("Payload fields: currentPassword, newPassword, confirmNewPassword");
 
     // Use the CORRECT endpoint and payload format that matches your backend
-    const response = await apiClient.put(`${API_URL}/user/change-password`, {
+    const response = await apiClient.put(`${API_URL}/change-password`, {
       currentPassword,
       newPassword,
       confirmNewPassword: confirmPassword,  // IMPORTANT: Backend expects confirmNewPassword
@@ -506,12 +506,19 @@ export const addAddress = async (address) => {
   try {
     const endpoint = `${API_URL}/user/address`;
     console.log("🔄 Adding new address to: POST " + endpoint);
-    console.log("Address data:", address);
+    console.log("=== DETAILED ADDRESS DATA DEBUG ===");
+    console.log("Complete address object:", address);
+    console.log("Label:", JSON.stringify(address.label), "Type:", typeof address.label);
+    console.log("Street:", JSON.stringify(address.street), "Type:", typeof address.street);
+    console.log("City:", JSON.stringify(address.city), "Type:", typeof address.city);
+    console.log("State:", JSON.stringify(address.state), "Type:", typeof address.state);
+    console.log("Zip:", JSON.stringify(address.zip), "Type:", typeof address.zip);
+    console.log("Country:", JSON.stringify(address.country), "Type:", typeof address.country);
 
     // Validate required fields
     if (!address.label || !address.street || !address.city) {
       const message = "Please fill in all required fields (label, street, city)";
-      console.warn("⚠️ Validation failed:", message);
+      console.warn("⚠️ Frontend Validation failed:", message);
       return {
         success: false,
         message: message,
@@ -519,15 +526,19 @@ export const addAddress = async (address) => {
     }
 
     const payload = {
-      label: address.label.trim(),
-      street: address.street.trim(),
-      city: address.city.trim(),
-      state: (address.state || "").trim(),
-      zip: (address.zip || "").trim(),
+      label: String(address.label).trim(),
+      street: String(address.street).trim(),
+      city: String(address.city).trim(),
+      district: (address.district ? String(address.district).trim() : ""),
+      postalCode: (address.postalCode ? String(address.postalCode).trim() : ""),
       country: address.country || "Sri Lanka",
     };
 
-    console.log("Sending payload:", payload);
+    console.log("=== PAYLOAD BEING SENT ===");
+    console.log("Full payload:", JSON.stringify(payload, null, 2));
+    console.log("Payload keys:", Object.keys(payload));
+    console.log("Auth token present:", !!localStorage.getItem("authToken"));
+    console.log("Endpoint URL:", endpoint);
 
     const response = await apiClient.post(endpoint, payload);
 
@@ -549,10 +560,14 @@ export const addAddress = async (address) => {
       message: response.data.message || "Failed to add address",
     };
   } catch (error) {
-    console.error("❌ Add address error:", error.message);
+    console.error("=== ADD ADDRESS ERROR - DETAILED ===");
+    console.error("❌ Error message:", error.message);
     console.error("Error status:", error.response?.status);
+    console.error("Error response:", error.response?.data);
+    console.error("Request config:", error.config);
     
     if (error.response?.status === 401) {
+      console.error("401 - Not authenticated");
       return {
         success: false,
         message: "Not authenticated. Please login again.",
@@ -560,9 +575,11 @@ export const addAddress = async (address) => {
     }
 
     if (error.response?.status === 400) {
+      console.error("400 - Bad Request from backend");
+      console.error("Backend validation error:", error.response?.data?.message);
       return {
         success: false,
-        message: error.response?.data?.message || "Invalid address data",
+        message: error.response?.data?.message || "Backend rejected the address data. Check console for details.",
       };
     }
 
@@ -597,8 +614,8 @@ export const updateAddress = async (addressId, address) => {
       label: address.label.trim(),
       street: address.street.trim(),
       city: address.city.trim(),
-      state: (address.state || "").trim(),
-      zip: (address.zip || "").trim(),
+      district: (address.district || "").trim(),
+      postalCode: (address.postalCode || "").trim(),
       country: address.country || "Sri Lanka",
     };
 

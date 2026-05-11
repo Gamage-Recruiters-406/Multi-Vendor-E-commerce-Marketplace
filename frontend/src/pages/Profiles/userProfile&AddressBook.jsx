@@ -13,7 +13,6 @@ import {
   addAddress,
   updateAddress,
   deleteAddress,
-  setDefaultAddress,
 } from '../../services/addressbookServices';
 
 // Normalize profile picture URL (same as in Header.jsx)
@@ -78,8 +77,8 @@ export default function UserProfileAndAddressBook() {
     label: '',
     street: '',
     city: '',
-    state: '',
-    zip: '',
+    district: '',
+    postalCode: '',
     country: 'Sri Lanka',
   });
   const [editingAddressData, setEditingAddressData] = useState(null);
@@ -414,8 +413,8 @@ export default function UserProfileAndAddressBook() {
           label: '',
           street: '',
           city: '',
-          state: '',
-          zip: '',
+          district: '',
+          postalCode: '',
           country: 'Sri Lanka',
         });
         setIsAddingAddress(false);
@@ -486,27 +485,6 @@ export default function UserProfileAndAddressBook() {
     }
   };
 
-  const handleSetDefault = async (addressId) => {
-    try {
-      setError(null);
-      const response = await setDefaultAddress(addressId);
-
-      if (response.success) {
-        setAddresses(
-          addresses.map(a => ({
-            ...a,
-            isDefault: a._id === addressId,
-          }))
-        );
-        showSuccess('Default address updated!');
-      } else {
-        showError(response.message || 'Failed to set default address');
-      }
-    } catch (err) {
-      showError(err.message || 'Failed to set default address');
-      console.error('Set default error:', err);
-    }
-  };
 
   // ============ RENDER LOADING STATE ============
 
@@ -883,16 +861,16 @@ export default function UserProfileAndAddressBook() {
                 <div className="grid grid-cols-2 gap-4">
                   <input
                     type="text"
-                    placeholder="State"
-                    value={newAddress.state}
-                    onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })}
+                    placeholder="District"
+                    value={newAddress.district}
+                    onChange={(e) => setNewAddress({ ...newAddress, district: e.target.value })}
                     className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                   <input
                     type="text"
-                    placeholder="ZIP"
-                    value={newAddress.zip}
-                    onChange={(e) => setNewAddress({ ...newAddress, zip: e.target.value })}
+                    placeholder="Postal Code"
+                    value={newAddress.postalCode}
+                    onChange={(e) => setNewAddress({ ...newAddress, postalCode: e.target.value })}
                     className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                 </div>
@@ -943,16 +921,16 @@ export default function UserProfileAndAddressBook() {
                 <div className="grid grid-cols-2 gap-4">
                   <input
                     type="text"
-                    placeholder="State"
-                    value={editingAddressData.state}
-                    onChange={(e) => setEditingAddressData({ ...editingAddressData, state: e.target.value })}
+                    placeholder="District"
+                    value={editingAddressData.district}
+                    onChange={(e) => setEditingAddressData({ ...editingAddressData, district: e.target.value })}
                     className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <input
                     type="text"
-                    placeholder="ZIP"
-                    value={editingAddressData.zip}
-                    onChange={(e) => setEditingAddressData({ ...editingAddressData, zip: e.target.value })}
+                    placeholder="Postal Code"
+                    value={editingAddressData.postalCode}
+                    onChange={(e) => setEditingAddressData({ ...editingAddressData, postalCode: e.target.value })}
                     className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
@@ -1002,7 +980,7 @@ export default function UserProfileAndAddressBook() {
                     </div>
                     <div className="space-y-1 text-sm text-gray-700 mb-4">
                       <p>{address.street}</p>
-                      <p>{address.city}, {address.state} {address.zip}</p>
+                      <p>{address.city}, {address.district} {address.postalCode}</p>
                       <p>{address.country}</p>
                     </div>
                     <div className="flex gap-2 flex-wrap">
@@ -1018,14 +996,6 @@ export default function UserProfileAndAddressBook() {
                       >
                         DELETE
                       </button>
-                      {!address.isDefault && (
-                        <button
-                          onClick={() => handleSetDefault(address._id)}
-                          className="px-4 py-2 text-emerald-700 font-semibold hover:bg-white rounded-lg transition-colors duration-200 text-sm ml-auto"
-                        >
-                          SET DEFAULT
-                        </button>
-                      )}
                     </div>
                   </div>
                 ))
