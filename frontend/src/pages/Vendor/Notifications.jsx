@@ -29,35 +29,89 @@ import {
 } from "../../api/notifications";
 
 const typeConfig = {
-  order_placed:        { icon: Package,      bg: "bg-emerald-50",      color: "text-[#1A9F73]" },
-  order_confirmed:     { icon: CheckCircle,   bg: "bg-emerald-50",      color: "text-[#1A9F73]" },
-  order_shipped:       { icon: Package,       bg: "bg-sky-50",          color: "text-sky-500" },
-  order_delivered:     { icon: ShoppingBag,   bg: "bg-emerald-50",      color: "text-[#1A9F73]" },
-  order_cancelled:     { icon: XCircle,       bg: "bg-red-50",          color: "text-red-500" },
-  payment_initiated:   { icon: CreditCard,    bg: "bg-amber-50",        color: "text-amber-500" },
-  payment_succeeded:   { icon: DollarSign,    bg: "bg-emerald-50",      color: "text-[#1A9F73]" },
-  payment_received:    { icon: DollarSign,    bg: "bg-emerald-50",      color: "text-[#1A9F73]" },
-  payment_failed:      { icon: XCircle,       bg: "bg-red-50",          color: "text-red-500" },
-  payment_refunded:    { icon: DollarSign,    bg: "bg-purple-50",       color: "text-purple-500" },
-  payment_updated:     { icon: CreditCard,    bg: "bg-sky-50",          color: "text-sky-500" },
-  announcement:        { icon: Megaphone,     bg: "bg-gray-100",        color: "text-gray-500" },
-  promotion:           { icon: Tag,           bg: "bg-rose-50",         color: "text-rose-500" },
-  low_stock:           { icon: AlertTriangle, bg: "bg-red-50",          color: "text-red-500" },
-  new_review:          { icon: Star,          bg: "bg-amber-50",        color: "text-amber-500" },
-  product_approved:    { icon: CheckCircle,   bg: "bg-emerald-50",      color: "text-[#1A9F73]" },
-  new_question:        { icon: MessageSquare, bg: "bg-sky-50",          color: "text-sky-500" },
-  sales_milestone:     { icon: TrendingUp,    bg: "bg-emerald-50",      color: "text-[#1A9F73]" },
+  order_placed: { icon: Package, bg: "bg-emerald-50", color: "text-[#1A9F73]" },
+  order_confirmed: {
+    icon: CheckCircle,
+    bg: "bg-emerald-50",
+    color: "text-[#1A9F73]",
+  },
+  order_shipped: { icon: Package, bg: "bg-sky-50", color: "text-sky-500" },
+  order_delivered: {
+    icon: ShoppingBag,
+    bg: "bg-emerald-50",
+    color: "text-[#1A9F73]",
+  },
+  order_cancelled: { icon: XCircle, bg: "bg-red-50", color: "text-red-500" },
+  payment_initiated: {
+    icon: CreditCard,
+    bg: "bg-amber-50",
+    color: "text-amber-500",
+  },
+  payment_succeeded: {
+    icon: DollarSign,
+    bg: "bg-emerald-50",
+    color: "text-[#1A9F73]",
+  },
+  payment_received: {
+    icon: DollarSign,
+    bg: "bg-emerald-50",
+    color: "text-[#1A9F73]",
+  },
+  payment_failed: { icon: XCircle, bg: "bg-red-50", color: "text-red-500" },
+  payment_refunded: {
+    icon: DollarSign,
+    bg: "bg-purple-50",
+    color: "text-purple-500",
+  },
+  payment_updated: { icon: CreditCard, bg: "bg-sky-50", color: "text-sky-500" },
+  announcement: { icon: Megaphone, bg: "bg-gray-100", color: "text-gray-500" },
+  promotion: { icon: Tag, bg: "bg-rose-50", color: "text-rose-500" },
+  low_stock: { icon: AlertTriangle, bg: "bg-red-50", color: "text-red-500" },
+  new_review: { icon: Star, bg: "bg-amber-50", color: "text-amber-500" },
+  product_approved: {
+    icon: CheckCircle,
+    bg: "bg-emerald-50",
+    color: "text-[#1A9F73]",
+  },
+  new_question: { icon: MessageSquare, bg: "bg-sky-50", color: "text-sky-500" },
+  sales_milestone: {
+    icon: TrendingUp,
+    bg: "bg-emerald-50",
+    color: "text-[#1A9F73]",
+  },
 };
 
 const defaultConfig = { icon: Bell, bg: "bg-gray-100", color: "text-gray-500" };
 
 const filterCategories = [
   { label: "All", types: null },
-  { label: "Orders", types: ["order_placed", "order_confirmed", "order_shipped", "order_delivered", "order_cancelled"] },
-  { label: "Payments", types: ["payment_initiated", "payment_succeeded", "payment_received", "payment_failed", "payment_refunded", "payment_updated"] },
+  {
+    label: "Orders",
+    types: [
+      "order_placed",
+      "order_confirmed",
+      "order_shipped",
+      "order_delivered",
+      "order_cancelled",
+    ],
+  },
+  {
+    label: "Payments",
+    types: [
+      "payment_initiated",
+      "payment_succeeded",
+      "payment_received",
+      "payment_failed",
+      "payment_refunded",
+      "payment_updated",
+    ],
+  },
   { label: "Alerts", types: ["low_stock", "new_question"] },
   { label: "Reviews", types: ["new_review"] },
-  { label: "Updates", types: ["announcement", "promotion", "product_approved", "sales_milestone"] },
+  {
+    label: "Updates",
+    types: ["announcement", "promotion", "product_approved", "sales_milestone"],
+  },
 ];
 
 function resolveConfig(type) {
@@ -95,7 +149,9 @@ function NotificationDetailModal({ notification, onClose, onMarkRead }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-lg font-semibold text-[#111827]">Notification Details</h2>
+          <h2 className="text-lg font-semibold text-[#111827]">
+            Notification Details
+          </h2>
           <button
             onClick={onClose}
             className="rounded-lg p-1.5 text-[#6B7280] transition-colors hover:bg-gray-100 hover:text-[#111827]"
@@ -106,35 +162,52 @@ function NotificationDetailModal({ notification, onClose, onMarkRead }) {
 
         <div className="px-6 py-5">
           <div className="mb-5 flex items-center gap-4">
-            <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${cfg.bg}`}>
+            <div
+              className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${cfg.bg}`}
+            >
               <Icon className={`h-7 w-7 ${cfg.color}`} />
             </div>
             <div className="flex-1">
-              <h3 className="text-base font-semibold text-[#111827]">{notification.title}</h3>
+              <h3 className="text-base font-semibold text-[#111827]">
+                {notification.title}
+              </h3>
               <div className="mt-1 flex items-center gap-2">
-                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                  notification.isRead
-                    ? "bg-gray-100 text-[#6B7280]"
-                    : "bg-emerald-50 text-[#1A9F73]"
-                }`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${notification.isRead ? "bg-gray-400" : "bg-[#1A9F73]"}`} />
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    notification.isRead
+                      ? "bg-gray-100 text-[#6B7280]"
+                      : "bg-emerald-50 text-[#1A9F73]"
+                  }`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${notification.isRead ? "bg-gray-400" : "bg-[#1A9F73]"}`}
+                  />
                   {notification.isRead ? "Read" : "Unread"}
                 </span>
-                <span className="text-xs text-[#6B7280]/70">{timeAgo(notification.createdAt)}</span>
+                <span className="text-xs text-[#6B7280]/70">
+                  {timeAgo(notification.createdAt)}
+                </span>
               </div>
             </div>
           </div>
 
           <div className="mb-5 rounded-xl bg-gray-50 p-4">
-            <p className="text-sm leading-relaxed text-[#6B7280]">{notification.message}</p>
+            <p className="text-sm leading-relaxed text-[#6B7280]">
+              {notification.message}
+            </p>
           </div>
 
           <div className="flex flex-wrap gap-2 text-xs text-[#6B7280]">
             <div className="rounded-lg bg-gray-100 px-3 py-1.5 capitalize">
-              Type: <span className="font-medium text-[#111827]">{notification.type.replace(/_/g, " ")}</span>
+              Type:{" "}
+              <span className="font-medium text-[#111827]">
+                {notification.type.replace(/_/g, " ")}
+              </span>
             </div>
             <div className="rounded-lg bg-gray-100 px-3 py-1.5">
-              <span className="font-medium text-[#111827]">{new Date(notification.createdAt).toLocaleString()}</span>
+              <span className="font-medium text-[#111827]">
+                {new Date(notification.createdAt).toLocaleString()}
+              </span>
             </div>
           </div>
         </div>
@@ -170,19 +243,29 @@ function NotificationCard({ notification, onSelect }) {
 
   return (
     <div
-      className={`group flex cursor-pointer items-center gap-4 rounded-[16px] bg-white p-5 transition-all duration-200 hover:shadow-md ${
+      className={`group flex cursor-pointer items-center gap-4 rounded-2xl bg-white p-5 transition-all duration-200 hover:shadow-md ${
         !notification.isRead ? "border-l-2 border-[#1A9F73]" : ""
       }`}
-      style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)" }}
+      style={{
+        boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)",
+      }}
       onClick={() => onSelect(notification)}
     >
-      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${cfg.bg}`}>
+      <div
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${cfg.bg}`}
+      >
         <Icon className={`h-5 w-5 ${cfg.color}`} />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <h3 className="text-sm font-semibold text-[#111827]">{notification.title}</h3>
-        <p className="truncate text-sm text-[#6B7280]">{notification.message}</p>
-        <span className="text-xs text-[#6B7280]/70">{timeAgo(notification.createdAt)}</span>
+        <h3 className="text-sm font-semibold text-[#111827]">
+          {notification.title}
+        </h3>
+        <p className="truncate text-sm text-[#6B7280]">
+          {notification.message}
+        </p>
+        <span className="text-xs text-[#6B7280]/70">
+          {timeAgo(notification.createdAt)}
+        </span>
       </div>
       {!notification.isRead && (
         <div className="ml-2 shrink-0">
@@ -208,7 +291,8 @@ export default function Notifications() {
   const filteredList = useMemo(() => {
     let result = list;
     const cat = filterCategories.find((f) => f.label === activeFilter);
-    if (cat && cat.types) result = result.filter((n) => cat.types.includes(n.type));
+    if (cat && cat.types)
+      result = result.filter((n) => cat.types.includes(n.type));
     if (readFilter === "Read") result = result.filter((n) => n.isRead);
     if (readFilter === "Unread") result = result.filter((n) => !n.isRead);
     return result;
@@ -256,7 +340,7 @@ export default function Notifications() {
 
   const handleMarkAsRead = async (id) => {
     setList((prev) =>
-      prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
+      prev.map((n) => (n._id === id ? { ...n, isRead: true } : n)),
     );
     setUnreadCount((prev) => Math.max(0, prev - 1));
     try {
@@ -264,7 +348,7 @@ export default function Notifications() {
     } catch {
       // revert on failure
       setList((prev) =>
-        prev.map((n) => (n._id === id ? { ...n, isRead: false } : n))
+        prev.map((n) => (n._id === id ? { ...n, isRead: false } : n)),
       );
       setUnreadCount((prev) => prev + 1);
     }
@@ -288,7 +372,10 @@ export default function Notifications() {
   return (
     <Layout>
       <div className="min-h-screen" style={{ backgroundColor: "#F5F6F7" }}>
-        <div className="mx-auto px-4 py-8 sm:px-6 lg:px-8" style={{ maxWidth: "1100px" }}>
+        <div
+          className="mx-auto px-4 py-8 sm:px-6 lg:px-8"
+          style={{ maxWidth: "1100px" }}
+        >
           <div className="mb-7 flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-3">
@@ -296,13 +383,14 @@ export default function Notifications() {
                   Notifications
                 </h1>
                 {unreadCount > 0 && (
-                  <span className="flex h-6 min-w-[24px] items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold text-white">
+                  <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold text-white">
                     {unreadCount}
                   </span>
                 )}
               </div>
               <p className="mt-1.5 text-sm text-[#6B7280]">
-                Activity Center &bull; Stay updated with your marketplace interactions
+                Activity Center &bull; Stay updated with your marketplace
+                interactions
               </p>
             </div>
             {unreadCount > 0 && (
@@ -312,7 +400,10 @@ export default function Notifications() {
                 className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-[#6B7280] transition-all duration-200 hover:border-[#1A9F73]/30 hover:text-[#1A9F73] hover:shadow-sm disabled:opacity-50"
               >
                 {markingAll ? (
-                  <Loader2 className="h-4 w-4 animate-spin" style={{ color: "#1A9F73" }} />
+                  <Loader2
+                    className="h-4 w-4 animate-spin"
+                    style={{ color: "#1A9F73" }}
+                  />
                 ) : (
                   <Check className="h-4 w-4" style={{ color: "#1A9F73" }} />
                 )}
@@ -322,21 +413,37 @@ export default function Notifications() {
           </div>
 
           <div className="mb-6 flex flex-wrap gap-2">
-            {["All", "Unread", "Read", "Orders", "Payments", "Alerts", "Reviews", "Updates"].map((label) => {
+            {[
+              "All",
+              "Unread",
+              "Read",
+              "Orders",
+              "Payments",
+              "Alerts",
+              "Reviews",
+              "Updates",
+            ].map((label) => {
               const isReadTab = label === "Unread" || label === "Read";
               const isAll = label === "All";
               const isActive = isAll
                 ? readFilter === "All" && activeFilter === "All"
                 : isReadTab
-                ? readFilter === label
-                : activeFilter === label;
+                  ? readFilter === label
+                  : activeFilter === label;
               return (
                 <button
                   key={label}
                   onClick={() => {
-                    if (isAll) { setReadFilter("All"); setActiveFilter("All"); }
-                    else if (isReadTab) { setReadFilter(label); setActiveFilter("All"); }
-                    else { setActiveFilter(label); setReadFilter("All"); }
+                    if (isAll) {
+                      setReadFilter("All");
+                      setActiveFilter("All");
+                    } else if (isReadTab) {
+                      setReadFilter(label);
+                      setActiveFilter("All");
+                    } else {
+                      setActiveFilter(label);
+                      setReadFilter("All");
+                    }
                   }}
                   className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-all duration-200 ${
                     isActive
@@ -346,7 +453,7 @@ export default function Notifications() {
                 >
                   {label}
                   {label === "Unread" && unreadCount > 0 && (
-                    <span className="ml-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white">
+                    <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white">
                       {unreadCount}
                     </span>
                   )}
@@ -357,21 +464,26 @@ export default function Notifications() {
 
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin" style={{ color: "#1A9F73" }} />
+              <Loader2
+                className="h-8 w-8 animate-spin"
+                style={{ color: "#1A9F73" }}
+              />
             </div>
           ) : filteredList.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100">
                 <Inbox className="h-8 w-8 text-gray-400" />
               </div>
-              <h3 className="text-lg font-semibold text-[#111827]">No notifications yet</h3>
+              <h3 className="text-lg font-semibold text-[#111827]">
+                No notifications yet
+              </h3>
               <p className="mt-1 text-sm text-[#6B7280]">
                 When you get notifications, they'll appear here.
               </p>
             </div>
           ) : (
             <>
-              <div className="flex flex-col gap-[14px]">
+              <div className="flex flex-col gap-3.5">
                 {filteredList.map((n) => (
                   <NotificationCard
                     key={n._id}
