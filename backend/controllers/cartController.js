@@ -44,6 +44,7 @@ export const addToCart = async (req, res) => {
         } else {
             cart.items.push({
                 product_id,
+                store_id: product.store_id,
                 quantity: quantity || 1,
                 price: product.price
             });
