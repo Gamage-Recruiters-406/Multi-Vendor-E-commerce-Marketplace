@@ -29,6 +29,7 @@ import UserManagement from './pages/admin/UserManagement'
 import VendorOrderManagementPage from "./pages/Vendor/OrderManagement";
 import VendorOrderDetailsPage from "./pages/Vendor/OrderDetails";
 import Q_AND_A_PAGE from "./pages/Buyer/Q&APage";
+import Notifications from "./pages/Vendor/Notifications";
 
 
 function App() {
@@ -65,7 +66,7 @@ function App() {
           <Route path="/vendor/dashboard" element={<VendorDashboard />} />
           <Route path="/vendor/orders" element={<VendorOrderManagementPage />} />
           <Route path="/vendor/orderDetails/:orderId" element={<VendorOrderDetailsPage />} />
-          frontend
+          <Route path="/notifications" element={<Notifications />} />
           {/* Admin Module */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/announcements" element={<Announcements />} />
