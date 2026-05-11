@@ -17,6 +17,8 @@ import {
   Tag,
   Loader2,
   Inbox,
+  X,
+  Eye,
 } from "lucide-react";
 import Layout from "../../components/Layouts/Layout";
 import {
@@ -78,19 +80,101 @@ function timeAgo(dateStr) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function NotificationCard({ notification, onMarkRead }) {
+function NotificationDetailModal({ notification, onClose, onMarkRead }) {
   const cfg = resolveConfig(notification.type);
   const Icon = cfg.icon;
 
   return (
     <div
-      className={`group flex items-center gap-4 rounded-[16px] bg-white p-5 transition-all duration-200 hover:shadow-md ${
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div
+        className="relative w-full max-w-lg rounded-2xl bg-white p-0 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+          <h2 className="text-lg font-semibold text-[#111827]">Notification Details</h2>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-[#6B7280] transition-colors hover:bg-gray-100 hover:text-[#111827]"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="px-6 py-5">
+          <div className="mb-5 flex items-center gap-4">
+            <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${cfg.bg}`}>
+              <Icon className={`h-7 w-7 ${cfg.color}`} />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-base font-semibold text-[#111827]">{notification.title}</h3>
+              <div className="mt-1 flex items-center gap-2">
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                  notification.isRead
+                    ? "bg-gray-100 text-[#6B7280]"
+                    : "bg-emerald-50 text-[#1A9F73]"
+                }`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${notification.isRead ? "bg-gray-400" : "bg-[#1A9F73]"}`} />
+                  {notification.isRead ? "Read" : "Unread"}
+                </span>
+                <span className="text-xs text-[#6B7280]/70">{timeAgo(notification.createdAt)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-5 rounded-xl bg-gray-50 p-4">
+            <p className="text-sm leading-relaxed text-[#6B7280]">{notification.message}</p>
+          </div>
+
+          <div className="flex flex-wrap gap-2 text-xs text-[#6B7280]">
+            <div className="rounded-lg bg-gray-100 px-3 py-1.5 capitalize">
+              Type: <span className="font-medium text-[#111827]">{notification.type.replace(/_/g, " ")}</span>
+            </div>
+            <div className="rounded-lg bg-gray-100 px-3 py-1.5">
+              <span className="font-medium text-[#111827]">{new Date(notification.createdAt).toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 border-t border-gray-100 px-6 py-4">
+          {!notification.isRead && (
+            <button
+              onClick={() => {
+                onMarkRead(notification._id);
+                onClose();
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#1A9F73] px-5 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-[#178a63]"
+            >
+              <Check className="h-4 w-4" />
+              Mark as read
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-medium text-[#6B7280] transition-all duration-200 hover:bg-gray-50"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NotificationCard({ notification, onSelect }) {
+  const cfg = resolveConfig(notification.type);
+  const Icon = cfg.icon;
+
+  return (
+    <div
+      className={`group flex cursor-pointer items-center gap-4 rounded-[16px] bg-white p-5 transition-all duration-200 hover:shadow-md ${
         !notification.isRead ? "border-l-2 border-[#1A9F73]" : ""
       }`}
       style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)" }}
-      onClick={() => {
-        if (!notification.isRead) onMarkRead(notification._id);
-      }}
+      onClick={() => onSelect(notification)}
     >
       <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${cfg.bg}`}>
         <Icon className={`h-5 w-5 ${cfg.color}`} />
@@ -118,7 +202,8 @@ export default function Notifications() {
   const [markingAll, setMarkingAll] = useState(false);
   const [activeFilter, setActiveFilter] = useState("All");
   const [readFilter, setReadFilter] = useState("All");
-  const limit = 20;
+  const [selectedNotification, setSelectedNotification] = useState(null);
+  const limit = 10;
 
   const filteredList = useMemo(() => {
     let result = list;
@@ -291,7 +376,7 @@ export default function Notifications() {
                   <NotificationCard
                     key={n._id}
                     notification={n}
-                    onMarkRead={handleMarkAsRead}
+                    onSelect={setSelectedNotification}
                   />
                 ))}
               </div>
@@ -302,7 +387,7 @@ export default function Notifications() {
                     onClick={handleLoadMore}
                     className="rounded-xl border border-gray-200 bg-white px-8 py-3 text-sm font-medium text-[#6B7280] transition-all duration-200 hover:border-gray-300 hover:shadow-md hover:shadow-gray-200/50"
                   >
-                    Load More
+                    Show more
                   </button>
                 </div>
               )}
@@ -310,6 +395,14 @@ export default function Notifications() {
           )}
         </div>
       </div>
+
+      {selectedNotification && (
+        <NotificationDetailModal
+          notification={selectedNotification}
+          onClose={() => setSelectedNotification(null)}
+          onMarkRead={handleMarkAsRead}
+        />
+      )}
     </Layout>
   );
 }
