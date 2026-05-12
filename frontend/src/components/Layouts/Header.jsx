@@ -75,7 +75,6 @@ const roleConfigs = {
 		links: [
 			{ label: "Home", path: "/" },
 			{ label: "Categories", path: "/categories" },
-			{ label: "Cart", path: "/cart" },
 			{ label: "Orders", path: "/orders" },
 		],
 		placeholder: "Search for unique artisan products...",
