@@ -96,7 +96,7 @@ export default function SigninPage() {
       } else if (userRole === 'admin') {
         navigate('/admin/dashboard');
       } else {
-        navigate('/addressbook');
+        navigate('/');
       }
     } catch (err) {
       console.error('❌ Sign in failed:', err.message);
