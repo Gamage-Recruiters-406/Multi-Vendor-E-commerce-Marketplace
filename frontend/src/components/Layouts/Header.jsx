@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { Bell, ShoppingCart, Heart } from "lucide-react";
 
 const normalizeUrlPart = (value = "") => value.replace(/\/+$/, "");
@@ -191,6 +192,9 @@ export default function Header({ userRole, userName }) {
 
 	const role = normalizeRole(userRole || dbUser?.role || storedUser?.role);
 	const currentPath = typeof window !== "undefined" ? window.location.pathname : "/";
+	const roleSlug = role.toLowerCase();
+	const profilePath = `/${roleSlug}/profile`;
+	const settingsPath = `/${roleSlug}/settings`;
 
 	const config = useMemo(() => roleConfigs[role] || roleConfigs.Buyer, [role]);
 
@@ -372,20 +376,22 @@ export default function Header({ userRole, userName }) {
 							role="menu"
 							className="absolute right-0 top-10 w-44 rounded-xl border border-slate-200 bg-white p-2 text-xs text-slate-700 shadow-lg"
 						>
-							<a
-								href="/profile"
+							<Link
+								to={profilePath}
 								role="menuitem"
 								className="block rounded-lg px-3 py-2 transition hover:bg-emerald-50 hover:text-emerald-700"
+								onClick={() => setIsProfileMenuOpen(false)}
 							>
 								Profile
-							</a>
-							<a
-								href="/settings"
+							</Link>
+							<Link
+								to={settingsPath}
 								role="menuitem"
 								className="block rounded-lg px-3 py-2 transition hover:bg-emerald-50 hover:text-emerald-700"
+								onClick={() => setIsProfileMenuOpen(false)}
 							>
 								Settings
-							</a>
+							</Link>
 							<button
 								type="button"
 								role="menuitem"
