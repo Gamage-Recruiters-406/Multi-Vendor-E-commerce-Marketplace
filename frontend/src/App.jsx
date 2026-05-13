@@ -28,7 +28,9 @@ import { MyOrders } from "./pages/MyOrders/MyOrders.jsx";
 import UserManagement from './pages/admin/UserManagement'
 import VendorOrderManagementPage from "./pages/Vendor/OrderManagement";
 import VendorOrderDetailsPage from "./pages/Vendor/OrderDetails";
+import Q_AND_A_PAGE from "./pages/Buyer/Q&APage";
 import Notifications from "./pages/Vendor/Notifications";
+import MarketplaceProductsPage from "./pages/Buyer/CategoryProducts.jsx";
 
 
 function App() {
@@ -85,6 +87,7 @@ function App() {
           />
           <Route path="/orders" element={<MyOrders />} />
           <Route path="/cart" element={<ShoppingCartPage />} />
+          <Route path="/categories" element={<MarketplaceProductsPage />} />
           {/* Checkout */}
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/addressbook" element={<UserProfileAndAddressBook />} />
