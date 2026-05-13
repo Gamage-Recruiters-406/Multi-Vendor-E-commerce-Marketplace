@@ -758,7 +758,7 @@ export const getVendorSessions = async (req, res) => {
         
         // Find all stores owned by this vendor
         const Store = await import('../models/Store.js');
-        const stores = await Store.default.find({ createdBy: vendorId });
+        const stores = await Store.default.find({ vendor: vendorId });
         const storeIds = stores.map(s => s._id);
         
         // Find all products in these stores
@@ -844,7 +844,7 @@ export const vendorReplyToBuyer = async (req, res) => {
         
         // Verify vendor owns this product's store
         const product = await Product.findById(session.productId).populate('store');
-        if (!product || product.store.createdBy.toString() !== vendorId.toString()) {
+        if (!product || product.store.vendor.toString() !== vendorId.toString()) {
             return res.status(403).json({ error: 'You can only reply to messages for your products' });
         }
         
