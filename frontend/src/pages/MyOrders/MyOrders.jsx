@@ -4,7 +4,8 @@ import { ArrowLeft, Search, ChevronDown, ClipboardList } from 'lucide-react'
 import Header from '../../components/Layouts/Header'
 import Footer from '../../components/Layouts/Footer'
 import { OrderCard } from '../../components/MyOrders/OrderCard.jsx'
-import { getBuyerOrders } from '../../api/buyerOrders.js'
+import { OrderDetailsModal } from '../../components/MyOrders/OrderDetailsModal.jsx'
+import { getBuyerOrders, getOrderDetails, getOrderTracking } from '../../api/buyerOrders.js'
 import toast from 'react-hot-toast'
 
 const FILTER_TABS = ['All', 'Placed', 'Confirmed', 'Shipped', 'Delivered']
@@ -15,6 +16,11 @@ export function MyOrders() {
   const [orders, setOrders] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [isDetailsLoading, setIsDetailsLoading] = useState(false)
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState(null)
+  const [detailsError, setDetailsError] = useState(null)
+  const [selectedOrderId, setSelectedOrderId] = useState(null)
 
   // Fetch orders on component mount
   useEffect(() => {
@@ -48,6 +54,43 @@ export function MyOrders() {
     if (activeFilter === 'All') return true
     return order.status.toLowerCase() === activeFilter.toLowerCase()
   })
+
+  const closeOrderDetails = () => {
+    setIsDetailsOpen(false)
+    setSelectedOrderDetails(null)
+    setDetailsError(null)
+    setIsDetailsLoading(false)
+  }
+
+  const handleViewDetails = async (orderId) => {
+    setSelectedOrderId(orderId)
+    try {
+      setIsDetailsOpen(true)
+      setIsDetailsLoading(true)
+      setDetailsError(null)
+
+      const [order, tracking] = await Promise.all([
+        getOrderDetails(orderId),
+        getOrderTracking(orderId),
+      ])
+
+      setSelectedOrderDetails({ order, tracking })
+    } catch (err) {
+      console.error('Failed to load order details:', err)
+
+      if (err.message?.includes('401') || err.message?.includes('Unauthorized')) {
+        toast.error('Please login to view this order')
+        navigate('/login')
+        return
+      }
+
+      const message = err.message || 'Failed to load order details'
+      setDetailsError(message)
+      toast.error(message)
+    } finally {
+      setIsDetailsLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -136,7 +179,11 @@ export function MyOrders() {
             <div className="space-y-4">
               {filteredOrders.length > 0 ? (
                 filteredOrders.map((order) => (
-                  <OrderCard key={order.id} {...order} />
+                  <OrderCard
+                    key={order.id}
+                    {...order}
+                    onViewDetails={() => handleViewDetails(order.id)}
+                  />
                 ))
               ) : (
                 <div className="text-center py-12 text-gray-500 bg-white rounded-2xl shadow-sm">
@@ -149,6 +196,18 @@ export function MyOrders() {
       </main>
 
       <Footer />
+
+      <OrderDetailsModal
+        isOpen={isDetailsOpen}
+        order={selectedOrderDetails?.order}
+        tracking={selectedOrderDetails?.tracking}
+        loading={isDetailsLoading}
+        error={detailsError}
+        onClose={closeOrderDetails}
+        onRetry={() => {
+          if (selectedOrderId) handleViewDetails(selectedOrderId)
+        }}
+      />
     </div>
   )
 }

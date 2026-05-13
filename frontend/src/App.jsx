@@ -67,7 +67,7 @@ function App() {
           <Route path="/vendor/dashboard" element={<VendorDashboard />} />
           <Route path="/vendor/orders" element={<VendorOrderManagementPage />} />
           <Route path="/vendor/orderDetails/:orderId" element={<VendorOrderDetailsPage />} />
-          frontend
+          <Route path="/notifications" element={<Notifications />} />
           {/* Admin Module */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/announcements" element={<Announcements />} />
@@ -84,10 +84,6 @@ function App() {
           <Route
             path="/buyer/productdetails/:id"
             element={<BuyerProductDetailsPage />}
-          />
-          <Route
-            path="/buyer/product/:productId/qa"
-            element={<Q_AND_A_PAGE />}
           />
           <Route path="/orders" element={<MyOrders />} />
           <Route path="/cart" element={<ShoppingCartPage />} />

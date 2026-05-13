@@ -30,6 +30,22 @@ const transformOrder = (backendOrder) => {
   
   // Extract items from all vendor orders
   const allItems = backendOrder.vendorOrders?.flatMap(vo => vo.items) || [];
+  const primaryItemName = allItems[0]?.productName || 'Order';
+  const trackingHistory = backendOrder.vendorOrders
+    ?.flatMap((segment) =>
+      (segment.trackingHistory || []).map((event) => ({
+        ...event,
+        vendorName: segment.vendor?.fullname || vendorName,
+        vendorOrderId: segment._id || '',
+      }))
+    )
+    .sort((left, right) => new Date(left.changedAt || 0) - new Date(right.changedAt || 0)) || [];
+
+  const summary = backendOrder.priceSummary || {};
+  const subtotal = Number(summary.subtotal ?? backendOrder.vendorOrders?.reduce((sum, vo) => sum + (vo.subtotal || 0), 0) ?? 0);
+  const discountAmount = Number(summary.discountAmount ?? backendOrder.vendorOrders?.reduce((sum, vo) => sum + (vo.discountAmount || 0), 0) ?? 0);
+  const shippingFee = Number(summary.shippingFee ?? backendOrder.vendorOrders?.reduce((sum, vo) => sum + (vo.shippingFee || 0), 0) ?? 0);
+  const totalAmount = Number(summary.totalAmount ?? backendOrder.vendorOrders?.reduce((sum, vo) => sum + (vo.totalAmount || 0), 0) ?? 0);
   
   // Format tags from items (show first 2-3 products)
   const tags = allItems.slice(0, 3).map(item => ({
@@ -43,8 +59,12 @@ const transformOrder = (backendOrder) => {
 
   return {
     id: backendOrder._id || '',
+    orderId: backendOrder._id || '',
+    orderNumber: backendOrder.orderNumber,
+    displayName: primaryItemName,
     status: (backendOrder.overallStatus || 'Placed').toUpperCase(),
     brand: vendorName,
+    vendorName,
     date: new Date(backendOrder.createdAt).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -54,10 +74,26 @@ const transformOrder = (backendOrder) => {
       icon: '📦',
       text: `${allItems.length} item${allItems.length !== 1 ? 's' : ''}`,
     }],
-    price: parseFloat(totalPrice) || 0,
+    price: parseFloat(totalAmount || totalPrice) || 0,
     initials: vendorInitials,
     orderNumber: backendOrder.orderNumber,
+    paymentMethod: backendOrder.payment?.method || 'Card',
     paymentStatus: backendOrder.payment?.status || 'Pending',
+    shippingAddress: backendOrder.shippingAddress || {},
+    items: allItems.map((item) => ({
+      productId: item.productId || '',
+      productName: item.productName || 'Product',
+      imageUrl: item.imageUrl || '',
+      quantity: Number(item.quantity) || 0,
+      unitPrice: Number(item.unitPrice) || 0,
+      totalPrice: Number(item.totalPrice) || Number(item.quantity) * Number(item.unitPrice) || 0,
+      variant: item.variant || {},
+    })),
+    trackingHistory,
+    subtotal: parseFloat(subtotal) || 0,
+    discountAmount: parseFloat(discountAmount) || 0,
+    shippingFee: parseFloat(shippingFee) || 0,
+    totalAmount: parseFloat(totalAmount) || 0,
   };
 };
 
