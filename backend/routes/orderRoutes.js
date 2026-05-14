@@ -2,6 +2,7 @@ import express from "express";
 import {
   adminUpdateVendorOrderStatus,
   createOrder,
+  enrichCartWithStoreId,
   getAllOrders,
   getMyOrders,
   getOrderById,
@@ -20,6 +21,9 @@ import {
 const router = express.Router();
 
 router.use(requiredSignIn);
+
+// ✅ Enrich cart with store ID (call before payment)
+router.post("/prepare/enrich-cart", isBuyer, enrichCartWithStoreId);
 
 // Buyer APIs
 router.post("/", isBuyer, createOrder);

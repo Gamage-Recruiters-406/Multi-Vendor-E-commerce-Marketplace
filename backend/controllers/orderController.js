@@ -2,6 +2,10 @@ import mongoose from "mongoose";
 import Order, { ORDER_STATUSES, PAYMENT_STATUSES } from "../models/Order.js";
 import Coupon from "../models/Coupon.js";
 import User from "../models/User.js";
+import Store from "../models/Store.js";
+import Product from "../models/Product.js";
+import Cart from "../models/Cart.js";
+import Payment from "../models/paymentModel.js";
 import {
   evaluateCoupon,
   normalizeCouponCode,
@@ -24,18 +28,48 @@ const toIdString = (value) => {
   return String(value);
 };
 
+const enrichCartItemsWithStoreId = async (cartItems) => {
+  const enrichedItems = [];
+  
+  for (const item of cartItems) {
+    if (!item.store_id) {
+      if (item.product_id && item.product_id.store) {
+        item.store_id = item.product_id.store;
+        console.log(` Enriched item ${item.product_id._id} with store_id: ${item.product_id.store}`);
+      } else {
+        const Product = (await import('../models/Product.js')).default;
+        const product = await Product.findById(item.product_id).select('store');
+        
+        if (product && product.store) {
+          item.store_id = product.store;
+          console.log(` Enriched item ${item.product_id} with store_id: ${product.store}`);
+        } else {
+          console.warn(` Product ${item.product_id} missing store field`);
+        }
+      }
+    }
+    enrichedItems.push(item);
+  }
+  
+  return enrichedItems;
+};
+
 const canAccessOrder = (order, user) => {
   if (!order || !user) return false;
 
-  if (user.role === "admin") return true;
+  const userRole = String(user.role || "").toLowerCase();
+  if (userRole === "admin") return true;
 
-  const userId = String(user._id);
-  if (user.role === "Buyer" && String(order.buyer) === userId) {
+  const userId = toIdString(user);
+  const buyerId = toIdString(order.buyer);
+
+  // Buyers can always access their own orders, even if role casing varies.
+  if (buyerId && buyerId === userId) {
     return true;
   }
 
   if (
-    user.role === "Vendor" &&
+    Array.isArray(order.vendorOrders) &&
     order.vendorOrders.some((segment) => toIdString(segment.vendor) === userId)
   ) {
     return true;
@@ -53,6 +87,200 @@ const parsePagination = (query) => {
   const limit = Math.min(100, Math.max(1, Number.parseInt(query.limit, 10) || 10));
   const skip = (page - 1) * limit;
   return { page, limit, skip };
+};
+
+const extractStoreVendorId = (store) =>
+  toIdString(store?.vendor || store?.createdBy || store?.owner_id);
+
+const uniqStrings = (values) => {
+  const set = new Set();
+  values.forEach((value) => {
+    const str = toIdString(value);
+    if (str) set.add(str);
+  });
+  return [...set];
+};
+
+const toObjectIds = (ids) => {
+  return ids
+    .map((id) => {
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) return null;
+      return new mongoose.Types.ObjectId(id);
+    })
+    .filter(Boolean);
+};
+
+// Vendor access can be based on vendor user id (preferred) OR store id (legacy/older data).
+const getVendorAccessIds = async (vendorUserId) => {
+  const vendorId = toIdString(vendorUserId);
+  const stores = await Store.find({
+    $or: [{ vendor: vendorUserId }, { createdBy: vendorUserId }, { owner_id: vendorUserId }],
+  })
+    .select("_id vendor createdBy owner_id")
+    .lean();
+  const storeIds = stores.map((store) => String(store._id));
+  const allIds = uniqStrings([vendorId, ...storeIds]);
+  return {
+    vendorId,
+    storeIds,
+    allIds,
+    objectIds: toObjectIds(allIds),
+  };
+};
+
+const buildVendorOrdersMatchQuery = (ids) => ({
+  $expr: {
+    $gt: [
+      {
+        $size: {
+          $filter: {
+            input: "$vendorOrders",
+            as: "segment",
+            cond: { $in: [{ $toString: "$$segment.vendor" }, ids] },
+          },
+        },
+      },
+      0,
+    ],
+  },
+});
+
+const getVendorProductIdSet = async (storeIds) => {
+  const storeObjectIds = toObjectIds(storeIds);
+  if (!storeObjectIds.length) return new Set();
+
+  const products = await Product.find({ store: { $in: storeObjectIds } })
+    .select("_id")
+    .lean();
+
+  return new Set(products.map((product) => String(product._id)));
+};
+
+const orderHasVendorProducts = (order, productIdSet) => {
+  if (!productIdSet.size) return false;
+  return order.vendorOrders.some((segment) =>
+    Array.isArray(segment.items) &&
+    segment.items.some((item) => productIdSet.has(String(item.productId)))
+  );
+};
+
+const findVendorSegment = (order, vendorMatchIds, productIdSet) => {
+  const directMatch = order.vendorOrders.find((segment) =>
+    vendorMatchIds.has(toIdString(segment.vendor))
+  );
+
+  if (directMatch) return directMatch;
+  if (!productIdSet.size) return null;
+
+  return order.vendorOrders.find(
+    (segment) =>
+      Array.isArray(segment.items) &&
+      segment.items.some((item) => productIdSet.has(String(item.productId)))
+  );
+};
+
+// Accept vendorOrders[].vendor as either Vendor userId OR StoreId.
+// If vendor is missing/wrong, resolve using item -> product -> store -> vendor.
+// Returns vendorOrders with vendor resolved to Vendor userId (preferred canonical storage).
+const resolveVendorOrdersVendorIds = async (vendorOrders) => {
+  const segments = Array.isArray(vendorOrders) ? vendorOrders : [];
+  const rawIds = uniqStrings(segments.map((segment) => segment?.vendor));
+  const objectIds = toObjectIds(rawIds);
+
+  const vendorUsers = await User.find({ _id: { $in: objectIds }, role: "Vendor" })
+    .select("_id")
+    .lean();
+  const vendorUserIdSet = new Set(vendorUsers.map((user) => String(user._id)));
+
+  const unresolvedIds = rawIds.filter((id) => !vendorUserIdSet.has(id));
+  const storeObjectIds = toObjectIds(unresolvedIds);
+
+  const productIds = uniqStrings(
+    segments.flatMap((segment) => (segment?.items || []).map((item) => item?.productId))
+  );
+  const productObjectIds = toObjectIds(productIds);
+
+  const products = productObjectIds.length
+    ? await Product.find({ _id: { $in: productObjectIds } }).select("_id store").lean()
+    : [];
+
+  const productToStoreMap = new Map(
+    products.map((product) => [String(product._id), toIdString(product.store)])
+  );
+  const storeIdsFromProducts = uniqStrings(products.map((product) => product?.store));
+  const storeIdsToLoad = uniqStrings([
+    ...storeObjectIds.map((id) => String(id)),
+    ...storeIdsFromProducts,
+  ]);
+
+  const stores = storeIdsToLoad.length
+    ? await Store.find({ _id: { $in: toObjectIds(storeIdsToLoad) } })
+        .select("_id vendor createdBy owner_id")
+        .lean()
+    : [];
+
+  const storeToVendorMap = new Map(
+    stores
+      .map((store) => [String(store._id), extractStoreVendorId(store)])
+      .filter(([, vendorId]) => vendorId)
+  );
+
+  const resolvedVendorOrders = segments.map((segment) => {
+    const vendorKey = toIdString(segment?.vendor);
+    let resolvedVendorId = vendorUserIdSet.has(vendorKey)
+      ? vendorKey
+      : storeToVendorMap.get(vendorKey);
+
+    if (!resolvedVendorId) {
+      const itemProductIds = uniqStrings(
+        (segment?.items || []).map((item) => item?.productId)
+      );
+      const itemStoreIds = uniqStrings(
+        itemProductIds.map((productId) => productToStoreMap.get(toIdString(productId)))
+      ).filter(Boolean);
+
+      if (itemStoreIds.length === 1) {
+        resolvedVendorId = storeToVendorMap.get(itemStoreIds[0]);
+      }
+    }
+
+    return {
+      ...segment,
+      vendor: resolvedVendorId || segment?.vendor,
+    };
+  });
+
+  const resolvedVendorIds = resolvedVendorOrders.map((segment) => toIdString(segment?.vendor));
+  const missing = resolvedVendorIds.some((id) => !id || !mongoose.Types.ObjectId.isValid(id));
+
+  if (missing) {
+    return {
+      resolvedVendorOrders,
+      isValid: false,
+      message: "Unable to resolve vendor for one or more order segments",
+    };
+  }
+
+  // Ensure resolved vendor ids are actually Vendor users.
+  const uniqueResolved = uniqStrings(resolvedVendorIds);
+  const resolvedCount = await User.countDocuments({
+    _id: { $in: toObjectIds(uniqueResolved) },
+    role: "Vendor",
+  });
+
+  if (resolvedCount !== uniqueResolved.length) {
+    return {
+      resolvedVendorOrders,
+      isValid: false,
+      message: "One or more vendor ids are invalid or not vendor accounts",
+    };
+  }
+
+  return {
+    resolvedVendorOrders,
+    isValid: true,
+    message: null,
+  };
 };
 
 const generateOrderNumber = () => {
@@ -190,14 +418,10 @@ const validateOrderPayload = async (payload) => {
     return "At least one vendor order is required";
   }
 
-  const vendorIds = [];
-
   for (const [segmentIndex, segment] of vendorOrders.entries()) {
-    if (!segment.vendor || !mongoose.Types.ObjectId.isValid(segment.vendor)) {
+    if (segment.vendor && !mongoose.Types.ObjectId.isValid(segment.vendor)) {
       return `Vendor id is invalid at vendorOrders[${segmentIndex}]`;
     }
-
-    vendorIds.push(segment.vendor);
 
     if (!Array.isArray(segment.items) || segment.items.length === 0) {
       return `At least one item is required in vendorOrders[${segmentIndex}]`;
@@ -222,20 +446,16 @@ const validateOrderPayload = async (payload) => {
     }
   }
 
-  const uniqueVendorIds = [...new Set(vendorIds.map((id) => String(id)))];
-  const vendorCount = await User.countDocuments({
-    _id: { $in: uniqueVendorIds },
-    role: "Vendor",
-  });
-
-  if (vendorCount !== uniqueVendorIds.length) {
-    return "One or more vendor ids are invalid or not vendor accounts";
+  // Allow vendorOrders[].vendor to be either a Vendor userId or a StoreId.
+  const resolution = await resolveVendorOrdersVendorIds(vendorOrders);
+  if (!resolution.isValid) {
+    return resolution.message;
   }
 
   return null;
 };
 
-const formatOrderPayload = (payload, buyerId, orderNumber, appliedCoupon) => {
+const formatOrderPayload = (payload, buyerId, orderNumber, appliedCoupon, paymentRecord) => {
   const baseVendorOrders = payload.vendorOrders.map((segment) => ({
     vendor: segment.vendor,
     status: "Placed",
@@ -283,12 +503,10 @@ const formatOrderPayload = (payload, buyerId, orderNumber, appliedCoupon) => {
     },
     couponCode: appliedCoupon?.coupon?.code || normalizeCouponCode(payload.couponCode),
     payment: {
-      method: payload.payment?.method || "Card",
-      status: PAYMENT_STATUSES.includes(payload.payment?.status)
-        ? payload.payment.status
-        : "Pending",
-      transactionId: payload.payment?.transactionId || "",
-      paidAt: payload.payment?.paidAt,
+      method: paymentRecord.amount?.paymentMethod || "Card",
+      status: paymentRecord.status === "paid" ? "Paid" : "Pending",
+      transactionId: paymentRecord.stripePaymentIntentId || "",
+      paidAt: paymentRecord.paymentDate,
     },
     vendorOrders,
   };
@@ -303,6 +521,50 @@ export const createOrder = async (req, res) => {
         message: validationMessage,
       });
     }
+
+    // Get payment ID from request body
+    const { paymentId } = req.body;
+    if (!paymentId || !mongoose.Types.ObjectId.isValid(paymentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid payment ID is required",
+      });
+    }
+
+    // Fetch payment record from database
+    const payment = await Payment.findById(paymentId);
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: "Payment record not found",
+      });
+    }
+
+    // Verify payment belongs to the current user
+    if (String(payment.customerId) !== String(req.user._id)) {
+      return res.status(403).json({
+        success: false,
+        message: "This payment does not belong to you",
+      });
+    }
+
+    // Check if payment status is 'paid' before placing order
+    if (payment.status !== "paid") {
+      return res.status(400).json({
+        success: false,
+        message: "Order can only be placed when payment status is 'paid'",
+      });
+    }
+
+    if (!payment.storePayments || payment.storePayments.length === 0) {
+      console.error(" Payment missing storePayments:", payment._id);
+      return res.status(400).json({
+        success: false,
+        message: "Payment missing store information. Please check your cart items.",
+      });
+    }
+
+    console.log(` Payment validated. Store Payments count: ${payment.storePayments.length}`);
 
     const couponCode = normalizeCouponCode(req.body.couponCode);
     let appliedCoupon = null;
@@ -330,11 +592,24 @@ export const createOrder = async (req, res) => {
     }
 
     const orderNumber = await createUniqueOrderNumber();
+
+    const vendorResolution = await resolveVendorOrdersVendorIds(req.body.vendorOrders);
+    if (!vendorResolution.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: vendorResolution.message,
+      });
+    }
+
     const orderPayload = formatOrderPayload(
-      req.body,
+      {
+        ...req.body,
+        vendorOrders: vendorResolution.resolvedVendorOrders,
+      },
       req.user._id,
       orderNumber,
-      appliedCoupon
+      appliedCoupon,
+      payment
     );
 
     const order = await Order.create(orderPayload);
@@ -526,7 +801,25 @@ export const getOrderById = async (req, res) => {
       });
     }
 
-    if (!canAccessOrder(order, req.user)) {
+    if (req.user.role === "Vendor") {
+      const access = await getVendorAccessIds(req.user._id);
+      const vendorMatchIds = new Set(access.allIds);
+      let allowed = order.vendorOrders.some((segment) =>
+        vendorMatchIds.has(toIdString(segment.vendor))
+      );
+
+      if (!allowed && access.storeIds.length) {
+        const productIdSet = await getVendorProductIdSet(access.storeIds);
+        allowed = orderHasVendorProducts(order, productIdSet);
+      }
+
+      if (!allowed) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied for this order",
+        });
+      }
+    } else if (!canAccessOrder(order, req.user)) {
       return res.status(403).json({
         success: false,
         message: "Access denied for this order",
@@ -568,7 +861,25 @@ export const getOrderTracking = async (req, res) => {
       });
     }
 
-    if (!canAccessOrder(order, req.user)) {
+    if (req.user.role === "Vendor") {
+      const access = await getVendorAccessIds(req.user._id);
+      const vendorMatchIds = new Set(access.allIds);
+      let allowed = order.vendorOrders.some((segment) =>
+        vendorMatchIds.has(toIdString(segment.vendor))
+      );
+
+      if (!allowed && access.storeIds.length) {
+        const productIdSet = await getVendorProductIdSet(access.storeIds);
+        allowed = orderHasVendorProducts(order, productIdSet);
+      }
+
+      if (!allowed) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied for this order",
+        });
+      }
+    } else if (!canAccessOrder(order, req.user)) {
       return res.status(403).json({
         success: false,
         message: "Access denied for this order",
@@ -605,43 +916,62 @@ export const getOrderTracking = async (req, res) => {
 
 export const getVendorOrders = async (req, res) => {
   try {
-    const { page, limit, skip } = parsePagination(req.query);
-    const { status, paymentStatus, search, sort = "newest" } = req.query;
+    const { page = 1, limit = 10, status, search, sort = "newest" } = req.query;
 
-    const baseQuery = {
+    const skip = (page - 1) * limit;
+
+    //  DEBUG 1: Vendor ID
+    console.log(" Vendor User ID:", req.user._id);
+
+    //  Step 1: Get orders where this vendor exists
+    const query = {
       "vendorOrders.vendor": req.user._id,
     };
 
+    //  Search filter
     if (search && search.trim()) {
-      baseQuery.orderNumber = { $regex: search.trim(), $options: "i" };
+      query.$or = [
+        { orderNumber: { $regex: search.trim(), $options: "i" } },
+        { "vendorOrders.items.productName": { $regex: search.trim(), $options: "i" } },
+      ];
     }
+
+    console.log(" Query:", JSON.stringify(query, null, 2));
 
     const sortQuery = sort === "oldest" ? { createdAt: 1 } : { createdAt: -1 };
 
-    const orders = await Order.find(baseQuery)
+    const orders = await Order.find(query)
       .sort(sortQuery)
       .populate("buyer", "fullname email phone")
       .populate("vendorOrders.vendor", "fullname email");
 
-    const vendorId = String(req.user._id);
+    //  DEBUG 2: Orders found
+    console.log(" Orders Found:", orders.length);
 
-    const flattened = orders
+    if (orders.length > 0) {
+      console.log(
+        " Sample Order Vendor IDs:",
+        orders[0].vendorOrders.map(v => v.vendor?._id)
+      );
+    }
+
+    //  Step 2: Extract only this vendor's segment
+    const filteredOrders = orders
       .map((order) => {
-        const segment = order.vendorOrders.find(
-          (vendorOrder) => toIdString(vendorOrder.vendor) === vendorId
+        const vendorSegment = order.vendorOrders.find(
+          (segment) => String(segment.vendor._id) === String(req.user._id)
         );
 
-        if (!segment) return null;
+        //  DEBUG 3: Segment check
+        console.log(
+          ` Checking Order ${order.orderNumber} → Segment Found:`,
+          !!vendorSegment
+        );
 
-        if (status && ORDER_STATUSES.includes(status) && segment.status !== status) {
-          return null;
-        }
+        if (!vendorSegment) return null;
 
-        if (
-          paymentStatus &&
-          PAYMENT_STATUSES.includes(paymentStatus) &&
-          order.payment.status !== paymentStatus
-        ) {
+        //  Status filter (optional)
+        if (status && vendorSegment.status !== status) {
           return null;
         }
 
@@ -651,36 +981,46 @@ export const getVendorOrders = async (req, res) => {
           buyer: order.buyer,
           createdAt: order.createdAt,
           overallStatus: order.overallStatus,
-          paymentStatus: order.payment.status,
+          paymentStatus: order.payment?.status,
+
           vendorOrder: {
-            vendorOrderId: segment._id,
-            status: segment.status,
-            estimatedDelivery: segment.estimatedDelivery,
-            subtotal: segment.subtotal,
-            shippingFee: segment.shippingFee,
-            discountAmount: segment.discountAmount,
-            totalAmount: segment.totalAmount,
-            itemCount: segment.items.reduce((sum, item) => sum + item.quantity, 0),
-            items: segment.items,
-            trackingHistory: segment.trackingHistory,
+            vendorOrderId: vendorSegment._id,
+            status: vendorSegment.status,
+            estimatedDelivery: vendorSegment.estimatedDelivery,
+            subtotal: vendorSegment.subtotal,
+            shippingFee: vendorSegment.shippingFee,
+            discountAmount: vendorSegment.discountAmount,
+            totalAmount: vendorSegment.totalAmount,
+            itemCount: vendorSegment.items.reduce(
+              (sum, item) => sum + item.quantity,
+              0
+            ),
+            items: vendorSegment.items,
+            trackingHistory: vendorSegment.trackingHistory,
           },
+
           shippingAddress: order.shippingAddress,
         };
       })
       .filter(Boolean);
 
-    const total = flattened.length;
-    const paginated = flattened.slice(skip, skip + limit);
+    //  DEBUG 4: Filtered results
+    console.log("✅ Filtered Orders Count:", filteredOrders.length);
+
+    //  Step 3: Pagination (manual)
+    const total = filteredOrders.length;
+    const paginated = filteredOrders.slice(skip, skip + Number(limit));
 
     return res.status(200).json({
       success: true,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
       total,
       totalPages: Math.ceil(total / limit),
       orders: paginated,
     });
   } catch (error) {
+    console.error(" getVendorOrders error:", error);
     return res.status(500).json({
       success: false,
       message: "Error fetching vendor orders",
@@ -716,9 +1056,18 @@ export const updateVendorOrderStatus = async (req, res) => {
       });
     }
 
-    const vendorSegment = order.vendorOrders.find(
-      (segment) => toIdString(segment.vendor) === String(req.user._id)
+    const access = await getVendorAccessIds(req.user._id);
+    const vendorMatchIds = new Set(access.allIds);
+
+    let productIdSet = new Set();
+    let vendorSegment = order.vendorOrders.find((segment) =>
+      vendorMatchIds.has(toIdString(segment.vendor))
     );
+
+    if (!vendorSegment && access.storeIds.length) {
+      productIdSet = await getVendorProductIdSet(access.storeIds);
+      vendorSegment = findVendorSegment(order, vendorMatchIds, productIdSet);
+    }
 
     if (!vendorSegment) {
       return res.status(403).json({
@@ -727,7 +1076,7 @@ export const updateVendorOrderStatus = async (req, res) => {
       });
     }
 
-    // ✅ FIX 3: Prevent duplicate notifications
+    //  FIX 3: Prevent duplicate notifications
     if (vendorSegment.status === status) {
       return res.status(400).json({
         success: false,
@@ -756,7 +1105,7 @@ export const updateVendorOrderStatus = async (req, res) => {
 
     await order.save();
 
-    // ✅ FIX 2 & 3: Notification with try/catch and duplicate prevention already done
+    //  FIX 2 & 3: Notification with try/catch and duplicate prevention already done
     try {
       await order.populate("buyer", "fullname email");
 
@@ -899,7 +1248,7 @@ export const updatePaymentStatus = async (req, res) => {
 
     const oldPaymentStatus = order.payment.status;
 
-    // ✅ FIX 1: Prevent duplicate notifications (no change)
+    //  FIX 1: Prevent duplicate notifications (no change)
     if (oldPaymentStatus === paymentStatus) {
       return res.status(200).json({
         success: true,
@@ -928,10 +1277,10 @@ export const updatePaymentStatus = async (req, res) => {
       { path: "vendorOrders.vendor", select: "fullname email" },
     ]);
 
-    // ✅ FIX 4: Wrap notifications in try/catch to prevent API failure
+    //  FIX 4: Wrap notifications in try/catch to prevent API failure
     try {
       // ─────────────────────────────────────────────
-      // 🔔 SEND NOTIFICATIONS FOR PAYMENT STATUS CHANGE
+      //  SEND NOTIFICATIONS FOR PAYMENT STATUS CHANGE
       // ─────────────────────────────────────────────
 
       // 1. Send notification to BUYER
@@ -984,7 +1333,7 @@ export const updatePaymentStatus = async (req, res) => {
         });
       }
 
-      // ✅ FIX 3: Send to VENDORS in PARALLEL (not sequential)
+      //  FIX 3: Send to VENDORS in PARALLEL (not sequential)
       if (paymentStatus === "Paid" && order.vendorOrders && order.vendorOrders.length > 0) {
         const vendorPromises = order.vendorOrders.map(async (vendorOrder) => {
           if (vendorOrder.vendor) {
@@ -1009,7 +1358,7 @@ export const updatePaymentStatus = async (req, res) => {
           return null;
         }).filter(Boolean);
 
-        await Promise.all(vendorPromises); // ✅ Parallel execution
+        await Promise.all(vendorPromises); //  Parallel execution
       }
 
       // Send notification for REFUND to vendors (also in parallel)
@@ -1032,11 +1381,11 @@ export const updatePaymentStatus = async (req, res) => {
           return null;
         }).filter(Boolean);
 
-        await Promise.all(refundPromises); // ✅ Parallel execution
+        await Promise.all(refundPromises); //  Parallel execution
       }
 
     } catch (notifError) {
-      // ✅ FIX 4: Don't block API response if notification fails
+      //  FIX 4: Don't block API response if notification fails
       console.error("Payment notification error:", notifError);
     }
 
@@ -1096,7 +1445,7 @@ export const adminUpdateVendorOrderStatus = async (req, res) => {
       });
     }
 
-    // ✅ FIX 3: Prevent duplicate notifications
+    //  FIX 3: Prevent duplicate notifications
     if (vendorSegment.status === status) {
       return res.status(400).json({
         success: false,
@@ -1114,7 +1463,7 @@ export const adminUpdateVendorOrderStatus = async (req, res) => {
 
     await order.save();
 
-    // ✅ FIX 2: Notification with try/catch
+    //  FIX 2: Notification with try/catch
     try {
       await order.populate("buyer", "fullname email");
 
@@ -1153,6 +1502,76 @@ export const adminUpdateVendorOrderStatus = async (req, res) => {
       success: false,
       message: "Error updating vendor status by admin",
       error: error.message,
+    });
+  }
+};
+
+// ─────────────────────────────────────────────
+// ENRICH CART WITH STORE ID (FIX FOR PAYMENT)
+// ─────────────────────────────────────────────
+export const enrichCartWithStoreId = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    // Get user's cart with populated product data
+    const cart = await Cart.findOne({ user_id: userId }).populate("items.product_id");
+    
+    if (!cart) {
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found"
+      });
+    }
+
+    if (cart.items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cart is empty"
+      });
+    }
+
+    console.log("\n === Enriching Cart with Store ID ===");
+    console.log(`Cart ID: ${cart._id}, Items: ${cart.items.length}`);
+
+    // Enrich items with store_id from populated product.store
+    let updated = false;
+    for (const item of cart.items) {
+      if (!item.store_id && item.product_id?.store) {
+        item.store_id = item.product_id.store;
+        updated = true;
+        console.log(`   Set store_id for product ${item.product_id._id}: ${item.product_id.store}`);
+      } else if (item.store_id) {
+        console.log(`Item already has store_id: ${item.store_id}`);
+      } else {
+        console.warn(`Item ${item.product_id._id} has no store info`);
+      }
+    }
+
+    // Save enriched cart
+    if (updated) {
+      await cart.save();
+      console.log(" Cart saved with enriched store_id values");
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Cart enriched successfully with store information",
+      updated,
+      cartId: cart._id,
+      items: cart.items.map(item => ({
+        product_id: item.product_id._id,
+        store_id: item.store_id,
+        quantity: item.quantity,
+        price: item.price
+      }))
+    });
+
+  } catch (error) {
+    console.error("enrichCartWithStoreId error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error enriching cart",
+      error: error.message
     });
   }
 };

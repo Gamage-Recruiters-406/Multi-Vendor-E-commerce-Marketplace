@@ -163,6 +163,9 @@ export const stripeWebhook = async (req, res) => {
                 existingPayment.status = "paid";
                 await existingPayment.save();
 
+                // ✅ CLEAR CART HERE
+                await Cart.findOneAndDelete({ user_id: existingPayment.customerId });
+
                 // Notify buyer
                 try {
                     const buyer = await User.findById(existingPayment.customerId);
@@ -359,21 +362,33 @@ export const getAllPaidPaymentsForAdmin = async (req, res) => {
 export const getPaidPaymentsForOwner = async (req, res) => {
     try {
         const ownerId = req.user._id;
+        const store_id = req.query.store_id || req.body?.store_id;
         const { startDate, endDate, limit = 10, page = 1 } = req.query;
+
+        if (!store_id) {
+            return res.status(400).json({ success: false, message: "store_id is required." });
+        }
+
+        // Verify that the store belongs to this owner
+        const Store = (await import('../models/Store.js')).default;
+        const store = await Store.findById(store_id);
+        
+        if (!store) {
+            return res.status(404).json({ success: false, message: "Store not found." });
+        }
+
+        if (store.vendor.toString() !== ownerId.toString()) {
+            return res.status(403).json({ success: false, message: "You do not have access to this store." });
+        }
 
         const pageNumber = parseInt(page);
         const limitNumber = parseInt(limit);
         const skip = (pageNumber - 1) * limitNumber;
 
-        // First find all stores owned by this user
-        const Store = (await import('../models/Store.js')).default;
-        const ownerStores = await Store.find({ owner_id: ownerId }).select("_id");
-        const storeIds = ownerStores.map(s => s._id);
-
-        // ✅ filter by storePayments.storeId
+        // ✅ Filter by the specific store_id
         let filter = {
             status: "paid",
-            "storePayments.storeId": { $in: storeIds }
+            "storePayments.storeId": store_id
         };
 
         if (startDate || endDate) {
@@ -395,27 +410,16 @@ export const getPaidPaymentsForOwner = async (req, res) => {
 
         const totalCount = await Payment.countDocuments(filter);
 
-        // Attach only this owner's store share to each payment
-        const paymentsWithMyShare = payments.map(payment => {
-            const myShares = payment.storePayments.filter(
-                s => storeIds.some(id => id.toString() === s.storeId._id?.toString())
-            );
-            return {
-                ...payment.toObject(),
-                myShare: myShares,
-            };
-        });
-
         res.status(200).json({
             success: true,
-            message: "Paid payments fetched successfully for owner.",
+            message: "Paid payments fetched successfully for store.",
             pagination: {
                 currentPage: pageNumber,
                 totalPages: Math.ceil(totalCount / limitNumber),
                 totalItems: totalCount,
                 itemsPerPage: limitNumber,
             },
-            payments: paymentsWithMyShare,
+            payments,
         });
     } catch (error) {
         console.error("getPaidPaymentsForOwner error:", error);

@@ -44,6 +44,7 @@ export const addToCart = async (req, res) => {
         } else {
             cart.items.push({
                 product_id,
+                store_id: product.store_id,
                 quantity: quantity || 1,
                 price: product.price
             });
@@ -77,7 +78,14 @@ export const addToCart = async (req, res) => {
 export const getCart = async (req, res) => {
     try {
         const cart = await Cart.findOne({ user_id: req.user._id })
-            .populate("items.product_id")
+            .populate({
+                path: 'items.product_id',
+                select: 'name description price images stock store category',
+                populate: {
+                    path: 'store',
+                    select: 'name logo'
+                }
+            })
             .lean();
 
         if (!cart) {
