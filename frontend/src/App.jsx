@@ -25,13 +25,13 @@ import VendorDashboard from "./pages/VendorDashboard";
 import BuyerProductDetailsPage from "./pages/Buyer/BuyerProductDetailsPage";
 import ShoppingCartPage from "./pages/ShoppingCart/ShoppingCartPage";
 import { MyOrders } from "./pages/MyOrders/MyOrders.jsx";
-import UserManagement from './pages/admin/UserManagement'
+import UserManagement from "./pages/admin/UserManagement";
 import VendorOrderManagementPage from "./pages/Vendor/OrderManagement";
+import VendorQAManagement from "./pages/Vendor/VendorQAManagement.jsx";
 import VendorOrderDetailsPage from "./pages/Vendor/OrderDetails";
 //import Q_AND_A_PAGE from "./pages/Buyer/Q&APage";
 import Notifications from "./pages/Vendor/Notifications";
 import MarketplaceProductsPage from "./pages/Buyer/CategoryProducts.jsx";
-
 
 function App() {
   return (
@@ -65,8 +65,15 @@ function App() {
           <Route path="/vendor/edit-store/:id" element={<EditStore />} />
           <Route path="/vendor/sales-analytics" element={<SalesAnalytics />} />
           <Route path="/vendor/dashboard" element={<VendorDashboard />} />
-          <Route path="/vendor/orders" element={<VendorOrderManagementPage />} />
-          <Route path="/vendor/orderDetails/:orderId" element={<VendorOrderDetailsPage />} />
+          <Route
+            path="/vendor/orders"
+            element={<VendorOrderManagementPage />}
+          />
+          <Route
+            path="/vendor/orderDetails/:orderId"
+            element={<VendorOrderDetailsPage />}
+          />
+          <Route path="/vendor/qa" element={<VendorQAManagement />} />
           <Route path="/notifications" element={<Notifications />} />
           {/* Admin Module */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
@@ -79,7 +86,7 @@ function App() {
             path="/admin/announcements/edit/:id"
             element={<EditAnnouncement />}
           />
-           <Route path="/admin/users" element={<UserManagement />} />
+          <Route path="/admin/users" element={<UserManagement />} />
           {/* Buyer */}
           <Route
             path="/buyer/productdetails/:id"
