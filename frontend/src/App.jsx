@@ -26,12 +26,16 @@ import BuyerProductDetailsPage from "./pages/Buyer/BuyerProductDetailsPage";
 import ShoppingCartPage from "./pages/ShoppingCart/ShoppingCartPage";
 import { MyOrders } from "./pages/MyOrders/MyOrders.jsx";
 import UserManagement from "./pages/admin/UserManagement";
+import UserManagement from './pages/admin/UserManagement'
+
 import VendorOrderManagementPage from "./pages/Vendor/OrderManagement";
 import VendorQAManagement from "./pages/Vendor/VendorQAManagement.jsx";
 import VendorOrderDetailsPage from "./pages/Vendor/OrderDetails";
 //import Q_AND_A_PAGE from "./pages/Buyer/Q&APage";
 import Notifications from "./pages/Vendor/Notifications";
 import MarketplaceProductsPage from "./pages/Buyer/CategoryProducts.jsx";
+
+import AdminProductManagement from './pages/admin/ProductManagement'
 
 function App() {
   return (
@@ -77,6 +81,7 @@ function App() {
           <Route path="/notifications" element={<Notifications />} />
           {/* Admin Module */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/products" element={<AdminProductManagement />} />
           <Route path="/admin/announcements" element={<Announcements />} />
           <Route
             path="/admin/announcements/create"
