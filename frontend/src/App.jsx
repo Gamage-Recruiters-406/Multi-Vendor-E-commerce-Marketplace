@@ -26,7 +26,6 @@ import BuyerProductDetailsPage from "./pages/Buyer/BuyerProductDetailsPage";
 import ShoppingCartPage from "./pages/ShoppingCart/ShoppingCartPage";
 import { MyOrders } from "./pages/MyOrders/MyOrders.jsx";
 import UserManagement from "./pages/admin/UserManagement";
-import UserManagement from './pages/admin/UserManagement'
 
 import VendorOrderManagementPage from "./pages/Vendor/OrderManagement";
 import VendorQAManagement from "./pages/Vendor/VendorQAManagement.jsx";
