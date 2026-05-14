@@ -57,15 +57,19 @@ const enrichCartItemsWithStoreId = async (cartItems) => {
 const canAccessOrder = (order, user) => {
   if (!order || !user) return false;
 
-  if (user.role === "admin") return true;
+  const userRole = String(user.role || "").toLowerCase();
+  if (userRole === "admin") return true;
 
-  const userId = String(user._id);
-  if (user.role === "Buyer" && String(order.buyer) === userId) {
+  const userId = toIdString(user);
+  const buyerId = toIdString(order.buyer);
+
+  // Buyers can always access their own orders, even if role casing varies.
+  if (buyerId && buyerId === userId) {
     return true;
   }
 
   if (
-    user.role === "Vendor" &&
+    Array.isArray(order.vendorOrders) &&
     order.vendorOrders.some((segment) => toIdString(segment.vendor) === userId)
   ) {
     return true;
