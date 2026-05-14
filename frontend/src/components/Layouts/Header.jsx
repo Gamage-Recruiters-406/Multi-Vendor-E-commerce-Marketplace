@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { Bell, ShoppingCart, Heart } from "lucide-react";
 
 const normalizeUrlPart = (value = "") => value.replace(/\/+$/, "");
@@ -63,10 +64,9 @@ const roleConfigs = {
 		tone: "vendor",
 		links: [
 			{ label: "Dashboard", path: "/vendor/dashboard" },
-			{ label: "Products", path: "/vendor/products" },
+			{ label: "Stores", path: "/vendor/stores" },
 			{ label: "Orders", path: "/vendor/orders" },
 			{ label: "Analytics", path: "/vendor/sales-analytics" },
-			{ label: "Settings", path: "/vendor/settings" },
 		],
 		cta: "STORE LIVE",
 	},
@@ -76,7 +76,6 @@ const roleConfigs = {
 		links: [
 			{ label: "Home", path: "/" },
 			{ label: "Categories", path: "/categories" },
-			{ label: "Cart", path: "/cart" },
 			{ label: "Orders", path: "/orders" },
 		],
 		placeholder: "Search for unique artisan products...",
@@ -91,7 +90,6 @@ const roleConfigs = {
 			{ label: "Revenue", path: "/admin/revenue" },
 			{ label: "Disputes", path: "/admin/disputes" },
 		],
-		cta: "Logout",
 	},
 };
 
@@ -115,6 +113,8 @@ const normalizeRole = (value) => {
 export default function Header({ userRole, userName }) {
 	const storedUser = typeof window !== "undefined" ? getStoredUser() : null;
 	const [dbUser, setDbUser] = useState(storedUser);
+	const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+	const profileMenuRef = useRef(null);
 
 	useEffect(() => {
 		let isMounted = true;
@@ -165,8 +165,36 @@ export default function Header({ userRole, userName }) {
 		};
 	}, []);
 
+	useEffect(() => {
+		if (!isProfileMenuOpen) return undefined;
+
+		const handleOutsideClick = (event) => {
+			if (!profileMenuRef.current) return;
+			if (!profileMenuRef.current.contains(event.target)) {
+				setIsProfileMenuOpen(false);
+			}
+		};
+
+		const handleEscape = (event) => {
+			if (event.key === "Escape") {
+				setIsProfileMenuOpen(false);
+			}
+		};
+
+		document.addEventListener("mousedown", handleOutsideClick);
+		document.addEventListener("keydown", handleEscape);
+
+		return () => {
+			document.removeEventListener("mousedown", handleOutsideClick);
+			document.removeEventListener("keydown", handleEscape);
+		};
+	}, [isProfileMenuOpen]);
+
 	const role = normalizeRole(userRole || dbUser?.role || storedUser?.role);
 	const currentPath = typeof window !== "undefined" ? window.location.pathname : "/";
+	const roleSlug = role.toLowerCase();
+	const profilePath = `/${roleSlug}/profile`;
+	const settingsPath = `/${roleSlug}/settings`;
 
 	const config = useMemo(() => roleConfigs[role] || roleConfigs.Buyer, [role]);
 
@@ -228,6 +256,15 @@ export default function Header({ userRole, userName }) {
 	const currentName = userName || dbUser?.fullname || storedUser?.fullname || "Perera";
 	const profilePicture = dbUser?.profilePicture || storedUser?.profilePicture || null;
 
+	const handleLogout = () => {
+		try {
+			localStorage.removeItem("token");
+			localStorage.removeItem("user");
+		} finally {
+			window.location.href = "/login";
+		}
+	};
+
 	return (
 		<header
 			className={`sticky top-0 z-50 w-full rounded-lg px-4 py-2 md:px-5 md:py-2.5 ${ui.shell} font-sans backdrop-blur-md`}
@@ -272,12 +309,6 @@ export default function Header({ userRole, userName }) {
 					</button>
 				)}
 
-				{config.tone === "admin" && (
-					<button type="button" className={ui.cta}>
-						{config.cta}
-					</button>
-				)}
-
 				{config.tone === "buyer" && (
 					<>
 						{/* Wishlist */}
@@ -316,18 +347,62 @@ export default function Header({ userRole, userName }) {
 					<span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-current" />
 				</button>
 
-				<div className={`grid h-7 w-7 place-items-center overflow-hidden rounded-full text-xs font-bold ${ui.avatar}`}>
-					{profilePicture ? (
-						<img src={profilePicture} alt={currentName} className="h-full w-full object-cover" />
-					) : (
-						currentName.slice(0, 1).toUpperCase()
+				<div className="relative" ref={profileMenuRef}>
+					<button
+						type="button"
+						className="flex cursor-pointer items-center gap-2 rounded-full px-1.5 py-0.5 transition hover:bg-black/5"
+						aria-haspopup="menu"
+						aria-expanded={isProfileMenuOpen}
+						onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+					>
+						<div
+							className={`grid h-7 w-7 place-items-center overflow-hidden rounded-full text-xs font-bold ${ui.avatar}`}
+						>
+							{profilePicture ? (
+								<img src={profilePicture} alt={currentName} className="h-full w-full object-cover" />
+							) : (
+								currentName.slice(0, 1).toUpperCase()
+							)}
+						</div>
+
+						<div className="grid text-left leading-tight">
+							<span className={`text-xs font-semibold ${ui.name}`}>{currentName}</span>
+							<span className={`text-[10px] uppercase tracking-[0.045em] ${ui.sub}`}>{role}</span>
+						</div>
+					</button>
+
+					{isProfileMenuOpen && (
+						<div
+							role="menu"
+							className="absolute right-0 top-10 w-44 rounded-xl border border-slate-200 bg-white p-2 text-xs text-slate-700 shadow-lg"
+						>
+							<Link
+								to={profilePath}
+								role="menuitem"
+								className="block rounded-lg px-3 py-2 transition hover:bg-emerald-50 hover:text-emerald-700"
+								onClick={() => setIsProfileMenuOpen(false)}
+							>
+								Profile
+							</Link>
+							<Link
+								to={settingsPath}
+								role="menuitem"
+								className="block rounded-lg px-3 py-2 transition hover:bg-emerald-50 hover:text-emerald-700"
+								onClick={() => setIsProfileMenuOpen(false)}
+							>
+								Settings
+							</Link>
+							<button
+								type="button"
+								role="menuitem"
+								className="block w-full rounded-lg px-3 py-2 text-left transition hover:bg-rose-50 hover:text-rose-600"
+								onClick={handleLogout}
+							>
+								Logout
+							</button>
+						</div>
 					)}
 				</div>
-
-					<div className="grid leading-tight">
-						<span className={`text-xs font-semibold ${ui.name}`}>{currentName}</span>
-						<span className={`text-[10px] uppercase tracking-[0.045em] ${ui.sub}`}>{role}</span>
-					</div>
 				</div>
 			</div>
 		</header>
