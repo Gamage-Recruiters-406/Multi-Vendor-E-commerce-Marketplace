@@ -28,7 +28,7 @@ import { MyOrders } from "./pages/MyOrders/MyOrders.jsx";
 import UserManagement from './pages/admin/UserManagement'
 import VendorOrderManagementPage from "./pages/Vendor/OrderManagement";
 import VendorOrderDetailsPage from "./pages/Vendor/OrderDetails";
-import Q_AND_A_PAGE from "./pages/Buyer/Q&APage";
+//import Q_AND_A_PAGE from "./pages/Buyer/Q&APage";
 import Notifications from "./pages/Vendor/Notifications";
 import MarketplaceProductsPage from "./pages/Buyer/CategoryProducts.jsx";
 
