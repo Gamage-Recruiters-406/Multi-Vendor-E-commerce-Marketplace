@@ -33,7 +33,6 @@ import Q_AND_A_PAGE from "./pages/Buyer/Q&APage";
 
 import AdminProductManagement from './pages/admin/ProductManagement'
 
-
 function App() {
   return (
     <>
