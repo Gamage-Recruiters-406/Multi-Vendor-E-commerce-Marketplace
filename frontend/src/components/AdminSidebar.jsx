@@ -19,14 +19,14 @@ const menuItems = [
 
 export default function AdminSidebar() {
   return (
-    <div className="w-full h-full bg-white flex flex-col">
-      <div className="flex-1 overflow-y-auto p-3">
-        {menuItems.map((item, index) => {
+    <div className="h-screen w-full bg-white flex flex-col">
+      <div className="flex-1 overflow-y-auto p-3 pt-6">
+        {menuItems.map((item) => {
           const Icon = item.icon;
 
           return (
             <NavLink
-              key={index}
+              key={item.path}
               to={item.path}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-lg mb-2 text-sm transition-all ${
