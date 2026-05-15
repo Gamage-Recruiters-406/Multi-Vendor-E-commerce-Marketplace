@@ -16,17 +16,13 @@ import {
   ShoppingCart,
   Minus,
   CirclePlus,
+  Heart,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layouts/Layout";
 
-// need Skeliton loading
-// card click should navigate to product details page
-// add to cart Icon should change to shopping cart and function need to add
-// pagination have small issue
-// it's better to have some UI polish on the hero part (Big top green banner)
 
 
 const sortOptions = ["Latest", "Price: Low to High", "Price: High to Low"];
@@ -78,11 +74,49 @@ function getBadge(item) {
   };
 }
 
-function Card({ item }) {
+function ProductCardSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      {/* Image Skeleton */}
+      <div className="aspect-4/3 animate-pulse bg-slate-200" />
+
+      <div className="p-4">
+        {/* Product Title */}
+        <div className="h-4 w-3/4 animate-pulse rounded bg-slate-200" />
+
+        <div className="mt-2 h-4 w-1/2 animate-pulse rounded bg-slate-200" />
+
+        {/* Store */}
+        <div className="mt-3 flex items-center gap-2">
+          <div className="h-5 w-5 animate-pulse rounded-full bg-slate-200" />
+
+          <div className="h-3 w-24 animate-pulse rounded bg-slate-200" />
+        </div>
+
+        {/* Price + Button */}
+        <div className="mt-5 flex items-center justify-between">
+          <div>
+            <div className="h-5 w-20 animate-pulse rounded bg-slate-200" />
+
+            <div className="mt-2 h-3 w-24 animate-pulse rounded bg-slate-200" />
+          </div>
+
+          <div className="h-9 w-9 animate-pulse rounded-full bg-slate-200" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Card({ item, addToWishlist, wishlistLoading, wishlistItems, removeFromWishlist }) {
   const badge = getBadge(item);
+  const navigate = useNavigate();
+  const isWishlisted = wishlistItems.includes(item._id);
 
   return (
-    <div className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <div 
+    onClick={() => navigate(`/buyer/productdetails/${item._id}`)} 
+    className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="relative aspect-4/3 bg-slate-100">
         <img
           src={item.images?.[0]}
@@ -139,8 +173,30 @@ function Card({ item }) {
             </div>
           </div>
 
-          <button className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-[#1A9F73] hover:text-[#1A9F73]">
-            <CirclePlus className="h-4 w-4" />
+          <button 
+          title={`${!isWishlisted ? "Add to Wishlist" : "Remove from Wishlist"}`}
+          onClick={(e)=>{
+            e.stopPropagation();
+
+            if (isWishlisted) {
+              removeFromWishlist(item._id);
+            } else {
+              addToWishlist(item._id);
+            }
+          }}
+          disabled={wishlistLoading === item._id}
+          className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition ${
+            wishlistLoading === item._id
+              ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+              : "border-[#1A9F73] text-[#1A9F73] hover:bg-[#1A9F73] hover:text-white"
+          }`}
+
+          >
+            <Heart className={`h-4 w-4 ${
+              isWishlisted
+                ? "fill-[#1A9F73] text-[#1A9F73]"
+                : ""
+            }`} />
           </button>
         </div>
       </div>
@@ -156,6 +212,8 @@ export default function MarketplaceProductsPage() {
   const [sortBy, setSortBy] = useState("Latest");
   const [activeTab, setActiveTab] = useState("All Products");
   const [page, setPage] = useState(1);
+  const [wishlistLoading, setWishlistLoading] = useState(null);
+  const [wishlistItems, setWishlistItems] = useState([]);
 
   const categories = [
     "All Categories",
@@ -192,8 +250,80 @@ export default function MarketplaceProductsPage() {
 
   }
 
+  const addToWishlist = async (productId) => {
+    try {
+      setWishlistLoading(productId);
+
+      const res = await axios.post(
+        `${API_BASE_URL}${API_VERSION}/wishlist/add`,
+        {
+          product_id: productId,
+        },
+        {
+          withCredentials: true,
+        }
+      );
+
+      if (res.data.success) {
+        toast.success(res.data.message || "Added to wishlist");
+      }
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        error?.response?.data?.message ||
+          "Failed to add to wishlist"
+      );
+    } finally {
+      setWishlistLoading(null);
+    }
+  };
+
+  const fetchWishlist = async () => {
+    try {
+      const res = await axios.get(
+        `${API_BASE_URL}${API_VERSION}/wishlist`,
+        {
+          withCredentials: true,
+        }
+      );
+
+      console.log("Wishists: ",res.data.data);
+
+      if (res.data.success) {
+        const ids = res.data.data.items.map(
+          (item) => item.product_id._id
+        );
+
+        setWishlistItems(ids);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const removeFromWishlist = async (productId) => {
+    try {
+      await axios.delete(
+        `${API_BASE_URL}${API_VERSION}/wishlist/${productId}`,
+        {
+          withCredentials: true,
+        }
+      );
+
+      setWishlistItems((prev) =>
+        prev.filter((id) => id !== productId)
+      );
+
+      toast.success("Removed from wishlist");
+    } catch (error) {
+      toast.error("Failed to remove");
+    }
+  };
+
   useEffect(()=> {
-    fetchProducts()
+    fetchProducts();
+    fetchWishlist();
   }, []);
 
   const filteredProducts = useMemo(() => {
@@ -235,6 +365,8 @@ export default function MarketplaceProductsPage() {
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const currentProducts = filteredProducts.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const totalproducts = productsData.length
+  
 
   const resetPage = (setter, value) => {
     setter(value);
@@ -245,22 +377,80 @@ export default function MarketplaceProductsPage() {
     <Layout>
       <div className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <div className="bg-gradient-to-r from-[#1A9F73] to-[#168863] rounded-4xl p-6 sm:p-10 text-white relative overflow-hidden shadow-xl">
-            <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
+          <div className="relative overflow-hidden rounded-4xl bg-linear-to-br from-[#1A9F73] via-[#168863] to-[#117a59] p-6 text-white shadow-xl sm:p-8">
+            {/* Background Glow */}
+            <div className="absolute top-0 right-0 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+
+            {/* Grid Pattern */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="h-full w-full bg-[linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] bg-size:40px_40px" />
+            </div>
+
+            {/* Bottom Gradient */}
+            <div className="absolute bottom-0 left-0 h-24 w-full bg-linear-to-t from-black/10 to-transparent" />
+
+            {/* Floating Icons */}
+            <div className="absolute right-8 top-8 hidden lg:flex flex-col gap-4 opacity-20">
+              <AudioLines className="h-10 w-10" />
+              <Watch className="h-10 w-10" />
+              <ShoppingCart className="h-10 w-10" />
+            </div>
 
             <div className="relative z-10">
-              <p className="uppercase tracking-[0.2em] text-white/80 text-xs font-medium">
+              {/* Marketplace Label */}
+              <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/80">
                 Multi Vendor Marketplace
               </p>
 
-              <h1 className="text-3xl sm:text-5xl font-bold mt-3 leading-tight max-w-3xl">
-                Explore Products by Category
+              {/* Heading */}
+              <h1 className="mt-3 max-w-3xl text-3xl font-bold leading-tight sm:text-5xl">
+                Find Products Across Multiple Categories
               </h1>
 
-              <p className="mt-4 text-white/85 max-w-2xl text-sm sm:text-base leading-relaxed">
-                Discover premium gadgets, gaming accessories, wearables,
-                cameras, and audio products from trusted vendors.
+              {/* Description */}
+              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/85 sm:text-base">
+                Browse products from verified vendors across fashion,
+                electronics, accessories, wearables, and more — all in one
+                marketplace.
               </p>
+
+              {/* Live Activity */}
+              <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs backdrop-blur-sm">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-300" />
+                300+ new products added this week
+              </div>
+
+              {/* Marketplace Stats */}
+              <div className="mt-6 flex flex-wrap items-center gap-8">
+                <div>
+                  <p className="text-2xl font-bold text-yellow-500">{totalproducts}+</p>
+                  <p className="text-sm text-white/75">Products</p>
+                </div>
+
+                <div>
+                  <p className="text-2xl font-bold text-yellow-500">80+</p>
+                  <p className="text-sm text-white/75">Vendors</p>
+                </div>
+
+                <div>
+                  <p className="text-2xl font-bold text-yellow-500">24</p>
+                  <p className="text-sm text-white/75">Categories</p>
+                </div>
+              </div>
+
+              {/* Category Pills */}
+              <div className="mt-6 flex flex-wrap gap-2">
+                {["Audio", "Wearables", "Gaming", "Fashion", "Accessories"].map(
+                  (item) => (
+                    <span
+                      key={item}
+                      className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur-sm"
+                    >
+                      {item}
+                    </span>
+                  )
+                )}
+              </div>
             </div>
           </div>
 
@@ -327,32 +517,100 @@ export default function MarketplaceProductsPage() {
           </div>
 
           <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {currentProducts.map((item) => (
-              <Card key={item._id} item={item} />
-            ))}
+            {loading
+            ? Array.from({ length: 8 }).map((_, index) => (
+                  <ProductCardSkeleton key={index} />
+              ))
+            : currentProducts.map((item) => (
+                <Card 
+                key={item._id} 
+                item={item}
+                addToWishlist={addToWishlist}
+                wishlistLoading={wishlistLoading}
+                wishlistItems={wishlistItems}
+                removeFromWishlist={removeFromWishlist}
+                />
+              ))}
           </div>
+          {!loading && (
+            <div className="mt-6 flex items-center justify-center gap-2">
+              {/* Previous */}
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-[#1A9F73] hover:text-[#1A9F73] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
 
-          <div className="mt-5 flex items-center justify-end gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={safePage === 1}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#1A9F73]/30 bg-white text-[#1A9F73] transition hover:bg-[#1A9F73]/5 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
+              {(() => {
+                const pages = [];
 
-            <span className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg border border-[#1A9F73]/30 bg-white px-3 text-sm font-medium text-[#1A9F73]">
-              {safePage}
-            </span>
+                // Always show first page
+                pages.push(1);
 
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={safePage === totalPages}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#1A9F73]/30 bg-white text-[#1A9F73] transition hover:bg-[#1A9F73]/5 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
+                // Show left dots
+                if (safePage > 3) {
+                  pages.push("...");
+                }
+
+                // Show current surrounding pages
+                for (
+                  let i = Math.max(2, safePage - 1);
+                  i <= Math.min(totalPages - 1, safePage + 1);
+                  i++
+                ) {
+                  pages.push(i);
+                }
+
+                // Show right dots
+                if (safePage < totalPages - 2) {
+                  pages.push("...");
+                }
+
+                // Always show last page
+                if (totalPages > 1) {
+                  pages.push(totalPages);
+                }
+
+                return pages.map((item, index) => {
+                  if (item === "...") {
+                    return (
+                      <span
+                        key={`dots-${index}`}
+                        className="px-2 text-slate-400"
+                      >
+                        ...
+                      </span>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={item}
+                      onClick={() => setPage(item)}
+                      className={`inline-flex h-10 min-w-10 items-center justify-center rounded-xl border px-3 text-sm font-medium transition ${
+                        safePage === item
+                          ? "border-[#1A9F73] bg-[#1A9F73] text-white shadow-md shadow-[#1A9F73]/20"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-[#1A9F73] hover:text-[#1A9F73]"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  );
+                });
+              })()}
+
+              {/* Next */}
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safePage === totalPages}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-[#1A9F73] hover:text-[#1A9F73] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </Layout>
