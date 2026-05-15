@@ -11,13 +11,12 @@ import {
   Clock,
   Download,
 } from "lucide-react";
-//import Layout from "../../components/Layouts/Layout";
 
+import AdminLayout from "../../components/Layouts/AdminLayout";
 import {
   getVendorSessions,
   vendorReplyToBuyer,
 } from "../../api/chatbotService";
-import AdminLayout from "../../components/Layouts/AdminLayout";
 
 const formatTime = (date) => {
   if (!date) return "";
@@ -55,6 +54,7 @@ export default function VendorQAManagement() {
   const [loading, setLoading] = useState(true);
   const [replyMessage, setReplyMessage] = useState("");
   const [selectedSession, setSelectedSession] = useState(null);
+
   useEffect(() => {
     const loadSessions = async () => {
       try {
@@ -63,8 +63,7 @@ export default function VendorQAManagement() {
         const res = await getVendorSessions();
         const sessions = res?.sessions || res?.data || [];
 
-        const mappedQuestions = sessions.map(mapSessionToQuestion);
-        setQuestions(mappedQuestions);
+        setQuestions(sessions.map(mapSessionToQuestion));
       } catch (error) {
         console.error("Vendor Q&A load error:", error);
         setQuestions([]);
@@ -78,7 +77,7 @@ export default function VendorQAManagement() {
 
   const sendReply = async () => {
     try {
-      if (!replyMessage || !selectedSession) return;
+      if (!replyMessage.trim() || !selectedSession) return;
 
       await vendorReplyToBuyer({
         sessionId: selectedSession.sessionId,
@@ -99,7 +98,6 @@ export default function VendorQAManagement() {
 
       setReplyMessage("");
       setSelectedSession(null);
-
       alert("Reply sent successfully!");
     } catch (error) {
       console.error(error);
@@ -110,7 +108,6 @@ export default function VendorQAManagement() {
   const filteredQuestions = useMemo(() => {
     return questions.filter((q) => {
       const matchFilter = filter === "All" || q.status === filter;
-
       const searchText = search.toLowerCase();
 
       const matchSearch =
@@ -130,32 +127,32 @@ export default function VendorQAManagement() {
 
   return (
     <AdminLayout>
-      <div className="min-h-screen bg-slate-50 px-6 py-6">
-        <div className="mb-6 flex items-center justify-between">
+      <div className="min-h-screen bg-slate-50 px-3 py-4 sm:px-4 md:px-6 md:py-6">
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-emerald-700">
+            <h1 className="text-xl font-bold text-emerald-700 sm:text-2xl">
               Q&A Management
             </h1>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-xs text-slate-400 sm:text-sm">
               Review and respond to customer inquiries across your product
               catalog
             </p>
           </div>
 
-          <div className="flex gap-3">
-            <button className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
+          <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+            <button className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
               <Download size={15} />
               Export
             </button>
 
-            <button className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">
+            <button className="flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">
               <Check size={15} />
               Mark all read
             </button>
           </div>
         </div>
 
-        <div className="mb-5 grid grid-cols-4 gap-4">
+        <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             icon={MessageSquare}
             label="Total Questions"
@@ -183,8 +180,8 @@ export default function VendorQAManagement() {
         </div>
 
         <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="relative w-full flex-1">
               <Search
                 size={16}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -197,29 +194,31 @@ export default function VendorQAManagement() {
               />
             </div>
 
-            {["All", "Answered", "Pending"].map((item) => (
-              <button
-                key={item}
-                onClick={() => setFilter(item)}
-                className={`rounded-lg px-4 py-2 text-sm font-medium ${
-                  filter === item
-                    ? "bg-emerald-600 text-white"
-                    : "border border-slate-200 bg-white text-slate-600"
-                }`}
-              >
-                {item}
-              </button>
-            ))}
+            <div className="flex flex-wrap gap-2">
+              {["All", "Answered", "Pending"].map((item) => (
+                <button
+                  key={item}
+                  onClick={() => setFilter(item)}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium ${
+                    filter === item
+                      ? "bg-emerald-600 text-white"
+                      : "border border-slate-200 bg-white text-slate-600"
+                  }`}
+                >
+                  {item}
+                </button>
+              ))}
 
-            <button className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">
-              Sort: Latest first
-            </button>
+              <button className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">
+                Sort: Latest first
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {loading ? (
-            <div className="col-span-3 rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
+            <div className="col-span-1 rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-400 md:col-span-2 xl:col-span-3">
               Loading questions...
             </div>
           ) : filteredQuestions.length > 0 ? (
@@ -231,15 +230,16 @@ export default function VendorQAManagement() {
               />
             ))
           ) : (
-            <div className="col-span-3 rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
+            <div className="col-span-1 rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-400 md:col-span-2 xl:col-span-3">
               No Q&A sessions found.
             </div>
           )}
         </div>
       </div>
+
       {selectedSession && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl sm:p-6">
             <h2 className="mb-4 text-lg font-bold text-slate-800">
               Reply to Customer
             </h2>
@@ -255,9 +255,12 @@ export default function VendorQAManagement() {
               className="h-32 w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-emerald-500"
             />
 
-            <div className="mt-4 flex justify-end gap-2">
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <button
-                onClick={() => setSelectedSession(null)}
+                onClick={() => {
+                  setSelectedSession(null);
+                  setReplyMessage("");
+                }}
                 className="rounded-lg border border-slate-200 px-4 py-2 text-sm"
               >
                 Cancel
@@ -284,16 +287,25 @@ function StatCard({ icon: Icon, label, value, color }) {
     blue: "bg-blue-50 text-blue-600",
   };
 
+  const barColor =
+    color === "red"
+      ? "bg-red-500"
+      : color === "blue"
+        ? "bg-blue-500"
+        : "bg-emerald-500";
+
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
       <div className="flex items-center gap-4">
         <div className={`rounded-xl p-3 ${styles[color]}`}>
-          <Icon size={24} />
+          <Icon size={22} />
         </div>
 
         <div>
-          <h2 className="text-3xl font-bold text-slate-800">{value}</h2>
-          <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          <h2 className="text-2xl font-bold text-slate-800 sm:text-3xl">
+            {value}
+          </h2>
+          <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400 sm:text-[11px]">
             {label}
           </p>
         </div>
@@ -301,14 +313,8 @@ function StatCard({ icon: Icon, label, value, color }) {
 
       <div className="mt-4 h-1 rounded-full bg-slate-100">
         <div
-          className={`h-1 rounded-full ${
-            color === "red"
-              ? "bg-red-500"
-              : color === "blue"
-                ? "bg-blue-500"
-                : "bg-emerald-500"
-          }`}
-          style={{ width: `${Math.min(Number(value) || 55, 100)}%` }}
+          className={`h-1 rounded-full ${barColor}`}
+          style={{ width: "55%" }}
         />
       </div>
     </div>
@@ -325,15 +331,16 @@ function QuestionCard({ item, onAnswer }) {
       }`}
     >
       <div className="mb-4 flex items-start gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+        <div className="hidden h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400 sm:flex">
           <MessageSquare size={22} />
         </div>
 
-        <div className="flex-1">
-          <div className="mb-1 flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex flex-wrap items-center gap-2">
             <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
               {item.sku}
             </span>
+
             <span
               className={`rounded px-2 py-0.5 text-[10px] font-bold ${
                 answered
@@ -345,7 +352,10 @@ function QuestionCard({ item, onAnswer }) {
             </span>
           </div>
 
-          <h3 className="text-sm font-bold text-slate-800">{item.product}</h3>
+          <h3 className="truncate text-sm font-bold text-slate-800">
+            {item.product}
+          </h3>
+
           <p className="mt-1 text-xs text-slate-400">
             {item.buyer} · {item.time}
           </p>
@@ -368,7 +378,7 @@ function QuestionCard({ item, onAnswer }) {
         </div>
       )}
 
-      <div className="mt-5 flex items-center justify-between">
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-1 text-xs text-slate-400">
           {answered ? (
             <>
@@ -383,7 +393,7 @@ function QuestionCard({ item, onAnswer }) {
           )}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600">
             <Eye size={13} className="inline" /> View
           </button>

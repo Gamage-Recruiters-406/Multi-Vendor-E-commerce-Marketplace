@@ -23,15 +23,19 @@ import EditStore from "./pages/Vendor/EditStore";
 import SalesAnalytics from "./pages/Vendor/SalesAnalytics";
 import VendorDashboard from "./pages/VendorDashboard";
 import BuyerProductDetailsPage from "./pages/Buyer/BuyerProductDetailsPage";
+import Wishlist from "./pages/Buyer/Wishlist";
 import ShoppingCartPage from "./pages/ShoppingCart/ShoppingCartPage";
 import { MyOrders } from "./pages/MyOrders/MyOrders.jsx";
 import UserManagement from "./pages/admin/UserManagement";
+
 import VendorOrderManagementPage from "./pages/Vendor/OrderManagement";
 import VendorQAManagement from "./pages/Vendor/VendorQAManagement.jsx";
 import VendorOrderDetailsPage from "./pages/Vendor/OrderDetails";
 //import Q_AND_A_PAGE from "./pages/Buyer/Q&APage";
 import Notifications from "./pages/Vendor/Notifications";
 import MarketplaceProductsPage from "./pages/Buyer/CategoryProducts.jsx";
+
+import AdminProductManagement from './pages/admin/ProductManagement'
 
 function App() {
   return (
@@ -77,6 +81,7 @@ function App() {
           <Route path="/notifications" element={<Notifications />} />
           {/* Admin Module */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/products" element={<AdminProductManagement />} />
           <Route path="/admin/announcements" element={<Announcements />} />
           <Route
             path="/admin/announcements/create"
@@ -92,6 +97,7 @@ function App() {
             path="/buyer/productdetails/:id"
             element={<BuyerProductDetailsPage />}
           />
+          <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/orders" element={<MyOrders />} />
           <Route path="/cart" element={<ShoppingCartPage />} />
           <Route path="/categories" element={<MarketplaceProductsPage />} />

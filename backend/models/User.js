@@ -33,7 +33,7 @@ const userSchema = new mongoose.Schema(
       minlength: 6 
     },
 
-    confirmPassword: {
+    /*confirmPassword: {
       type: String,
       required: true,
       validate: {
@@ -42,7 +42,7 @@ const userSchema = new mongoose.Schema(
         },
         message: "Passwords do not match",
       },
-    },
+    },*/
 
     role: { 
       type: String, 
@@ -59,6 +59,21 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    addresses: [
+  {
+    street: { type: String, required: true },
+    city: { type: String, required: true },
+    district: { type: String, required: true },
+    postalCode: { type: String },
+    country: { type: String, default: "Sri Lanka" },
+  }
+],
+
+    isSuspended: {
+    type: Boolean,
+    default: false,
+    },
     
   },
   { timestamps: true }
@@ -69,7 +84,7 @@ userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
   const salt = bcrypt.genSaltSync(10);
   this.password = bcrypt.hashSync(this.password, salt);
-  this.confirmPassword = undefined; // Remove confirmPassword field
+  //this.confirmPassword = undefined; // Remove confirmPassword field
 });
 
 // Compare password
@@ -81,7 +96,7 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
-  delete obj.confirmPassword;
+  //delete obj.confirmPassword;
   return obj;
 };
 
