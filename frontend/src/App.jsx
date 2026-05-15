@@ -23,6 +23,7 @@ import EditStore from "./pages/Vendor/EditStore";
 import SalesAnalytics from "./pages/Vendor/SalesAnalytics";
 import VendorDashboard from "./pages/VendorDashboard";
 import BuyerProductDetailsPage from "./pages/Buyer/BuyerProductDetailsPage";
+import Wishlist from "./pages/Buyer/Wishlist";
 import ShoppingCartPage from "./pages/ShoppingCart/ShoppingCartPage";
 import { MyOrders } from "./pages/MyOrders/MyOrders.jsx";
 import UserManagement from "./pages/admin/UserManagement";
@@ -96,6 +97,7 @@ function App() {
             path="/buyer/productdetails/:id"
             element={<BuyerProductDetailsPage />}
           />
+          <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/orders" element={<MyOrders />} />
           <Route path="/cart" element={<ShoppingCartPage />} />
           <Route path="/categories" element={<MarketplaceProductsPage />} />
