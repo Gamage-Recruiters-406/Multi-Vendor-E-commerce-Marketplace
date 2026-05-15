@@ -1,3 +1,5 @@
+// AdminSidebar.jsx
+
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -8,6 +10,7 @@ import {
   Settings,
   LogOut,
   UserCircle2,
+  X,
 } from "lucide-react";
 
 const menuItems = [
@@ -19,7 +22,7 @@ const menuItems = [
   { name: "Settings", path: "/admin/settings", icon: Settings },
 ];
 
-export default function AdminSidebar() {
+export default function AdminSidebar({ closeSidebar }) {
   const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -27,31 +30,42 @@ export default function AdminSidebar() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+
     navigate("/login");
   };
 
   return (
     <div className="h-screen w-full bg-[#EAF7F1] flex flex-col">
-      {/* Top user section */}
+      {/* MOBILE CLOSE BUTTON */}
+      <div className="flex items-center justify-between px-5 pt-4 lg:hidden">
+        <h2 className="text-lg font-bold text-green-700">Admin</h2>
+
+        <button onClick={closeSidebar}>
+          <X size={22} />
+        </button>
+      </div>
+
+      {/* USER */}
       <div className="px-5 py-5">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
             <UserCircle2 className="text-green-600" size={30} />
           </div>
 
-          <div>
-            <h3 className="text-sm font-semibold text-gray-800">
+          <div className="min-w-0">
+            <h3 className="truncate text-sm font-semibold text-gray-800">
               {user?.fullname || user?.name || "Admin User"}
             </h3>
-            <p className="text-xs text-gray-500 capitalize">
+
+            <p className="truncate text-xs text-gray-500 capitalize">
               {user?.role || "Administrator"}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Menu */}
-      <div className="flex-1 overflow-y-auto p-3 pt-3">
+      {/* MENU */}
+      <div className="flex-1 overflow-y-auto px-3 pb-3">
         {menuItems.map((item) => {
           const Icon = item.icon;
 
@@ -59,8 +73,9 @@ export default function AdminSidebar() {
             <NavLink
               key={item.path}
               to={item.path}
+              onClick={closeSidebar}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl mb-2 text-sm transition-all ${
+                `flex items-center gap-3 rounded-xl px-4 py-3 mb-2 text-sm transition-all ${
                   isActive
                     ? "bg-white text-green-700 font-semibold shadow-sm"
                     : "text-gray-700 hover:bg-white/70 hover:text-green-700"
@@ -68,13 +83,13 @@ export default function AdminSidebar() {
               }
             >
               <Icon size={18} />
-              {item.name}
+              <span>{item.name}</span>
             </NavLink>
           );
         })}
       </div>
 
-      {/* Logout */}
+      {/* LOGOUT */}
       <div className="p-4">
         <button
           onClick={handleLogout}
