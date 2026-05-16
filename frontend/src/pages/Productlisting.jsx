@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import productListingService from '../services/ProductListingService';
 import FilterPanel from '../components/ProductListing/FilterPanel';
+import Layout from '../components/Layouts/Layout';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
   ? `${import.meta.env.VITE_API_BASE_URL}${import.meta.env.VITE_API_VERSION || '/api/v1'}`
@@ -133,7 +134,7 @@ function ProductCard({ product, onViewDetails }) {
   );
 }
 
-export default function ProductListing() {
+function ProductListingContent() {
   const [showSidebar, setShowSidebar] = useState(true);
   const [activeFilters, setActiveFilters] = useState([]);
   const [viewMode, setViewMode] = useState('grid');
@@ -285,9 +286,9 @@ export default function ProductListing() {
     };
 
     fetchCategories();
-  }, [fetchProducts]); 
+  }, [fetchProducts]);
 
-  // Debounced search effect 
+  // Debounced search effect
   useEffect(() => {
     if (isInitialMount.current) return;
 
@@ -299,7 +300,8 @@ export default function ProductListing() {
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
-  }, [filters.searchKeyword, fetchProducts]); 
+  }, [filters.searchKeyword, fetchProducts]);
+
   const handleViewDetails = (productId) => {
     window.location.href = `/buyer/productdetails/${productId}`;
   };
@@ -435,7 +437,7 @@ export default function ProductListing() {
     return (
       <div
         style={{
-          minHeight: '100vh',
+          minHeight: '60vh',
           background: '#f9fafb',
           display: 'flex',
           alignItems: 'center',
@@ -451,7 +453,7 @@ export default function ProductListing() {
     return (
       <div
         style={{
-          minHeight: '100vh',
+          minHeight: '60vh',
           background: '#f9fafb',
           display: 'flex',
           alignItems: 'center',
@@ -481,7 +483,7 @@ export default function ProductListing() {
   return (
     <div
       style={{
-        minHeight: '100vh',
+        minHeight: '100%',
         background: '#f9fafb',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}
@@ -973,5 +975,14 @@ export default function ProductListing() {
         }
       `}</style>
     </div>
+  );
+}
+
+// Main export with Layout wrapper
+export default function ProductListing() {
+  return (
+    <Layout>
+      <ProductListingContent />
+    </Layout>
   );
 }
