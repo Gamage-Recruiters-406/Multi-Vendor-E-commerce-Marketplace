@@ -173,30 +173,39 @@ function Card({ item, addToWishlist, wishlistLoading, wishlistItems, removeFromW
             </div>
           </div>
 
-          <button 
-          title={`${!isWishlisted ? "Add to Wishlist" : "Remove from Wishlist"}`}
-          onClick={(e)=>{
-            e.stopPropagation();
-
-            if (isWishlisted) {
-              removeFromWishlist(item._id);
-            } else {
-              addToWishlist(item._id);
-            }
-          }}
-          disabled={wishlistLoading === item._id}
-          className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition ${
-            wishlistLoading === item._id
-              ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-              : "border-[#1A9F73] text-[#1A9F73] hover:bg-[#1A9F73] hover:text-white"
-          }`}
-
-          >
-            <Heart className={`h-4 w-4 ${
+          <button
+            title={
               isWishlisted
-                ? "fill-[#1A9F73] text-[#1A9F73]"
-                : ""
-            }`} />
+                ? "Remove from Wishlist"
+                : "Add to Wishlist"
+            }
+            onClick={(e) => {
+              e.stopPropagation();
+
+              if (isWishlisted) {
+                removeFromWishlist(item._id);
+              } else {
+                addToWishlist(item._id);
+              }
+            }}
+            disabled={wishlistLoading === item._id}
+            className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition ${
+              wishlistLoading === item._id
+                ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                : isWishlisted
+                ? "border-[#1A9F73] bg-[#1A9F73]/10 text-[#1A9F73] hover:bg-[#1A9F73]/20"
+                : "border-slate-200 text-slate-500 hover:border-[#1A9F73] hover:bg-[#1A9F73] hover:text-white"
+            }`}
+          >
+            <Heart
+              className={`h-4 w-4 transition ${
+                wishlistLoading === item._id
+                  ? "animate-pulse"
+                  : isWishlisted
+                  ? "fill-[#1A9F73]"
+                  : ""
+              }`}
+            />
           </button>
         </div>
       </div>
@@ -265,6 +274,7 @@ export default function MarketplaceProductsPage() {
       );
 
       if (res.data.success) {
+        setWishlistItems((prev) => [...prev, productId]);
         toast.success(res.data.message || "Added to wishlist");
       }
     } catch (error) {
@@ -360,7 +370,7 @@ export default function MarketplaceProductsPage() {
     }
 
     return items;
-  }, [productsData, search, category, sortBy, activeTab]);
+  }, [productsData, search, category, sortBy, activeTab, wishlistItems]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
   const safePage = Math.min(page, totalPages);
