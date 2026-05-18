@@ -1,41 +1,42 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
-import ProductCreate from "./pages/product _create/ProductCreate";
-import ProductUpdate from "./pages/Product_update/ProductUpdate";
-import { Toaster } from "react-hot-toast";
-import SigninPage from "./pages/login/SigninPage";
-import SignupPage from "./pages/login/SignupPage";
-import VendorProductManagemnt from "./pages/Vendor/ProductManagement";
-import Products from "./pages/Vendor/Products";
-import CreateStore from "./pages/Vendor/CreateStore";
-import ViewStore from "./pages/Vendor/ViewStore";
-import Announcements from "./pages/Announcements";
-import CreateAnnouncement from "./pages/CreateAnnouncement";
-import EditAnnouncement from "./pages/EditAnnouncement";
-import { AdminDashboard } from "./pages/AdminDashboard/AdminDashboard";
-import VendorProfile from "./pages/Profiles/vendorProfile";
-import Home from "./pages/Home";
-import CheckoutPage from "./pages/CheckoutPage";
-import UserProfileAndAddressBook from "./pages/Profiles/userProfile&AddressBook";
-import "./App.css";
-import StoresPage from "./pages/Vendor/Stores";
-import EditStore from "./pages/Vendor/EditStore";
-import SalesAnalytics from "./pages/Vendor/SalesAnalytics";
-import VendorDashboard from "./pages/VendorDashboard";
-import BuyerProductDetailsPage from "./pages/Buyer/BuyerProductDetailsPage";
-import Wishlist from "./pages/Buyer/Wishlist";
-import ShoppingCartPage from "./pages/ShoppingCart/ShoppingCartPage";
-import { MyOrders } from "./pages/MyOrders/MyOrders.jsx";
-import UserManagement from "./pages/admin/UserManagement";
+import ProductCreate from './pages/product _create/ProductCreate';
+import ProductUpdate from './pages/Product_update/ProductUpdate';
+import { Toaster } from 'react-hot-toast';
+import SigninPage from './pages/login/SigninPage';
+import SignupPage from './pages/login/SignupPage';
+import VendorProductManagemnt from './pages/Vendor/ProductManagement';
+import Products from './pages/Vendor/Products';
+import CreateStore from './pages/Vendor/CreateStore';
+import ViewStore from './pages/Vendor/ViewStore';
+import Announcements from './pages/Announcements';
+import CreateAnnouncement from './pages/CreateAnnouncement';
+import EditAnnouncement from './pages/EditAnnouncement';
+import { AdminDashboard } from './pages/AdminDashboard/AdminDashboard';
+import VendorProfile from './pages/Profiles/vendorProfile';
+import Home from './pages/Home';
+import CheckoutPage from './pages/CheckoutPage';
+import UserProfileAndAddressBook from './pages/Profiles/userProfile&AddressBook';
+import './App.css';
+import StoresPage from './pages/Vendor/Stores';
+import EditStore from './pages/Vendor/EditStore';
+import SalesAnalytics from './pages/Vendor/SalesAnalytics';
+import VendorDashboard from './pages/VendorDashboard';
+import BuyerProductDetailsPage from './pages/Buyer/BuyerProductDetailsPage';
+import Wishlist from './pages/Buyer/Wishlist';
+import ShoppingCartPage from './pages/ShoppingCart/ShoppingCartPage';
+import { MyOrders } from './pages/MyOrders/MyOrders.jsx';
+import UserManagement from './pages/admin/UserManagement';
 
-import VendorOrderManagementPage from "./pages/Vendor/OrderManagement";
-import VendorQAManagement from "./pages/Vendor/VendorQAManagement.jsx";
-import VendorOrderDetailsPage from "./pages/Vendor/OrderDetails";
+import VendorOrderManagementPage from './pages/Vendor/OrderManagement';
+import VendorQAManagement from './pages/Vendor/VendorQAManagement.jsx';
+import VendorOrderDetailsPage from './pages/Vendor/OrderDetails';
 //import Q_AND_A_PAGE from "./pages/Buyer/Q&APage";
-import Notifications from "./pages/Vendor/Notifications";
-import MarketplaceProductsPage from "./pages/Buyer/CategoryProducts.jsx";
+import Notifications from './pages/Vendor/Notifications';
+import MarketplaceProductsPage from './pages/Buyer/CategoryProducts.jsx';
+import ProductListing from './pages/Productlisting';
 
-import AdminProductManagement from './pages/admin/ProductManagement'
+import AdminProductManagement from './pages/admin/ProductManagement';
 
 function App() {
   return (
@@ -101,6 +102,9 @@ function App() {
           <Route path="/orders" element={<MyOrders />} />
           <Route path="/cart" element={<ShoppingCartPage />} />
           <Route path="/categories" element={<MarketplaceProductsPage />} />
+
+          <Route path="/user/product-listing" element={<ProductListing />} />
+
           {/* Checkout */}
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/addressbook" element={<UserProfileAndAddressBook />} />
