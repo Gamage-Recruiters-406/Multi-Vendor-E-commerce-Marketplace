@@ -27,6 +27,7 @@ import Wishlist from './pages/Buyer/Wishlist';
 import ShoppingCartPage from './pages/ShoppingCart/ShoppingCartPage';
 import { MyOrders } from './pages/MyOrders/MyOrders.jsx';
 import UserManagement from './pages/admin/UserManagement';
+import { AdminReportDashboard } from './pages/AdminReportsDashboard/AdminReportDashboard.jsx';
 
 import VendorOrderManagementPage from './pages/Vendor/OrderManagement';
 import VendorQAManagement from './pages/Vendor/VendorQAManagement.jsx';
@@ -93,6 +94,7 @@ function App() {
             element={<EditAnnouncement />}
           />
           <Route path="/admin/users" element={<UserManagement />} />
+          <Route path="/admin/reports" element={<AdminReportDashboard />} />
           {/* Buyer */}
           <Route
             path="/buyer/productdetails/:id"
