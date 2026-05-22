@@ -75,7 +75,7 @@ const roleConfigs = {
 		tone: "buyer",
 		links: [
 			{ label: "Home", path: "/" },
-			{ label: "Categories", path: "/categories" },
+			{ label: "Products", path: "/categories" },
 			{ label: "Orders", path: "/orders" },
 		],
 		placeholder: "Search for unique artisan products...",
