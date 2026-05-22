@@ -12,7 +12,10 @@ import {
   Download,
 } from "lucide-react";
 
-import AdminLayout from "../../components/Layouts/AdminLayout";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
+import Layout from "../../components/Layouts/Layout";
 import {
   getVendorSessions,
   vendorReplyToBuyer,
@@ -54,6 +57,7 @@ export default function VendorQAManagement() {
   const [loading, setLoading] = useState(true);
   const [replyMessage, setReplyMessage] = useState("");
   const [selectedSession, setSelectedSession] = useState(null);
+  const [sortOrder, setSortOrder] = useState("latest");
 
   useEffect(() => {
     const loadSessions = async () => {
@@ -106,7 +110,7 @@ export default function VendorQAManagement() {
   };
 
   const filteredQuestions = useMemo(() => {
-    return questions.filter((q) => {
+    let filtered = questions.filter((q) => {
       const matchFilter = filter === "All" || q.status === filter;
       const searchText = search.toLowerCase();
 
@@ -118,15 +122,65 @@ export default function VendorQAManagement() {
 
       return matchFilter && matchSearch;
     });
-  }, [questions, filter, search]);
+
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.time);
+      const dateB = new Date(b.time);
+
+      return sortOrder === "latest" ? dateB - dateA : dateA - dateB;
+    });
+
+    return filtered;
+  }, [questions, filter, search, sortOrder]);
 
   const total = questions.length;
   const answered = questions.filter((q) => q.status === "Answered").length;
   const pending = questions.filter((q) => q.status === "Pending").length;
   const responseRate = total ? Math.round((answered / total) * 100) : 0;
 
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+
+    doc.setFontSize(18);
+    doc.text("Q&A Management Report", 14, 18);
+
+    doc.setFontSize(10);
+    doc.text(`Generated Date: ${new Date().toLocaleString()}`, 14, 26);
+
+    doc.setFontSize(12);
+    doc.text(`Total Questions: ${total}`, 14, 38);
+    doc.text(`Answered: ${answered}`, 14, 46);
+    doc.text(`Pending: ${pending}`, 14, 54);
+    doc.text(`Response Rate: ${responseRate}%`, 14, 62);
+
+    autoTable(doc, {
+      startY: 72,
+      head: [
+        ["SKU", "Product", "Buyer", "Status", "Question", "Answer", "Time"],
+      ],
+      body: filteredQuestions.map((q) => [
+        q.sku,
+        q.product,
+        q.buyer,
+        q.status,
+        q.question,
+        q.answer || "Not answered yet",
+        q.time,
+      ]),
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+      },
+      headStyles: {
+        fillColor: [5, 150, 105],
+      },
+    });
+
+    doc.save("qa-management-report.pdf");
+  };
+
   return (
-    <AdminLayout>
+    <Layout>
       <div className="min-h-screen bg-slate-50 px-3 py-4 sm:px-4 md:px-6 md:py-6">
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -140,15 +194,18 @@ export default function VendorQAManagement() {
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
-            <button className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
+            <button
+              onClick={exportToPDF}
+              className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-emerald-600 px-4 py-2 text-sm font-medium text-slate-100"
+            >
               <Download size={15} />
               Export
             </button>
 
-            <button className="flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">
+            {/*<button className="flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">
               <Check size={15} />
               Mark all read
-            </button>
+            </button>*/}
           </div>
         </div>
 
@@ -209,9 +266,14 @@ export default function VendorQAManagement() {
                 </button>
               ))}
 
-              <button className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">
-                Sort: Latest first
-              </button>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 outline-none"
+              >
+                <option value="latest">Latest First</option>
+                <option value="oldest">Oldest First</option>
+              </select>
             </div>
           </div>
         </div>
@@ -276,7 +338,7 @@ export default function VendorQAManagement() {
           </div>
         </div>
       )}
-    </AdminLayout>
+    </Layout>
   );
 }
 

@@ -192,7 +192,7 @@ export default function BuyerProductDetailsPage() {
     <>
       <Layout>
         <div className="min-h-screen bg-slate-50 text-slate-900">
-          <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl px-3 py-4 sm:px-4 md:px-6 lg:px-8">
             <div className="mb-6 flex flex-wrap items-center gap-2 text-xs text-slate-500">
               <span>{product.store?.name || "Store"}</span>
               <ChevronRight size={12} />
@@ -201,7 +201,7 @@ export default function BuyerProductDetailsPage() {
               <span className="text-slate-700">{product.name}</span>
             </div>
 
-            <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-10">
               <div>
                 <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
                   <div className="mb-4 flex items-center justify-between">
@@ -217,7 +217,7 @@ export default function BuyerProductDetailsPage() {
                     <img
                       src={selectedImage || product.images?.[0] || ""}
                       alt={product.name}
-                      className="h-[420px] w-full object-cover md:h-[520px]"
+                      className="h-[260px] w-full object-cover sm:h-[340px] md:h-[420px] lg:h-[520px]"
                     />
                   </div>
 
@@ -235,7 +235,7 @@ export default function BuyerProductDetailsPage() {
                         <img
                           src={image}
                           alt={`Preview ${i + 1}`}
-                          className="h-20 w-20 object-cover md:h-24 md:w-24"
+                          className="h-16 w-16 object-cover sm:h-20 sm:w-20 md:h-24 md:w-24"
                         />
                       </button>
                     ))}
@@ -254,7 +254,7 @@ export default function BuyerProductDetailsPage() {
                     </Badge>
                   </div>
 
-                  <h1 className="text-3xl font-bold leading-tight text-slate-900 md:text-4xl">
+                  <h1 className="text-2xl font-bold leading-tight text-slate-900 sm:text-3xl md:text-4xl">
                     {product.name}
                   </h1>
 
@@ -270,12 +270,12 @@ export default function BuyerProductDetailsPage() {
                   </div>
 
                   <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className="text-4xl font-bold text-emerald-600">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <span className="text-3xl font-bold text-emerald-600 sm:text-4xl">
                         Rs. {Number(product.price || 0).toLocaleString()}
                       </span>
 
-                      <div className="ml-auto text-right text-sm text-emerald-600">
+                      <div className="text-sm text-emerald-600 sm:ml-auto sm:text-right">
                         <p className="font-semibold">
                           {product.stock > 0 ? "In Stock" : "Unavailable"}
                         </p>
@@ -288,7 +288,7 @@ export default function BuyerProductDetailsPage() {
                     <p className="mb-3 text-sm font-semibold text-slate-700">
                       Quantity
                     </p>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                       <div className="inline-flex items-center overflow-hidden rounded-xl border border-slate-200 bg-white">
                         <button
                           className="px-3 py-2 text-slate-600 hover:bg-slate-50"
@@ -336,7 +336,7 @@ export default function BuyerProductDetailsPage() {
                     </button>
                   </div>
 
-                  <div className="mt-6 grid grid-cols-2 gap-3">
+                  <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {[
                       { icon: Truck, text: "Free Express Shipping" },
                       { icon: ShieldCheck, text: "2 Year Warranty" },
@@ -375,7 +375,7 @@ export default function BuyerProductDetailsPage() {
             </div>
 
             <div className="mt-10 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="mb-6 flex flex-wrap items-center gap-6 border-b border-slate-200 pb-4">
+              <div className="mb-6 flex overflow-x-auto whitespace-nowrap gap-6 border-b border-slate-200 pb-4">
                 {[
                   { key: "description", label: "Description" },
                   { key: "specifications", label: "Specifications" },
@@ -385,7 +385,7 @@ export default function BuyerProductDetailsPage() {
                   <button
                     key={tab.key}
                     onClick={() => setActiveTab(tab.key)}
-                    className={`pb-2 text-sm font-medium transition ${
+                    className={`shrink-0 pb-2 text-sm font-medium transition ${
                       activeTab === tab.key
                         ? "border-b-2 border-emerald-600 text-emerald-600"
                         : "text-slate-500 hover:text-slate-700"
@@ -397,7 +397,7 @@ export default function BuyerProductDetailsPage() {
               </div>
 
               {activeTab === "description" && (
-                <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
                   <div className="lg:col-span-2">
                     <h2 className="text-2xl font-bold text-slate-900">
                       {product.name}
@@ -472,7 +472,7 @@ export default function BuyerProductDetailsPage() {
                 <div>
                   <div className="mb-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
                     <div className="flex flex-col gap-2">
-                      <p className="text-5xl font-bold text-slate-900">
+                      <p className="text-4xl font-bold text-slate-900 sm:text-5xl">
                         {avgRating.toFixed(1)}
                       </p>
                       <div className="mt-2">
@@ -491,8 +491,8 @@ export default function BuyerProductDetailsPage() {
                           key={review._id || i}
                           className="rounded-2xl border border-slate-200 bg-white p-5"
                         >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex items-start gap-3">
+                          <div className="flex items-start gap-3">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
                                 {(
                                   review.user_id?.name ||
@@ -562,7 +562,7 @@ export default function BuyerProductDetailsPage() {
                     )}
                   </div>
 
-                  <div className="mt-4 flex gap-3">
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                     <input
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
