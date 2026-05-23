@@ -384,14 +384,14 @@ export default function Header({ userRole, userName }) {
 							>
 								Profile
 							</Link>
-							<Link
+							{/* <Link
 								to={settingsPath}
 								role="menuitem"
 								className="block rounded-lg px-3 py-2 transition hover:bg-emerald-50 hover:text-emerald-700"
 								onClick={() => setIsProfileMenuOpen(false)}
 							>
 								Settings
-							</Link>
+							</Link> */}
 							<button
 								type="button"
 								role="menuitem"

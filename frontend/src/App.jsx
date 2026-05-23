@@ -109,7 +109,7 @@ function App() {
 
           {/* Checkout */}
           <Route path="/checkout" element={<CheckoutPage />} />
-          <Route path="/addressbook" element={<UserProfileAndAddressBook />} />
+          <Route path="/buyer/profile" element={<UserProfileAndAddressBook />} />
         </Routes>
       </Router>
     </>
