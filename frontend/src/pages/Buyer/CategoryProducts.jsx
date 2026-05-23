@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Layout from "../../components/Layouts/Layout";
 
 
@@ -216,7 +216,8 @@ function Card({ item, addToWishlist, wishlistLoading, wishlistItems, removeFromW
 export default function MarketplaceProductsPage() {
   const [productsData, setProductData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get("q") || "");
   const [category, setCategory] = useState("All Categories");
   const [sortBy, setSortBy] = useState("Latest");
   const [activeTab, setActiveTab] = useState("All Products");
@@ -344,9 +345,9 @@ export default function MarketplaceProductsPage() {
       const q = search.toLowerCase();
       items = items.filter(
         (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.category?.name?.toLowerCase().includes(q) ||
-          p.status.toLowerCase().includes(q)
+          p.name?.toLowerCase().includes(q) ||
+          p.description?.toLowerCase().includes(q) ||
+          p.category?.name?.toLowerCase().includes(q)
       );
     }
 
