@@ -359,11 +359,12 @@ export default function Header({ userRole, userName }) {
 		>
 			<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
 				<div className="flex min-w-0 flex-1 items-center gap-4 md:gap-5">
-					<div
-						className={`grid h-9 min-w-20.5 place-items-center rounded font-extrabold tracking-wide text-sm ${ui.logo}`}
-					>
-					{config.brand}
-					</div>
+					<Link
+					to="/"
+					className={`grid h-9 min-w-20.5 place-items-center rounded font-extrabold tracking-wide text-sm no-underline ${ui.logo}`}
+				>
+				{config.brand}
+				</Link>
 
 					<nav className={`flex min-w-0 flex-wrap items-center gap-3 md:gap-4 ${ui.nav}`}>
 						{config.links.map((item) => (
