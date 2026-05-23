@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Bell, ShoppingCart, Heart, Search, X } from "lucide-react";
+import { ShoppingCart, Heart, Search, X } from "lucide-react";
+import AnnouncementBell from "./AnnouncementBell";
 
 const normalizeUrlPart = (value = "") => value.replace(/\/+$/, "");
 const ensureLeadingSlash = (value = "") => (value.startsWith("/") ? value : `/${value}`);
@@ -508,14 +509,7 @@ export default function Header({ userRole, userName }) {
 					</>
 				)}
 
-				<button
-					type="button"
-					aria-label="Notifications"
-					className={`relative grid h-9 w-9 place-items-center rounded-full border border-transparent transition ${ui.notification}`}
-				>
-					<Bell size={16} />
-					<span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-current" />
-				</button>
+				<AnnouncementBell notificationClassName={ui.notification} />
 
 				<div className="relative" ref={profileMenuRef}>
 					<button
