@@ -21,6 +21,7 @@ export function MyOrders() {
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null)
   const [detailsError, setDetailsError] = useState(null)
   const [selectedOrderId, setSelectedOrderId] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Fetch orders on component mount
   useEffect(() => {
@@ -51,8 +52,21 @@ export function MyOrders() {
   }, [navigate])
 
   const filteredOrders = orders.filter((order) => {
-    if (activeFilter === 'All') return true
-    return order.status.toLowerCase() === activeFilter.toLowerCase()
+    const matchesFilter =
+      activeFilter === 'All' ||
+      order.status.toLowerCase() === activeFilter.toLowerCase()
+
+    const q = searchQuery.toLowerCase().trim()
+    const matchesSearch =
+      !q ||
+      order.id?.toLowerCase().includes(q) ||
+      order._id?.toLowerCase().includes(q) ||
+      order.items?.some((item) =>
+        item.productName?.toLowerCase().includes(q) ||
+        item.name?.toLowerCase().includes(q)
+      )
+
+    return matchesFilter && matchesSearch
   })
 
   const closeOrderDetails = () => {
@@ -154,6 +168,8 @@ export function MyOrders() {
                   type="text"
                   placeholder="Search by Order ID or product..."
                   className="w-full bg-white rounded-full py-3 pl-11 pr-4 text-sm shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none border-none"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               <button className="bg-white px-6 py-3 rounded-full text-sm font-medium shadow-sm flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors min-w-[160px]">
