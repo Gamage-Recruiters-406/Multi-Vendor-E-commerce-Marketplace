@@ -1,9 +1,9 @@
 import axios from 'axios';
 
 // API configuration for Vite - use import.meta.env
-const API_URL =
-  `${import.meta.env.VITE_API_BASE_URL}${import.meta.env.VITE_API_VERSION}` ||
-  'http://localhost:5000/api/v1';
+const _base    = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const _version = import.meta.env.VITE_API_VERSION  || '/api/v1';
+const API_URL  = `${_base}${_version}`;
 
 // Configure axios defaults
 axios.defaults.withCredentials = true;

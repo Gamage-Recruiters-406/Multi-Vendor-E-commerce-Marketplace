@@ -3,9 +3,9 @@ import productListingService from '../services/ProductListingService';
 import FilterPanel from '../components/ProductListing/FilterPanel';
 import Layout from '../components/Layouts/Layout';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-  ? `${import.meta.env.VITE_API_BASE_URL}${import.meta.env.VITE_API_VERSION || '/api/v1'}`
-  : 'http://localhost:5000/api/v1';
+const _base    = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const _version = import.meta.env.VITE_API_VERSION  || '/api/v1';
+const API_BASE_URL = `${_base}${_version}`;
 
 const GREEN = '#1A9F73';
 const GREEN_DARK = '#158860';
